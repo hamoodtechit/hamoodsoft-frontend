@@ -1,0 +1,94 @@
+{
+  "common": {
+    "welcome": "স্বাগতম",
+    "loading": "লোড হচ্ছে...",
+    "error": "ত্রুটি",
+    "success": "সফল",
+    "cancel": "বাতিল",
+    "confirm": "নিশ্চিত করুন",
+    "save": "সংরক্ষণ করুন",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা করুন",
+    "search": "খুঁজুন",
+    "filter": "ফিল্টার",
+    "close": "বন্ধ করুন",
+    "submit": "জমা দিন",
+    "back": "পিছনে",
+    "next": "পরবর্তী",
+    "previous": "পূর্ববর্তী"
+  },
+  "auth": {
+    "login": "লগইন",
+    "logout": "লগআউট",
+    "register": "নিবন্ধন",
+    "email": "ইমেইল",
+    "password": "পাসওয়ার্ড",
+    "confirmPassword": "পাসওয়ার্ড নিশ্চিত করুন",
+    "forgotPassword": "পাসওয়ার্ড ভুলে গেছেন?",
+    "resetPassword": "পাসওয়ার্ড রিসেট করুন",
+    "rememberMe": "আমাকে মনে রাখুন",
+    "alreadyHaveAccount": "ইতিমধ্যে একটি অ্যাকাউন্ট আছে?",
+    "dontHaveAccount": "একটি অ্যাকাউন্ট নেই?",
+    "signIn": "সাইন ইন",
+    "signUp": "সাইন আপ",
+    "sendResetLink": "রিসেট লিঙ্ক পাঠান",
+    "passwordResetSuccess": "পাসওয়ার্ড রিসেট সফল! এখন আপনি লগইন করতে পারেন।",
+    "resetEmailSent": "পাসওয়ার্ড রিসেট ইমেইল পাঠানো হয়েছে! অনুগ্রহ করে আপনার ইনবক্স পরীক্ষা করুন।"
+  },
+  "theme": {
+    "light": "হালকা",
+    "dark": "অন্ধকার",
+    "system": "সিস্টেম"
+  },
+  "language": {
+    "english": "ইংরেজি",
+    "bangla": "বাংলা",
+    "selectLanguage": "ভাষা নির্বাচন করুন"
+  },
+  "errors": {
+    "somethingWentWrong": "কিছু ভুল হয়েছে",
+    "networkError": "নেটওয়ার্ক ত্রুটি। আপনার সংযোগ পরীক্ষা করুন।",
+    "unauthorized": "আপনি এই সম্পদ অ্যাক্সেস করার অনুমোদিত নন",
+    "notFound": "পৃষ্ঠা পাওয়া যায়নি",
+    "serverError": "সার্ভার ত্রুটি। অনুগ্রহ করে পরে আবার চেষ্টা করুন।"
+  },
+  "profile": {
+    "title": "প্রোফাইল",
+    "description": "আপনার অ্যাকাউন্টের তথ্য এবং পছন্দসমূহ পরিচালনা করুন",
+    "profileInformation": "প্রোফাইল তথ্য",
+    "updateProfileDescription": "নিচে আপনার অ্যাকাউন্টের বিবরণ আপডেট করুন",
+    "name": "নাম",
+    "namePlaceholder": "আপনার নাম লিখুন",
+    "email": "ইমেইল",
+    "emailCannotBeChanged": "ইমেইল পরিবর্তন করা যাবে না",
+    "userId": "ব্যবহারকারী আইডি",
+    "userIdDescription": "আপনার অনন্য ব্যবহারকারী শনাক্তকারী",
+    "saveChanges": "পরিবর্তন সংরক্ষণ করুন",
+    "saving": "সংরক্ষণ করা হচ্ছে..."
+  },
+  "business": {
+    "registerBusiness": "আপনার ব্যবসা নিবন্ধন করুন",
+    "registerDescription": "শুরু করতে আপনার ব্যবসা নিবন্ধন সম্পূর্ণ করুন",
+    "createNewBusiness": "নতুন ব্যবসা তৈরি করুন",
+    "createNewBusinessDescription": "আপনার অ্যাকাউন্টে একটি নতুন ব্যবসা যোগ করুন। আপনি যেকোনো সময় ব্যবসার মধ্যে পরিবর্তন করতে পারবেন।",
+    "businessInformation": "ব্যবসার তথ্য",
+    "businessDescription": "নিচে আপনার ব্যবসার বিবরণ লিখুন",
+    "businessName": "ব্যবসার নাম",
+    "businessNamePlaceholder": "যেমন, Acme Inc.",
+    "continue": "চালিয়ে যান"
+  },
+  "apps": {
+    "selectApps": "আপনার অ্যাপ নির্বাচন করুন",
+    "selectAppsDescription": "আপনার ব্যবসার জন্য যে অ্যাপগুলি ব্যবহার করতে চান তা বেছে নিন",
+    "managementApps": "ব্যবস্থাপনা অ্যাপ",
+    "moduleApps": "মডিউল অ্যাপ",
+    "continueToDashboard": "ড্যাশবোর্ডে যান",
+    "selectAtLeastOne": "অনুগ্রহ করে অন্তত একটি অ্যাপ নির্বাচন করুন"
+  },
+  "modules": {
+    "selectModules": "আপনার মডিউল নির্বাচন করুন",
+    "selectModulesDescription": "আপনার ব্যবসার জন্য যে মডিউলগুলি সক্রিয় করতে চান তা বেছে নিন। আপনি ডিফল্ট মডিউল ব্যবহার করতে এই ধাপটি এড়িয়ে যেতে পারেন।",
+    "skip": "এড়িয়ে যান",
+    "continueToDashboard": "ড্যাশবোর্ডে যান"
+  }
+}
