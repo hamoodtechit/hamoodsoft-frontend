@@ -2,7 +2,7 @@
 
 import { businessApi } from "@/lib/api/business"
 import { usersApi } from "@/lib/api/users"
-import { CreateBusinessInput } from "@/lib/validations/business"
+import { CreateBusinessInput, UpdateBusinessInput } from "@/lib/validations/business"
 import { useAuthStore } from "@/store"
 import { Business } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -156,6 +156,33 @@ export function useBusiness(id: string | null | undefined) {
     queryFn: () => businessApi.getBusinessById(id!),
     enabled: isAuthenticated && !!id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  })
+}
+
+export function useUpdateBusiness() {
+  const { businesses: storeBusinesses, setBusinesses } = useAuthStore()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateBusinessInput }) =>
+      businessApi.updateBusiness(id, data),
+    onSuccess: (updatedBusiness) => {
+      // Update businesses in store and cache
+      const updatedBusinesses = storeBusinesses.map((business) =>
+        business.id === updatedBusiness.id ? updatedBusiness : business
+      )
+      setBusinesses(updatedBusinesses)
+      queryClient.setQueryData(["businesses"], updatedBusinesses)
+      queryClient.setQueryData(["business", updatedBusiness.id], updatedBusiness)
+      
+      toast.success("Business updated successfully!")
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        "Failed to update business. Please try again."
+      toast.error(message)
+    },
   })
 }
 

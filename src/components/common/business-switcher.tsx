@@ -9,11 +9,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { BusinessEditDialog } from "@/components/common/business-edit-dialog"
 import { useBusinesses, useSwitchBusiness } from "@/lib/hooks/use-business"
 import { useAuthStore } from "@/store"
+import { Business } from "@/types"
 import { useQueryClient } from "@tanstack/react-query"
-import { Building2, Check } from "lucide-react"
+import { Building2, Check, Pencil } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { useState } from "react"
 
 export function BusinessSwitcher() {
   const t = useTranslations("common")
@@ -21,6 +24,8 @@ export function BusinessSwitcher() {
   const { data: apiBusinesses, isLoading } = useBusinesses()
   const switchBusinessMutation = useSwitchBusiness()
   const queryClient = useQueryClient()
+  const [editingBusiness, setEditingBusiness] = useState<Business | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // Use businesses from multiple sources in priority order:
   // 1. Zustand store (from login response, persisted)
@@ -55,6 +60,13 @@ export function BusinessSwitcher() {
     }
   }
 
+  const handleEditBusiness = (e: React.MouseEvent, business: Business) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setEditingBusiness(business)
+    setIsEditDialogOpen(true)
+  }
+
   if (isLoading) {
     return (
       <Button variant="outline" size="sm" disabled>
@@ -69,38 +81,76 @@ export function BusinessSwitcher() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Building2 className="h-4 w-4" />
-          <span className="hidden sm:inline">
-            {currentBusiness?.name || "Select Business"}
-          </span>
-          <span className="sm:hidden">Business</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Switch Business</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {businesses.map((business) => {
-          const isCurrent = business.id === currentBusinessId
-          return (
-            <DropdownMenuItem
-              key={business.id}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleSwitchBusiness(business.id)
-              }}
-              disabled={switchBusinessMutation.isPending || isCurrent}
-              className="flex items-center justify-between"
-            >
-              <span className="flex-1 truncate">{business.name}</span>
-              {isCurrent && <Check className="h-4 w-4 text-primary" />}
-            </DropdownMenuItem>
-          )
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">
+              {currentBusiness?.name || "Select Business"}
+            </span>
+            <span className="sm:hidden">Business</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel>Switch Business</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {businesses.map((business) => {
+            const isCurrent = business.id === currentBusinessId
+            return (
+              <DropdownMenuItem
+                key={business.id}
+                onClick={(e) => {
+                  // Don't switch if clicking on the edit button
+                  const target = e.target as HTMLElement
+                  if (target.closest('button[data-edit-button]')) {
+                    return
+                  }
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleSwitchBusiness(business.id)
+                }}
+                disabled={switchBusinessMutation.isPending || isCurrent}
+                className="flex items-center justify-between gap-2"
+                onSelect={(e) => e.preventDefault()}
+              >
+                <span className="flex-1 truncate">{business.name}</span>
+                <div className="flex items-center gap-1">
+                  {isCurrent && <Check className="h-4 w-4 text-primary" />}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    data-edit-button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleEditBusiness(e, business)
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <BusinessEditDialog
+        business={editingBusiness}
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) {
+            setEditingBusiness(null)
+          }
+        }}
+      />
+    </>
   )
 }

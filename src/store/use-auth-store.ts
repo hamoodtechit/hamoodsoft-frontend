@@ -17,30 +17,45 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
-      user: null,
-      token: null,
-      refreshToken: null,
-      businesses: [], // Not persisted - fetched fresh when needed
-      isAuthenticated: false,
-      setUser: (user) => {
-        const { token } = get()
-        set({ user, isAuthenticated: !!(user && user.id && token) })
-      },
-      setToken: (token) => {
-        const { user } = get()
-        set({ token, isAuthenticated: !!(token && user && user.id) })
-      },
-      setRefreshToken: (refreshToken) => set({ refreshToken }),
-      setBusinesses: (businesses) => set({ businesses }),
-      logout: () => set({ 
-        user: null, 
-        token: null, 
+    (set, get) => {
+      // Listen for token refresh events from API client
+      if (typeof window !== "undefined") {
+        window.addEventListener("auth-token-refreshed", ((event: CustomEvent<{ token: string; refreshToken?: string }>) => {
+          const { token, refreshToken } = event.detail
+          const { user } = get()
+          set({ 
+            token, 
+            refreshToken: refreshToken || get().refreshToken,
+            isAuthenticated: !!(token && user && user.id) 
+          })
+        }) as EventListener)
+      }
+
+      return {
+        user: null,
+        token: null,
         refreshToken: null,
-        businesses: [],
-        isAuthenticated: false 
-      }),
-    }),
+        businesses: [], // Not persisted - fetched fresh when needed
+        isAuthenticated: false,
+        setUser: (user) => {
+          const { token } = get()
+          set({ user, isAuthenticated: !!(user && user.id && token) })
+        },
+        setToken: (token) => {
+          const { user } = get()
+          set({ token, isAuthenticated: !!(token && user && user.id) })
+        },
+        setRefreshToken: (refreshToken) => set({ refreshToken }),
+        setBusinesses: (businesses) => set({ businesses }),
+        logout: () => set({ 
+          user: null, 
+          token: null, 
+          refreshToken: null,
+          businesses: [],
+          isAuthenticated: false 
+        }),
+      }
+    },
     {
       name: "auth-storage",
       // Persist businesses so they're available immediately after refresh

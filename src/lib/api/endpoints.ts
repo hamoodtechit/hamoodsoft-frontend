@@ -16,6 +16,7 @@ export const endpoints = {
     create: "/business",
     list: "/business",
     getById: (id: string) => `/business/${id}`,
+    update: (id: string) => `/business/${id}`,
     selectApps: "/business/apps",
   },
 } as const

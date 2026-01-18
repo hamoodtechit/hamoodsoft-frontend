@@ -1,10 +1,10 @@
 import {
-    ForgotPasswordInput,
-    LoginInput,
-    RegisterInput,
-    ResetPasswordInput,
+  ForgotPasswordInput,
+  LoginInput,
+  RegisterInput,
+  ResetPasswordInput,
 } from "@/lib/validations/auth"
-import { ApiResponse, User, Business } from "@/types"
+import { ApiResponse, Business, User } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
 
@@ -70,6 +70,13 @@ export const authApi = {
         token: data.token,
         newPassword: data.newPassword,
       }
+    )
+    return response.data.data
+  },
+
+  refreshToken: async (): Promise<{ token: string; refreshToken?: string }> => {
+    const response = await apiClient.post<ApiResponse<{ token: string; refreshToken?: string }>>(
+      endpoints.auth.refresh
     )
     return response.data.data
   },
