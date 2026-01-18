@@ -20,6 +20,9 @@ export function PageContainer({
   className,
   maxWidth = "2xl",
 }: PageContainerProps) {
+  if (maxWidth === "full") {
+    return <div className={cn("w-full", className)}>{children}</div>
+  }
   return (
     <div className={cn("flex justify-center", className)}>
       <div className={cn("w-full", maxWidthClasses[maxWidth])}>{children}</div>

@@ -145,12 +145,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
                   <DropdownMenuItem asChild>
                     <Link href={`/${locale}/dashboard/profile`} className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/${locale}/settings`} className="flex items-center">
-                      <span>Settings</span>
+                      <span>Profile Settings</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

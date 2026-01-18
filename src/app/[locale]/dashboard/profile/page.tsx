@@ -24,9 +24,9 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useUpdateUser } from "@/lib/hooks/use-users"
 import { updateUserSchema, type UpdateUserInput } from "@/lib/validations/users"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Mail, Save, User } from "lucide-react"
+import { Camera, Loader2, Mail, Save, Shield, User } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 
 export default function ProfilePage() {
@@ -34,6 +34,14 @@ export default function ProfilePage() {
   const tProfile = useTranslations("profile")
   const { user, isLoading: isLoadingUser } = useAuth()
   const updateUserMutation = useUpdateUser()
+  
+  // Avatar upload state
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  
+  // 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [isLoading2FA, setIsLoading2FA] = useState(false)
 
   const form = useForm<UpdateUserInput>({
     resolver: zodResolver(updateUserSchema),
@@ -49,59 +57,220 @@ export default function ProfilePage() {
         name: user.name,
       })
     }
+    // Set avatar preview if user has avatar
+    if (user?.avatar) {
+      setAvatarPreview(user.avatar)
+    }
   }, [user, form])
 
   const onSubmit = (data: UpdateUserInput) => {
     updateUserMutation.mutate(data)
   }
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // TODO: Integrate with backend API when ready
+      // For now, just show preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+      setIsUploadingAvatar(true)
+      
+      // Simulate API call - replace with actual API integration
+      setTimeout(() => {
+        setIsUploadingAvatar(false)
+        // TODO: Call API to upload avatar
+        // await usersApi.uploadAvatar(file)
+      }, 1000)
+    }
+  }
+
+  const handleToggle2FA = async () => {
+    // TODO: Integrate with backend API when ready
+    setIsLoading2FA(true)
+    try {
+      // await authApi.toggleTwoFactor(!twoFactorEnabled)
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      setTwoFactorEnabled(!twoFactorEnabled)
+    } catch (error) {
+      console.error("Failed to toggle 2FA:", error)
+    } finally {
+      setIsLoading2FA(false)
+    }
+  }
+
   if (isLoadingUser) {
     return (
       <PageLayout
-        title={tProfile("title")}
-        description={tProfile("description")}
+        title="Profile Settings"
+        description="Manage your profile, security, and account settings"
+        maxWidth="full"
       >
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <Skeleton className="h-10 w-32" />
-          </CardContent>
-        </Card>
+        <div className="space-y-6 w-full">
+          {/* Profile Information Card Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Profile Picture Section Skeleton */}
+              <div className="flex items-center gap-6 pb-6 mb-6">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-10 w-40" />
+                  <Skeleton className="h-3 w-48" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+              </div>
+
+              {/* Form Fields Skeleton */}
+              <div className="space-y-6">
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+
+                {/* User ID Field */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4">
+                  <Skeleton className="h-10 w-32" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Two-Factor Authentication Card Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-6 w-56" />
+                  <Skeleton className="h-4 w-72" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-3 w-80 mt-2" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </PageLayout>
     )
   }
 
   return (
     <PageLayout
-      title={tProfile("title")}
-      description={tProfile("description")}
+      title="Profile Settings"
+      description="Manage your profile, security, and account settings"
+      maxWidth="full"
     >
-      <Card>
+      <div className="space-y-6 w-full">
+        {/* Profile Information Card */}
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <User className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle>{tProfile("profileInformation")}</CardTitle>
+                <CardTitle>Profile Information</CardTitle>
                 <CardDescription>
-                  {tProfile("updateProfileDescription")}
+                  Update your personal information and profile picture
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Profile Picture Section */}
+            <div className="flex items-center gap-6 pb-6 mb-6">
+              {/* Avatar Preview */}
+              <div className="relative group">
+                <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden ring-2 ring-primary/20">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-12 w-12 text-muted-foreground" />
+                  )}
+                </div>
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+                {/* Camera Icon Overlay on Hover */}
+                <label
+                  htmlFor="avatar-upload"
+                  className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Camera className="h-6 w-6 text-white" />
+                </label>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
+              </div>
+
+              {/* Upload Button */}
+              <div className="flex-1">
+                <Label htmlFor="avatar-upload" className="cursor-pointer">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isUploadingAvatar}
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    {avatarPreview ? "Change Picture" : "Upload Picture"}
+                  </Button>
+                </Label>
+                <p className="text-xs text-muted-foreground mt-2">
+                  JPG, PNG or GIF. Max size 2MB.
+                </p>
+                <p className="text-xs text-muted-foreground text-blue-600 dark:text-blue-400 mt-1">
+                  ⚠️ API integration pending - will be connected when backend is ready
+                </p>
+              </div>
+            </div>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Name Field */}
@@ -180,6 +349,59 @@ export default function ProfilePage() {
             </Form>
           </CardContent>
         </Card>
+
+        {/* Two-Factor Authentication Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900">
+                <Shield className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <CardTitle>Two-Factor Authentication</CardTitle>
+                <CardDescription>
+                  Add an extra layer of security to your account
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {twoFactorEnabled
+                    ? "Your account is protected with two-factor authentication"
+                    : "Enable two-factor authentication for enhanced security"}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  ⚠️ API integration pending - will be connected when backend is ready
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={twoFactorEnabled ? "destructive" : "default"}
+                onClick={handleToggle2FA}
+                disabled={isLoading2FA}
+              >
+                {isLoading2FA ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {twoFactorEnabled ? "Disabling..." : "Enabling..."}
+                  </>
+                ) : (
+                  <>
+                    <Shield className="mr-2 h-4 w-4" />
+                    {twoFactorEnabled ? "Disable 2FA" : "Enable 2FA"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </PageLayout>
   )
 }

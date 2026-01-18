@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Building2, Check, Pencil } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export function BusinessSwitcher() {
   const t = useTranslations("common")
@@ -106,13 +107,28 @@ export function BusinessSwitcher() {
                   if (target.closest('button[data-edit-button]')) {
                     return
                   }
+                  // Don't switch if it's the current business
+                  if (isCurrent) {
+                    return
+                  }
                   e.preventDefault()
                   e.stopPropagation()
                   handleSwitchBusiness(business.id)
                 }}
-                disabled={switchBusinessMutation.isPending || isCurrent}
-                className="flex items-center justify-between gap-2"
-                onSelect={(e) => e.preventDefault()}
+                disabled={switchBusinessMutation.isPending}
+                className={cn(
+                  "flex items-center justify-between gap-2",
+                  isCurrent && "opacity-100" // Keep visible even if current
+                )}
+                onSelect={(e) => {
+                  // Prevent default selection behavior
+                  e.preventDefault()
+                  // Don't close dropdown if clicking on edit button or current business
+                  const target = e.target as HTMLElement
+                  if (target.closest('button[data-edit-button]') || isCurrent) {
+                    e.preventDefault()
+                  }
+                }}
               >
                 <span className="flex-1 truncate">{business.name}</span>
                 <div className="flex items-center gap-1">
@@ -131,6 +147,7 @@ export function BusinessSwitcher() {
                       e.preventDefault()
                       e.stopPropagation()
                     }}
+                    disabled={switchBusinessMutation.isPending}
                   >
                     <Pencil className="h-3 w-3" />
                   </Button>
