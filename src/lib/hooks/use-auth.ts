@@ -187,10 +187,12 @@ export function useForgotPassword() {
   return useMutation({
     mutationFn: (data: ForgotPasswordInput) => authApi.requestPasswordReset(data),
     onSuccess: (response) => {
-      // API returns a token, redirect to reset password page with the token
-      if (response.token) {
+      // Store token in sessionStorage instead of URL for better security
+      // This prevents token from appearing in browser history, server logs, etc.
+      if (response.token && typeof window !== "undefined") {
+        sessionStorage.setItem("passwordResetToken", response.token)
         toast.success("Password reset token generated. Redirecting to reset page...")
-        router.push(`/${locale}/reset-password?token=${response.token}`)
+        router.push(`/${locale}/reset-password`)
       } else {
         toast.success("Password reset requested successfully!")
       }
