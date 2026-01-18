@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store"
 import { Business } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
 export function useCreateBusiness() {
@@ -157,6 +157,38 @@ export function useBusiness(id: string | null | undefined) {
     enabled: isAuthenticated && !!id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   })
+}
+
+/**
+ * Hook to get the current business based on user's currentBusinessId
+ * Returns the business object directly (not a query result)
+ */
+export function useCurrentBusiness() {
+  const { user, businesses: storeBusinesses } = useAuthStore()
+  const { data: apiBusinesses } = useBusinesses()
+  const queryClient = useQueryClient()
+
+  // Get businesses from multiple sources in priority order
+  const businesses = useMemo(() => {
+    if (storeBusinesses.length > 0) return storeBusinesses
+    
+    const cachedBusinesses = queryClient.getQueryData<Business[]>(["businesses"])
+    if (cachedBusinesses && Array.isArray(cachedBusinesses) && cachedBusinesses.length > 0) {
+      return cachedBusinesses
+    }
+    
+    if (apiBusinesses && apiBusinesses.length > 0) return apiBusinesses
+    
+    return []
+  }, [storeBusinesses, apiBusinesses, queryClient])
+
+  // Get current business based on user's currentBusinessId
+  const currentBusiness = useMemo(() => {
+    if (!user?.currentBusinessId || !businesses || businesses.length === 0) return null
+    return businesses.find((b: Business) => b.id === user.currentBusinessId) || null
+  }, [user?.currentBusinessId, businesses])
+
+  return currentBusiness
 }
 
 export function useUpdateBusiness() {
