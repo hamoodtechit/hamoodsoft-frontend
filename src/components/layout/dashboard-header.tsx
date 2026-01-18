@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
 import { useAuthStore, useUIStore } from "@/store"
-import { Building2, Languages, Menu, Moon, Plus, Search, Sun, User } from "lucide-react"
+import { Building2, Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -100,18 +100,6 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
           <div className="hidden min-[400px]:block">
             <BusinessSwitcher />
           </div>
-          {/* Create New Business Button - Hide text on small screens */}
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="gap-1 sm:gap-2 h-9 px-2 sm:px-3"
-          >
-            <Link href={`/${locale}/register-business`}>
-              <Plus className="h-4 w-4" />
-              <span className="hidden md:inline">Create Business</span>
-            </Link>
-          </Button>
           {/* Show language switcher and theme toggle on larger screens */}
           <div className="hidden sm:flex items-center gap-1 sm:gap-2">
             <LanguageSwitcher />

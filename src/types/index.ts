@@ -34,3 +34,22 @@ export interface ApiError {
   code?: string | number
   errors?: Record<string, string[]>
 }
+
+export interface Category {
+  id: string
+  name: string
+  parentId?: string | null
+  parent?: Category | null
+  children?: Category[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Branch {
+  id: string
+  name: string
+  address: string
+  phone: string
+  createdAt?: string
+  updatedAt?: string
+}

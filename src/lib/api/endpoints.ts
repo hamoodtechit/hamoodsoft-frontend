@@ -19,4 +19,18 @@ export const endpoints = {
     update: (id: string) => `/business/${id}`,
     selectApps: "/business/apps",
   },
+  categories: {
+    create: "/product-categories",
+    list: "/product-categories",
+    getById: (id: string) => `/product-categories/${id}`,
+    update: (id: string) => `/api/product-categories/${id}`,
+    delete: (id: string) => `/product-categories/${id}`,
+  },
+  branches: {
+    create: "/branches",
+    list: "/branches",
+    getById: (id: string) => `/branches/${id}`,
+    update: (id: string) => `/branches/${id}`,
+    delete: (id: string) => `/branches/${id}`,
+  },
 } as const

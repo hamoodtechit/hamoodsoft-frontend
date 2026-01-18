@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useParams } from "next/navigation"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   LayoutDashboard,
   Users,
@@ -13,10 +13,16 @@ import {
   Fuel,
   Settings,
   ChevronRight,
+  ChevronDown,
+  FolderTree,
+  Building2,
+  Ruler,
+  Plus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useBusinesses } from "@/lib/hooks/use-business"
 import { useAuthStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
@@ -28,16 +34,20 @@ interface NavItem {
   badge?: string
 }
 
+interface NavItemWithSubmenu extends NavItem {
+  submenu?: NavItem[]
+}
+
 interface NavSection {
   title?: string
-  items: NavItem[]
+  items: (NavItem | NavItemWithSubmenu)[]
 }
 
 interface MobileSidebarContentProps {
   onLinkClick?: () => void
 }
 
-// Module to sidebar item mapping (same as desktop sidebar)
+// Module to sidebar item mapping
 const moduleSidebarMap: Record<string, NavItem> = {
   'inventory': {
     title: "Inventory",
@@ -83,34 +93,34 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   const { user: storeUser, businesses: storeBusinesses } = useAuthStore()
   const { data: apiBusinesses, isLoading: isLoadingBusinesses } = useBusinesses()
   const queryClient = useQueryClient()
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
+    inventory: true,
+    myBusiness: false,
+  })
 
-  // Use businesses from multiple sources in priority order (same as desktop sidebar)
+  // Use businesses from multiple sources
   const businesses = useMemo(() => {
     if (storeBusinesses.length > 0) return storeBusinesses
-    
     const cachedBusinesses = queryClient.getQueryData<any>(["businesses"])
     if (cachedBusinesses && Array.isArray(cachedBusinesses) && cachedBusinesses.length > 0) {
       return cachedBusinesses
     }
-    
     if (apiBusinesses && apiBusinesses.length > 0) return apiBusinesses
-    
     return []
   }, [storeBusinesses, apiBusinesses, queryClient])
 
-  // Get current business based on user's currentBusinessId
+  // Get current business
   const currentBusiness = useMemo(() => {
     if (!storeUser?.currentBusinessId || !businesses || businesses.length === 0) return null
     return businesses.find((b) => b.id === storeUser.currentBusinessId)
   }, [storeUser?.currentBusinessId, businesses])
 
-  // Show loading state only if we're actively fetching AND have no businesses data at all
   const isLoading = isLoadingBusinesses && businesses.length === 0 && !storeBusinesses.length && !queryClient.getQueryData<any>(["businesses"])
 
-  // Get enabled modules from current business
+  // Get enabled modules
   const enabledModules = currentBusiness?.modules || []
 
-  // Build sidebar sections based on enabled modules (same logic as desktop sidebar)
+  // Build sidebar sections
   const navSections: NavSection[] = useMemo(() => {
     const sections: NavSection[] = [
       {
@@ -124,12 +134,65 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       },
     ]
 
-    // Management modules (always available core modules)
-    const managementModules = ['inventory', 'sales', 'purchases', 'accounting', 'point-of-sale', 'crm']
-    const managementItems = managementModules
-      .filter((moduleId) => enabledModules.includes(moduleId))
-      .map((moduleId) => moduleSidebarMap[moduleId])
-      .filter(Boolean)
+    // Management modules
+    const managementItems: (NavItem | NavItemWithSubmenu)[] = []
+    
+    // Inventory with submenu (no main page, only submenu items)
+    if (enabledModules.includes('inventory')) {
+      const inventorySubmenu: NavItem[] = [
+        {
+          title: "Categories",
+          href: "/dashboard/categories",
+          icon: FolderTree,
+        },
+        {
+          title: "Unit",
+          href: "/dashboard/units",
+          icon: Ruler,
+        },
+      ]
+      managementItems.push({
+        title: "Inventory",
+        href: "#",
+        icon: Package,
+        submenu: inventorySubmenu,
+      })
+    }
+
+    // Other management modules
+    const otherModules = ['sales', 'purchases', 'accounting', 'point-of-sale', 'crm']
+    otherModules.forEach((moduleId) => {
+      if (enabledModules.includes(moduleId)) {
+        managementItems.push(moduleSidebarMap[moduleId])
+      }
+    })
+
+    // My Business dropdown
+    if (currentBusiness) {
+      const myBusinessSubmenu: NavItem[] = [
+        {
+          title: "Business Settings",
+          href: "/dashboard/settings",
+          icon: Settings,
+        },
+        {
+          title: "Create Business",
+          href: "/register-business",
+          icon: Plus,
+        },
+        {
+          title: "Branches",
+          href: "/dashboard/branches",
+          icon: Building2,
+        },
+      ]
+      managementItems.push({
+        title: "My Business",
+        href: "#",
+        icon: Building2,
+        submenu: myBusinessSubmenu,
+      })
+    }
 
     if (managementItems.length > 0) {
       sections.push({
@@ -138,7 +201,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       })
     }
 
-    // Special modules (like oil-filling-station)
+    // Special modules
     const specialModules = ['oil-filling-station']
     const specialItems = specialModules
       .filter((moduleId) => enabledModules.includes(moduleId))
@@ -153,9 +216,106 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     }
 
     return sections
-  }, [enabledModules])
+  }, [enabledModules, currentBusiness])
 
-  // Settings menu item - separate from navSections to position at bottom
+  const toggleSubmenu = (key: string) => {
+    setOpenSubmenus((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  const renderNavItem = (item: NavItem | NavItemWithSubmenu, itemKey: string) => {
+    const Icon = item.icon
+    const fullHref = item.href === "#" ? "#" : `/${locale}${item.href}`
+    const isActive = item.href !== "#" && pathname?.startsWith(fullHref)
+    const hasSubmenu = 'submenu' in item && item.submenu && item.submenu.length > 0
+    const isSubmenuOpen = openSubmenus[itemKey] || false
+
+    // Check if any submenu item is active
+    const isSubmenuActive = hasSubmenu && item.submenu?.some(
+      (subItem) => pathname?.startsWith(`/${locale}${subItem.href}`)
+    )
+
+    if (hasSubmenu) {
+      return (
+        <Collapsible
+          key={itemKey}
+          open={isSubmenuOpen}
+          onOpenChange={() => toggleSubmenu(itemKey)}
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant={isSubmenuActive ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-between gap-3 h-10 px-3",
+                isSubmenuActive && "bg-secondary font-medium"
+              )}
+            >
+              <div className="flex items-center gap-3 flex-1">
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1 text-left text-sm">{item.title}</span>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  isSubmenuOpen && "transform rotate-180"
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 mt-1 ml-4">
+            {item.submenu?.map((subItem) => {
+              const SubIcon = subItem.icon
+              const subFullHref = `/${locale}${subItem.href}`
+              const isSubActive = pathname?.startsWith(subFullHref)
+              
+              return (
+                <Link key={subItem.href} href={subFullHref} onClick={onLinkClick}>
+                  <Button
+                    variant={isSubActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 h-9 px-3 text-sm",
+                      isSubActive && "bg-secondary font-medium"
+                    )}
+                  >
+                    <SubIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">{subItem.title}</span>
+                  </Button>
+                </Link>
+              )
+            })}
+          </CollapsibleContent>
+        </Collapsible>
+      )
+    }
+
+    // Regular item without submenu
+    return (
+      <Link key={itemKey} href={fullHref} onClick={onLinkClick}>
+        <Button
+          variant={isActive ? "secondary" : "ghost"}
+          className={cn(
+            "w-full justify-start gap-3 h-10 px-3",
+            isActive && "bg-secondary font-medium"
+          )}
+        >
+          <Icon className="h-4 w-4 flex-shrink-0" />
+          <span className="flex-1 text-left text-sm">{item.title}</span>
+          {item.badge && (
+            <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+              {item.badge}
+            </span>
+          )}
+          {isActive && (
+            <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
+          )}
+        </Button>
+      </Link>
+    )
+  }
+
+  // Settings menu item
   const settingsItem: NavItem = {
     title: "Settings",
     href: "/settings",
@@ -184,32 +344,9 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
               </div>
             )}
             <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon
-                const fullHref = `/${locale}${item.href}`
-                const isActive = pathname?.startsWith(fullHref)
-                return (
-                  <Link key={item.href} href={fullHref} onClick={onLinkClick}>
-                    <Button
-                      variant={isActive ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-3 h-10 px-3",
-                        isActive && "bg-secondary font-medium"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="flex-1 text-left text-sm">{item.title}</span>
-                      {item.badge && (
-                        <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                          {item.badge}
-                        </span>
-                      )}
-                      {isActive && (
-                        <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
-                      )}
-                    </Button>
-                  </Link>
-                )
+              {section.items.map((item, itemIndex) => {
+                const itemKey = `${sectionIndex}-${itemIndex}-${item.href}`
+                return renderNavItem(item, itemKey)
               })}
             </div>
           </div>
