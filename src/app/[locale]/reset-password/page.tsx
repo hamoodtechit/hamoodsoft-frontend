@@ -21,11 +21,11 @@ import { Input } from "@/components/ui/input"
 import { useResetPassword } from "@/lib/hooks/use-auth"
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validations/auth"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, CheckCircle2, KeyRound, Lock } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Lock } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useParams, useSearchParams } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 
 export default function ResetPasswordPage() {
@@ -35,6 +35,8 @@ export default function ResetPasswordPage() {
   const params = useParams()
   const locale = params.locale as string
   const resetPasswordMutation = useResetPassword()
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
@@ -124,13 +126,27 @@ export default function ResetPasswordPage() {
                         {t("password")}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          className="h-11"
-                          {...field}
-                          disabled={resetPasswordMutation.isPending}
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="h-11 pr-10"
+                            {...field}
+                            disabled={resetPasswordMutation.isPending}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            disabled={resetPasswordMutation.isPending}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -146,13 +162,27 @@ export default function ResetPasswordPage() {
                         {t("confirmPassword")}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          className="h-11"
-                          {...field}
-                          disabled={resetPasswordMutation.isPending}
-                        />
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="h-11 pr-10"
+                            {...field}
+                            disabled={resetPasswordMutation.isPending}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            disabled={resetPasswordMutation.isPending}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

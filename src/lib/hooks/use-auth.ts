@@ -180,17 +180,25 @@ export function useAuth() {
 }
 
 export function useForgotPassword() {
+  const router = useRouter()
+  const params = useParams()
+  const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
+
   return useMutation({
     mutationFn: (data: ForgotPasswordInput) => authApi.requestPasswordReset(data),
-    onSuccess: () => {
-      toast.success(
-        "Password reset email sent! Please check your inbox."
-      )
+    onSuccess: (response) => {
+      // API returns a token, redirect to reset password page with the token
+      if (response.token) {
+        toast.success("Password reset token generated. Redirecting to reset page...")
+        router.push(`/${locale}/reset-password?token=${response.token}`)
+      } else {
+        toast.success("Password reset requested successfully!")
+      }
     },
     onError: (error: any) => {
       const message =
         error?.response?.data?.message ||
-        "Failed to send reset email. Please try again."
+        "Failed to request password reset. Please try again."
       toast.error(message)
     },
   })

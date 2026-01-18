@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Reset Password</h1>
           <p className="text-muted-foreground mt-2">
-            We'll send you a link to reset your password
+            Enter your email to get a password reset link
           </p>
         </div>
 
@@ -73,8 +73,7 @@ export default function ForgotPasswordPage() {
               {t("forgotPassword")}
             </CardTitle>
             <CardDescription className="text-center">
-              Enter your email address and we'll send you a link to reset your
-              password.
+              Enter your email address to receive a password reset link.
             </CardDescription>
           </CardHeader>
           <Form {...form}>
@@ -117,7 +116,7 @@ export default function ForgotPasswordPage() {
                   ) : (
                     <span className="flex items-center gap-2">
                       <Send className="w-4 h-4" />
-                      Send Reset Link
+                      Get Reset Link
                     </span>
                   )}
                 </Button>
