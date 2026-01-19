@@ -1,6 +1,6 @@
+import { Business, User } from "@/types"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { User, Business } from "@/types"
 
 interface AuthState {
   user: User | null

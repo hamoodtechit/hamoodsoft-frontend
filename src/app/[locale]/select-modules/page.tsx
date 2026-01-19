@@ -17,7 +17,7 @@ import { useCreateBusiness } from "@/lib/hooks/use-business"
 import { cn } from "@/lib/utils"
 import { selectModulesSchema, type SelectModulesInput } from "@/lib/validations/modules"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowRight, Check, Grid3x3, SkipForward } from "lucide-react"
+import { ArrowRight, Check, Grid3x3, Loader2, SkipForward } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -129,8 +129,42 @@ function SelectModulesContent() {
     )
   }
 
+  const isCreating = createBusinessMutation.isPending
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/20 relative">
+      {/* Loading Overlay */}
+      {isCreating && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card border rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="relative">
+                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                  <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-ping" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">{t("creatingBusiness")}</h3>
+                <p className="text-muted-foreground text-sm">
+                  {t("creatingBusinessDescription")}
+                </p>
+              </div>
+              <div className="pt-4 space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t("settingUpModules")}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t("configuringSystem")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-4xl">
         {/* Header Section */}
         <div className="text-center mb-8">
@@ -147,7 +181,10 @@ function SelectModulesContent() {
           <form onSubmit={form.handleSubmit(onSubmit)} suppressHydrationWarning>
             <div className="space-y-8">
               {/* Modules Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className={cn(
+                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
+                isCreating && "opacity-50 pointer-events-none"
+              )}>
                 {modules.map((moduleId) => {
                   const isSelected = selectedModules.includes(moduleId)
                   return (

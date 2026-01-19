@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios"
 import { config } from "@/constants/config"
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios"
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
