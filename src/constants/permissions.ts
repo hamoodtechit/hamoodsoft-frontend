@@ -82,6 +82,6 @@ export const permissionGroups = {
 } as const
 
 // Flatten all permissions for easy access
-export const allPermissions = Object.values(permissionGroups).flatMap(
+export const allPermissions: Permission[] = (Object.values(permissionGroups) as unknown as Array<{ permissions: Permission[] }>).flatMap(
   (group) => group.permissions
-) as Permission[]
+)
