@@ -1,6 +1,11 @@
 // Permission format: resource:action
 // Examples: units:read, units:create, units:update, units:delete
 
+export type Permission = {
+  value: string
+  label: string
+}
+
 export const permissionGroups = {
   units: {
     label: "Units",
@@ -77,6 +82,6 @@ export const permissionGroups = {
 } as const
 
 // Flatten all permissions for easy access
-export const allPermissions = Object.values(permissionGroups).flatMap(
+export const allPermissions: Permission[] = Object.values(permissionGroups).flatMap(
   (group) => group.permissions
 )
