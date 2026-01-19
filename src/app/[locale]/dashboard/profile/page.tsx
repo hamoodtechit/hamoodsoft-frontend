@@ -106,8 +106,8 @@ export default function ProfilePage() {
   if (isLoadingUser) {
     return (
       <PageLayout
-        title="Profile Settings"
-        description="Manage your profile, security, and account settings"
+        title={tProfile("title")}
+        description={tProfile("description")}
         maxWidth="full"
       >
         <div className="space-y-6 w-full">
@@ -192,8 +192,8 @@ export default function ProfilePage() {
 
   return (
     <PageLayout
-      title="Profile Settings"
-      description="Manage your profile, security, and account settings"
+      title={tProfile("title")}
+      description={tProfile("description")}
       maxWidth="full"
     >
       <div className="space-y-6 w-full">
@@ -205,9 +205,9 @@ export default function ProfilePage() {
                 <User className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle>{tProfile("profileInformation")}</CardTitle>
                 <CardDescription>
-                  Update your personal information and profile picture
+                  {tProfile("updateProfileDescription")}
                 </CardDescription>
               </div>
             </div>
@@ -259,14 +259,14 @@ export default function ProfilePage() {
                     disabled={isUploadingAvatar}
                   >
                     <Camera className="mr-2 h-4 w-4" />
-                    {avatarPreview ? "Change Picture" : "Upload Picture"}
+                    {avatarPreview ? tProfile("changePicture") : tProfile("uploadPicture")}
                   </Button>
                 </Label>
                 <p className="text-xs text-muted-foreground mt-2">
-                  JPG, PNG or GIF. Max size 2MB.
+                  {tProfile("avatarUploadHint")}
                 </p>
                 <p className="text-xs text-muted-foreground text-blue-600 dark:text-blue-400 mt-1">
-                  ⚠️ API integration pending - will be connected when backend is ready
+                  {tProfile("apiPending")}
                 </p>
               </div>
             </div>
@@ -358,9 +358,9 @@ export default function ProfilePage() {
                 <Shield className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="flex-1">
-                <CardTitle>Two-Factor Authentication</CardTitle>
+                <CardTitle>{tProfile("twoFactorAuth")}</CardTitle>
                 <CardDescription>
-                  Add an extra layer of security to your account
+                  {tProfile("twoFactorDescription")}
                 </CardDescription>
               </div>
             </div>
@@ -369,15 +369,15 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium">
-                  {twoFactorEnabled ? "2FA is enabled" : "2FA is disabled"}
+                  {twoFactorEnabled ? tProfile("twoFactorEnabled") : tProfile("twoFactorDisabled")}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {twoFactorEnabled
-                    ? "Your account is protected with two-factor authentication"
-                    : "Enable two-factor authentication for enhanced security"}
+                    ? tProfile("twoFactorEnabledDescription")
+                    : tProfile("twoFactorDisabledDescription")}
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                  ⚠️ API integration pending - will be connected when backend is ready
+                  {tProfile("apiPending")}
                 </p>
               </div>
               <Button
@@ -389,12 +389,12 @@ export default function ProfilePage() {
                 {isLoading2FA ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {twoFactorEnabled ? "Disabling..." : "Enabling..."}
+                    {twoFactorEnabled ? tProfile("disabling") : tProfile("enabling")}
                   </>
                 ) : (
                   <>
                     <Shield className="mr-2 h-4 w-4" />
-                    {twoFactorEnabled ? "Disable 2FA" : "Enable 2FA"}
+                    {twoFactorEnabled ? tProfile("disable2FA") : tProfile("enable2FA")}
                   </>
                 )}
               </Button>

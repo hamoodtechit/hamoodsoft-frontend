@@ -53,3 +53,20 @@ export interface Branch {
   createdAt?: string
   updatedAt?: string
 }
+
+export interface Unit {
+  id: string
+  name: string
+  suffix: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Role {
+  id: string
+  businessId: string
+  name: string
+  permissions?: string[]
+  createdAt?: string
+  updatedAt?: string
+}

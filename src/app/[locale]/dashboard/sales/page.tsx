@@ -6,9 +6,11 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { ShoppingCart } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 
 export default function SalesPage() {
+  const t = useTranslations("modulesPages.sales")
   const params = useParams()
   const router = useRouter()
   const locale = params.locale as string
@@ -24,11 +26,11 @@ export default function SalesPage() {
 
   if (!currentBusiness?.modules?.includes("sales")) {
     return (
-      <PageLayout title="Access Denied" description="You don't have access to this module">
+      <PageLayout title={t("accessDenied")} description={t("noAccess")}>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">
-              You don't have access to the Sales module. Please contact your administrator.
+              {t("noAccessDescription")}
             </p>
           </CardContent>
         </Card>
@@ -38,8 +40,8 @@ export default function SalesPage() {
 
   return (
     <PageLayout
-      title="Sales"
-      description="Track sales, orders, and customer interactions"
+      title={t("title")}
+      description={t("description")}
       maxWidth="full"
     >
       <Card>
@@ -49,9 +51,9 @@ export default function SalesPage() {
               <ShoppingCart className="h-6 w-6" />
             </div>
             <div>
-              <CardTitle>Sales Management</CardTitle>
+              <CardTitle>{t("cardTitle")}</CardTitle>
               <CardDescription>
-                Manage your sales, track orders, and handle customer interactions
+                {t("cardDescription")}
               </CardDescription>
             </div>
           </div>
@@ -59,18 +61,18 @@ export default function SalesPage() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-muted-foreground">
-              This is the Sales module page. Here you will be able to:
+              {t("pageDescription")}
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Create and manage sales orders</li>
-              <li>Track sales performance and analytics</li>
-              <li>Manage customer relationships</li>
-              <li>Handle invoices and payments</li>
-              <li>Generate sales reports</li>
+              <li>{t("createOrders")}</li>
+              <li>{t("trackPerformance")}</li>
+              <li>{t("manageCustomers")}</li>
+              <li>{t("handleInvoices")}</li>
+              <li>{t("generateReports")}</li>
             </ul>
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> This is a placeholder page. Full functionality will be implemented soon.
+                <strong>{t("placeholderNote").split(":")[0]}:</strong> {t("placeholderNote").split(":")[1]}
               </p>
             </div>
           </div>

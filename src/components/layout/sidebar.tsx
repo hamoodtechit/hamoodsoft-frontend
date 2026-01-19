@@ -1,30 +1,32 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useBusinesses } from "@/lib/hooks/use-business"
 import { cn } from "@/lib/utils"
 import { useAuthStore, useUIStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
 import {
-  BookOpen,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  Fuel,
-  LayoutDashboard,
-  Package,
-  Settings,
-  ShoppingCart,
-  Users,
-  FolderTree,
-  Building2,
-  Ruler,
-  Plus,
+    BookOpen,
+    Building2,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    CreditCard,
+    FolderTree,
+    Fuel,
+    LayoutDashboard,
+    Package,
+    Plus,
+    Ruler,
+    Settings,
+    Shield,
+    ShoppingCart,
+    Users,
 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -49,43 +51,43 @@ interface SidebarProps {
   isOpen?: boolean
 }
 
-// Module to sidebar item mapping
-const moduleSidebarMap: Record<string, NavItem> = {
-  'inventory': {
-    title: "Inventory",
+// Module to sidebar item mapping - will be translated in component
+const moduleSidebarMap: Record<string, (t: any) => NavItem> = {
+  'inventory': (t) => ({
+    title: t("sidebar.inventory"),
     href: "/dashboard/inventory",
     icon: Package,
-  },
-  'sales': {
-    title: "Sales",
+  }),
+  'sales': (t) => ({
+    title: t("sidebar.sales"),
     href: "/dashboard/sales",
     icon: ShoppingCart,
-  },
-  'purchases': {
-    title: "Purchase",
+  }),
+  'purchases': (t) => ({
+    title: t("sidebar.purchase"),
     href: "/dashboard/purchase",
     icon: Package,
-  },
-  'accounting': {
-    title: "Accounting",
+  }),
+  'accounting': (t) => ({
+    title: t("sidebar.accounting"),
     href: "/dashboard/accounting",
     icon: BookOpen,
-  },
-  'point-of-sale': {
-    title: "Point of Sale",
+  }),
+  'point-of-sale': (t) => ({
+    title: t("sidebar.pointOfSale"),
     href: "/dashboard/point-of-sale",
     icon: CreditCard,
-  },
-  'crm': {
-    title: "CRM",
+  }),
+  'crm': (t) => ({
+    title: t("sidebar.crm"),
     href: "/dashboard/crm",
     icon: Users,
-  },
-  'oil-filling-station': {
-    title: "Oil Filling Station",
+  }),
+  'oil-filling-station': (t) => ({
+    title: t("sidebar.oilFillingStation"),
     href: "/dashboard/oil-filling-station",
     icon: Fuel,
-  },
+  }),
 }
 
 export function Sidebar({ isOpen = true }: SidebarProps) {
@@ -95,6 +97,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
   const { toggleSidebar } = useUIStore()
   const { user: storeUser, businesses: storeBusinesses } = useAuthStore()
   const { data: apiBusinesses, isLoading: isLoadingBusinesses } = useBusinesses()
+  const t = useTranslations()
   const queryClient = useQueryClient()
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     inventory: true,
@@ -129,7 +132,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
       {
         items: [
           {
-            title: "Dashboard",
+            title: t("sidebar.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
           },
@@ -144,18 +147,18 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     if (enabledModules.includes('inventory')) {
       const inventorySubmenu: NavItem[] = [
         {
-          title: "Categories",
+          title: t("sidebar.categories"),
           href: "/dashboard/categories",
           icon: FolderTree,
         },
         {
-          title: "Unit",
+          title: t("sidebar.unit"),
           href: "/dashboard/units",
           icon: Ruler,
         },
       ]
       managementItems.push({
-        title: "Inventory",
+        title: t("sidebar.inventory"),
         href: "#",
         icon: Package,
         submenu: inventorySubmenu,
@@ -166,7 +169,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     const otherModules = ['sales', 'purchases', 'accounting', 'point-of-sale', 'crm']
     otherModules.forEach((moduleId) => {
       if (enabledModules.includes(moduleId)) {
-        managementItems.push(moduleSidebarMap[moduleId])
+        managementItems.push(moduleSidebarMap[moduleId](t))
       }
     })
 
@@ -174,23 +177,28 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     if (currentBusiness) {
       const myBusinessSubmenu: NavItem[] = [
         {
-          title: "Business Settings",
+          title: t("sidebar.businessSettings"),
           href: "/dashboard/settings",
           icon: Settings,
         },
         {
-          title: "Create Business",
+          title: t("sidebar.rolesPermissions"),
+          href: "/dashboard/roles",
+          icon: Shield,
+        },
+        {
+          title: t("sidebar.createBusiness"),
           href: "/register-business",
           icon: Plus,
         },
         {
-          title: "Branches",
+          title: t("sidebar.branches"),
           href: "/dashboard/branches",
           icon: Building2,
         },
       ]
       managementItems.push({
-        title: "My Business",
+        title: t("sidebar.myBusiness"),
         href: "#",
         icon: Building2,
         submenu: myBusinessSubmenu,
@@ -199,7 +207,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
 
     if (managementItems.length > 0) {
       sections.push({
-        title: "Management",
+        title: t("sidebar.management"),
         items: managementItems,
       })
     }
@@ -208,12 +216,12 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     const specialModules = ['oil-filling-station']
     const specialItems = specialModules
       .filter((moduleId) => enabledModules.includes(moduleId))
-      .map((moduleId) => moduleSidebarMap[moduleId])
+      .map((moduleId) => moduleSidebarMap[moduleId](t))
       .filter(Boolean)
 
     if (specialItems.length > 0) {
       sections.push({
-        title: "Modules",
+        title: t("sidebar.modules"),
         items: specialItems,
       })
     }
@@ -375,7 +383,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
 
   // Settings menu item
   const settingsItem: NavItem = {
-    title: "Settings",
+    title: t("sidebar.settings"),
     href: "/settings",
     icon: Settings,
   }

@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
 import { useAuthStore, useUIStore } from "@/store"
-import { Building2, Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
-import { useTranslations, useLocale } from "next-intl"
+import { Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { useParams, usePathname, useRouter } from "next/navigation"
@@ -29,6 +29,9 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const t = useTranslations("auth")
+  const tHeader = useTranslations("header")
+  const tProfile = useTranslations("profile")
+  const tTheme = useTranslations("theme")
   const params = useParams()
   const currentLocale = useLocale()
   const pathname = usePathname()
@@ -89,8 +92,8 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
             onClick={() => setSearchOpen(true)}
           >
             <Search className="mr-1 sm:mr-2 h-4 w-4 flex-shrink-0" />
-            <span className="hidden sm:inline truncate">Search...</span>
-            <span className="sm:hidden">Search</span>
+            <span className="hidden sm:inline truncate">{tHeader("search")}</span>
+            <span className="sm:hidden">{tHeader("searchShort")}</span>
           </Button>
         </div>
 
@@ -122,7 +125,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user?.name || "User"}
+                      {user?.name || tHeader("user")}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user?.email || ""}
@@ -133,14 +136,14 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
                   <DropdownMenuItem asChild>
                     <Link href={`/${locale}/dashboard/profile`} className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile Settings</span>
+                      <span>{tHeader("profileSettings")}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {/* Language Switcher - Show on small screens */}
                   <div className="sm:hidden">
                     <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5">
-                      Language
+                      {tHeader("language")}
                     </DropdownMenuLabel>
                     {languages.map((lang) => (
                       <DropdownMenuItem
@@ -157,19 +160,19 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
                   {/* Theme Toggle - Show on small screens */}
                   <div className="sm:hidden">
                     <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5">
-                      Theme
+                      {tHeader("theme")}
                     </DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setTheme("light")}>
                       <Sun className="mr-2 h-4 w-4" />
-                      Light
+                      {tTheme("light")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setTheme("dark")}>
                       <Moon className="mr-2 h-4 w-4" />
-                      Dark
+                      {tTheme("dark")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setTheme("system")}>
                       <span className="mr-2 h-4 w-4 flex items-center justify-center">⚙</span>
-                      System
+                      {tTheme("system")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </div>

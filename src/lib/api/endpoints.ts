@@ -10,6 +10,7 @@ export const endpoints = {
     resetPassword: "/auth/reset-password",
   },
   users: {
+    list: "/users",
     update: (id: string) => `/users/${id}`,
   },
   business: {
@@ -32,5 +33,20 @@ export const endpoints = {
     getById: (id: string) => `/branches/${id}`,
     update: (id: string) => `/branches/${id}`,
     delete: (id: string) => `/branches/${id}`,
+  },
+  units: {
+    create: "/units",
+    list: "/units",
+    getById: (id: string) => `/units/${id}`,
+    update: (id: string) => `/units/${id}`,
+    delete: (id: string) => `/units/${id}`,
+  },
+  roles: {
+    create: "/roles",
+    list: "/roles",
+    getById: (id: string) => `/roles/${id}`,
+    update: (id: string) => `/roles/${id}`,
+    delete: (id: string) => `/roles/${id}`,
+    assignUser: (id: string) => `/roles/${id}/assign-user`,
   },
 } as const

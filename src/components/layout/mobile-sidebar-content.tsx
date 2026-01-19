@@ -1,31 +1,33 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname, useParams } from "next/navigation"
-import { useMemo, useState } from "react"
-import {
-  LayoutDashboard,
-  Users,
-  ShoppingCart,
-  Package,
-  BookOpen,
-  CreditCard,
-  Fuel,
-  Settings,
-  ChevronRight,
-  ChevronDown,
-  FolderTree,
-  Building2,
-  Ruler,
-  Plus,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useBusinesses } from "@/lib/hooks/use-business"
+import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
+import {
+    BookOpen,
+    Building2,
+    ChevronDown,
+    ChevronRight,
+    CreditCard,
+    FolderTree,
+    Fuel,
+    LayoutDashboard,
+    Package,
+    Plus,
+    Ruler,
+    Settings,
+    Shield,
+    ShoppingCart,
+    Users,
+} from "lucide-react"
+import { useTranslations } from "next-intl"
+import Link from "next/link"
+import { useParams, usePathname } from "next/navigation"
+import { useMemo, useState } from "react"
 
 interface NavItem {
   title: string
@@ -47,46 +49,47 @@ interface MobileSidebarContentProps {
   onLinkClick?: () => void
 }
 
-// Module to sidebar item mapping
-const moduleSidebarMap: Record<string, NavItem> = {
-  'inventory': {
-    title: "Inventory",
+// Module to sidebar item mapping - will be translated in component
+const moduleSidebarMap: Record<string, (t: any) => NavItem> = {
+  'inventory': (t) => ({
+    title: t("sidebar.inventory"),
     href: "/dashboard/inventory",
     icon: Package,
-  },
-  'sales': {
-    title: "Sales",
+  }),
+  'sales': (t) => ({
+    title: t("sidebar.sales"),
     href: "/dashboard/sales",
     icon: ShoppingCart,
-  },
-  'purchases': {
-    title: "Purchase",
+  }),
+  'purchases': (t) => ({
+    title: t("sidebar.purchase"),
     href: "/dashboard/purchase",
     icon: Package,
-  },
-  'accounting': {
-    title: "Accounting",
+  }),
+  'accounting': (t) => ({
+    title: t("sidebar.accounting"),
     href: "/dashboard/accounting",
     icon: BookOpen,
-  },
-  'point-of-sale': {
-    title: "Point of Sale",
+  }),
+  'point-of-sale': (t) => ({
+    title: t("sidebar.pointOfSale"),
     href: "/dashboard/point-of-sale",
     icon: CreditCard,
-  },
-  'crm': {
-    title: "CRM",
+  }),
+  'crm': (t) => ({
+    title: t("sidebar.crm"),
     href: "/dashboard/crm",
     icon: Users,
-  },
-  'oil-filling-station': {
-    title: "Oil Filling Station",
+  }),
+  'oil-filling-station': (t) => ({
+    title: t("sidebar.oilFillingStation"),
     href: "/dashboard/oil-filling-station",
     icon: Fuel,
-  },
+  }),
 }
 
 export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps = {}) {
+  const t = useTranslations()
   const pathname = usePathname()
   const params = useParams()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
@@ -126,7 +129,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       {
         items: [
           {
-            title: "Dashboard",
+            title: t("sidebar.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
           },
@@ -141,18 +144,18 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     if (enabledModules.includes('inventory')) {
       const inventorySubmenu: NavItem[] = [
         {
-          title: "Categories",
+          title: t("sidebar.categories"),
           href: "/dashboard/categories",
           icon: FolderTree,
         },
         {
-          title: "Unit",
+          title: t("sidebar.unit"),
           href: "/dashboard/units",
           icon: Ruler,
         },
       ]
       managementItems.push({
-        title: "Inventory",
+        title: t("sidebar.inventory"),
         href: "#",
         icon: Package,
         submenu: inventorySubmenu,
@@ -163,7 +166,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     const otherModules = ['sales', 'purchases', 'accounting', 'point-of-sale', 'crm']
     otherModules.forEach((moduleId) => {
       if (enabledModules.includes(moduleId)) {
-        managementItems.push(moduleSidebarMap[moduleId])
+        managementItems.push(moduleSidebarMap[moduleId](t))
       }
     })
 
@@ -171,23 +174,28 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     if (currentBusiness) {
       const myBusinessSubmenu: NavItem[] = [
         {
-          title: "Business Settings",
+          title: t("sidebar.businessSettings"),
           href: "/dashboard/settings",
           icon: Settings,
         },
         {
-          title: "Create Business",
+          title: t("sidebar.rolesPermissions"),
+          href: "/dashboard/roles",
+          icon: Shield,
+        },
+        {
+          title: t("sidebar.createBusiness"),
           href: "/register-business",
           icon: Plus,
         },
         {
-          title: "Branches",
+          title: t("sidebar.branches"),
           href: "/dashboard/branches",
           icon: Building2,
         },
       ]
       managementItems.push({
-        title: "My Business",
+        title: t("sidebar.myBusiness"),
         href: "#",
         icon: Building2,
         submenu: myBusinessSubmenu,
@@ -196,7 +204,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
 
     if (managementItems.length > 0) {
       sections.push({
-        title: "Management",
+        title: t("sidebar.management"),
         items: managementItems,
       })
     }
@@ -205,12 +213,12 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     const specialModules = ['oil-filling-station']
     const specialItems = specialModules
       .filter((moduleId) => enabledModules.includes(moduleId))
-      .map((moduleId) => moduleSidebarMap[moduleId])
+      .map((moduleId) => moduleSidebarMap[moduleId](t))
       .filter(Boolean)
 
     if (specialItems.length > 0) {
       sections.push({
-        title: "Modules",
+        title: t("sidebar.modules"),
         items: specialItems,
       })
     }

@@ -15,9 +15,12 @@ import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { useBranches, useDeleteBranch } from "@/lib/hooks/use-branches"
 import { Branch } from "@/types"
 import { Building2, MoreVertical, Plus, Trash2, Pencil, MapPin, Phone } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 
 export default function BranchesPage() {
+  const t = useTranslations("branches")
+  const tCommon = useTranslations("common")
   const { data: branches = [], isLoading } = useBranches()
   const deleteBranchMutation = useDeleteBranch()
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
@@ -53,8 +56,8 @@ export default function BranchesPage() {
 
   return (
     <PageLayout
-      title="Branches"
-      description="Manage your business branches and locations"
+      title={t("title")}
+      description={t("description")}
       maxWidth="full"
     >
       <Card>
@@ -65,15 +68,15 @@ export default function BranchesPage() {
                 <Building2 className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle>Branches</CardTitle>
+                <CardTitle>{t("title")}</CardTitle>
                 <CardDescription>
-                  Manage all your business branches and locations
+                  {t("description")}
                 </CardDescription>
               </div>
             </div>
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Branch
+              {t("createBranch")}
             </Button>
           </div>
         </CardHeader>
@@ -83,13 +86,13 @@ export default function BranchesPage() {
           ) : branches.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No branches yet</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("noBranches")}</h3>
               <p className="text-muted-foreground mb-4">
-                Get started by creating your first branch
+                {t("noBranchesDescription")}
               </p>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
-                Create Branch
+                {t("createBranch")}
               </Button>
             </div>
           ) : (
@@ -115,14 +118,14 @@ export default function BranchesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(branch)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            {tCommon("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(branch)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            {tCommon("delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -133,7 +136,7 @@ export default function BranchesPage() {
                       <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Address</p>
+                          <p className="text-sm font-medium">{t("address")}</p>
                           <p className="text-sm text-muted-foreground">
                             {branch.address}
                           </p>
@@ -142,7 +145,7 @@ export default function BranchesPage() {
                       <div className="flex items-start gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Phone</p>
+                          <p className="text-sm font-medium">{t("phone")}</p>
                           <p className="text-sm text-muted-foreground">
                             {branch.phone}
                           </p>
@@ -167,9 +170,8 @@ export default function BranchesPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
-        title="Delete Branch"
-        description="This action cannot be undone. This will permanently delete the branch."
-        itemName={branchToDelete?.name}
+        title={t("deleteConfirmTitle")}
+        description={t("deleteConfirmDescription", { name: branchToDelete?.name || "" })}
         isLoading={deleteBranchMutation.isPending}
       />
     </PageLayout>

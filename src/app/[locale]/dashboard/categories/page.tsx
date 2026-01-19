@@ -18,9 +18,12 @@ import {
 } from "@/lib/hooks/use-categories"
 import { Category } from "@/types"
 import { FolderTree, MoreVertical, Plus, Trash2, Pencil } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 
 export default function CategoriesPage() {
+  const t = useTranslations("categories")
+  const tCommon = useTranslations("common")
   const { data: categories = [], isLoading } = useCategories()
   const deleteCategoryMutation = useDeleteCategory()
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
@@ -92,11 +95,6 @@ export default function CategoriesPage() {
               <FolderTree className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">{category.name}</div>
-                {category.parentId && (
-                  <div className="text-sm text-muted-foreground">
-                    Subcategory
-                  </div>
-                )}
               </div>
             </div>
             <DropdownMenu>
@@ -108,14 +106,14 @@ export default function CategoriesPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleEdit(category)}>
                   <Pencil className="mr-2 h-4 w-4" />
-                  Edit
+                  {tCommon("edit")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDelete(category)}
                   className="text-destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  {tCommon("delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -131,8 +129,8 @@ export default function CategoriesPage() {
 
   return (
     <PageLayout
-      title="Product Categories"
-      description="Manage your product categories and subcategories"
+      title={t("title")}
+      description={t("description")}
       maxWidth="full"
     >
       <Card>
@@ -143,15 +141,15 @@ export default function CategoriesPage() {
                 <FolderTree className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle>Categories</CardTitle>
+                <CardTitle>{t("title")}</CardTitle>
                 <CardDescription>
-                  Organize your products with categories and subcategories
+                  {t("description")}
                 </CardDescription>
               </div>
             </div>
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Category
+              {t("createCategory")}
             </Button>
           </div>
         </CardHeader>
@@ -161,13 +159,13 @@ export default function CategoriesPage() {
           ) : categories.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderTree className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No categories yet</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("noCategories")}</h3>
               <p className="text-muted-foreground mb-4">
-                Get started by creating your first category
+                {t("noCategoriesDescription")}
               </p>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
-                Create Category
+                {t("createCategory")}
               </Button>
             </div>
           ) : (
@@ -186,9 +184,8 @@ export default function CategoriesPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
-        title="Delete Category"
-        description="This action cannot be undone. This will permanently delete the category."
-        itemName={categoryToDelete?.name}
+        title={t("deleteConfirmTitle")}
+        description={t("deleteConfirmDescription", { name: categoryToDelete?.name || "" })}
         isLoading={deleteCategoryMutation.isPending}
       />
     </PageLayout>

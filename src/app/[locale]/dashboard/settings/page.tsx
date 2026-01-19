@@ -6,9 +6,11 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { Settings } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 
 export default function BusinessSettingsPage() {
+  const t = useTranslations("settings")
   const params = useParams()
   const router = useRouter()
   const locale = params.locale as string
@@ -24,11 +26,11 @@ export default function BusinessSettingsPage() {
 
   if (!currentBusiness) {
     return (
-      <PageLayout title="Access Denied" description="You need to select a business">
+      <PageLayout title={t("accessDenied")} description={t("selectBusiness")}>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">
-              Please select a business to access settings.
+              {t("selectBusinessDescription")}
             </p>
           </CardContent>
         </Card>
@@ -38,8 +40,8 @@ export default function BusinessSettingsPage() {
 
   return (
     <PageLayout
-      title="Business Settings"
-      description="Manage your business configuration and preferences"
+      title={t("title")}
+      description={t("description")}
       maxWidth="full"
     >
       <Card>
@@ -49,9 +51,9 @@ export default function BusinessSettingsPage() {
               <Settings className="h-6 w-6" />
             </div>
             <div>
-              <CardTitle>Business Settings</CardTitle>
+              <CardTitle>{t("title")}</CardTitle>
               <CardDescription>
-                Configure your business settings, preferences, and modules
+                {t("description")}
               </CardDescription>
             </div>
           </div>
@@ -59,20 +61,20 @@ export default function BusinessSettingsPage() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-muted-foreground">
-              This is the Business Settings page. Here you will be able to:
+              {t("pageDescription")}
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Update business information and details</li>
-              <li>Manage enabled modules and features</li>
-              <li>Configure business preferences and defaults</li>
-              <li>Set up tax rates and financial settings</li>
-              <li>Manage business integrations and API keys</li>
-              <li>Configure notification preferences</li>
-              <li>Set up user roles and permissions</li>
+              <li>{t("updateBusinessInfo")}</li>
+              <li>{t("manageModules")}</li>
+              <li>{t("configurePreferences")}</li>
+              <li>{t("setupTaxRates")}</li>
+              <li>{t("manageIntegrations")}</li>
+              <li>{t("configureNotifications")}</li>
+              <li>{t("setupRoles")}</li>
             </ul>
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> This is a placeholder page. Full functionality will be implemented soon.
+                <strong>{t("placeholderNote").split(":")[0]}:</strong> {t("placeholderNote").split(":")[1]}
               </p>
             </div>
           </div>

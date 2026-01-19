@@ -3,8 +3,15 @@
 import { usersApi } from "@/lib/api/users"
 import { UpdateUserInput } from "@/lib/validations/users"
 import { useAuthStore } from "@/store"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () => usersApi.getUsers(),
+  })
+}
 
 export function useUpdateUser() {
   const queryClient = useQueryClient()

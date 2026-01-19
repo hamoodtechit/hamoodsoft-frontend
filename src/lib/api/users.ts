@@ -9,6 +9,11 @@ export interface UpdateUserInput {
 }
 
 export const usersApi = {
+  getUsers: async (): Promise<User[]> => {
+    const response = await apiClient.get<ApiResponse<User[]>>(endpoints.users.list)
+    return response.data.data
+  },
+
   updateUser: async (id: string, data: UpdateUserInput): Promise<User> => {
     const url = endpoints.users.update(id)
     const fullUrl = `${config.api.baseUrl}${url}`
