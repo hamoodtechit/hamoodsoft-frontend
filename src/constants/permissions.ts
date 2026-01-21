@@ -7,6 +7,15 @@ export type Permission = {
 }
 
 export const permissionGroups = {
+  products: {
+    label: "Products",
+    permissions: [
+      { value: "products:read", label: "Read Products" },
+      { value: "products:create", label: "Create Products" },
+      { value: "products:update", label: "Update Products" },
+      { value: "products:delete", label: "Delete Products" },
+    ],
+  },
   units: {
     label: "Units",
     permissions: [
@@ -82,6 +91,6 @@ export const permissionGroups = {
 } as const
 
 // Flatten all permissions for easy access
-export const allPermissions: Permission[] = (Object.values(permissionGroups) as unknown as Array<{ permissions: Permission[] }>).flatMap(
-  (group) => group.permissions
-)
+export const allPermissions: Permission[] = (
+  Object.values(permissionGroups) as unknown as Array<{ permissions: readonly Permission[] }>
+).flatMap((group) => group.permissions) as Permission[]

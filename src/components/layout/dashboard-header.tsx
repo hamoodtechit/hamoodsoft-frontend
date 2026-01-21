@@ -1,5 +1,6 @@
 "use client"
 
+import { BranchSwitcher } from "@/components/common/branch-switcher"
 import { BusinessSwitcher } from "@/components/common/business-switcher"
 import { LanguageSwitcher } from "@/components/common/language-switcher"
 import { SearchModal } from "@/components/common/search-modal"
@@ -102,6 +103,10 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
           {/* Hide Business Switcher on very small screens */}
           <div className="hidden min-[400px]:block">
             <BusinessSwitcher />
+          </div>
+          {/* Branch switcher (depends on branches for current business) */}
+          <div className="hidden min-[400px]:block">
+            <BranchSwitcher />
           </div>
           {/* Show language switcher and theme toggle on larger screens */}
           <div className="hidden sm:flex items-center gap-1 sm:gap-2">

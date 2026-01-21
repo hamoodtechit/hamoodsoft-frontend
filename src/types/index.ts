@@ -70,3 +70,79 @@ export interface Role {
   createdAt?: string
   updatedAt?: string
 }
+
+export interface Product {
+  id: string
+  businessId?: string
+  branchIds?: string[]
+  name: string
+  description?: string | null
+  price: number
+  unitId: string
+  categoryIds?: string[]
+  unit?: Unit
+  categories?: Category[]
+  isVariable?: boolean
+  manageStocks?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ProductVariant {
+  id: string
+  productId: string
+  sku: string
+  price: number
+  unitId: string
+  variantName: string
+  options?: Record<string, string>
+  unit?: Unit
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Attribute {
+  id: string
+  businessId?: string
+  productId: string
+  name: string
+  values: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Stock {
+  id: string
+  businessId?: string
+  branchId: string
+  productId: string
+  unitId: string
+  quantity: number
+  purchasePrice?: number | null
+  salePrice?: number | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface StockHistory {
+  id: string
+  stockId: string
+  branchId: string
+  productId: string
+  unitId: string
+  transactionType: "IN" | "OUT"
+  quantity: number
+  reason?: string | null
+  createdAt?: string
+}
+
+export interface PaginatedResult<T> {
+  items: T[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages?: number
+    [key: string]: any
+  }
+}

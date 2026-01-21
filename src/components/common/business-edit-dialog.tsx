@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { updateBusinessSchema, type UpdateBusinessInput } from "@/lib/validations/business"
 import { Business } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Building2, Check, Grid3x3, Loader2 } from "lucide-react"
+import { Building2, Check, Grid3x3 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -203,10 +203,10 @@ export function BusinessEditDialog({
                 disabled={updateBusinessMutation.isPending || !form.formState.isDirty}
               >
                 {updateBusinessMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {t("loading")}
+                  </span>
                 ) : (
                   "Save Changes"
                 )}

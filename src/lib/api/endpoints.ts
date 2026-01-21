@@ -49,4 +49,37 @@ export const endpoints = {
     delete: (id: string) => `/roles/${id}`,
     assignUser: (id: string) => `/roles/${id}/assign-user`,
   },
+  products: {
+    create: "/products",
+    list: "/products",
+    getById: (id: string) => `/products/${id}`,
+    update: (id: string) => `/products/${id}`,
+    delete: (id: string) => `/products/${id}`,
+  },
+  productVariants: {
+    create: (productId: string) => `/product-variants/${productId}`,
+    listByProduct: (productId: string) => `/product-variants/by-product/${productId}`,
+    getById: (id: string) => `/product-variants/${id}`,
+    update: (id: string) => `/product-variants/${id}`,
+    delete: (id: string) => `/product-variants/${id}`,
+  },
+  attributes: {
+    create: (productId: string) => `/attributes/${productId}`,
+    listByProduct: (productId: string) => `/attributes/by-product/${productId}`,
+    update: (id: string) => `/attributes/${id}`,
+    delete: (id: string) => `/attributes/${id}`,
+  },
+  stocks: {
+    list: "/stocks",
+    create: "/stocks",
+    getById: (id: string) => `/stocks/${id}`,
+    listByBranch: (branchId: string) => `/stocks/by-branch/${branchId}`,
+    listByProduct: (productId: string) => `/api/stocks/by-product/${productId}`,
+    historyByBranch: (branchId: string) => `/stocks/history/by-branch/${branchId}`,
+    historyByProduct: (productId: string) => `/stocks/history/by-product/${productId}`,
+    historyByBranchAndProduct: (branchId: string, productId: string) =>
+      `/stocks/history/by-branch/${branchId}/by-product/${productId}`,
+    historyByStock: (stockId: string) => `/stocks/${stockId}/history`,
+    adjust: "/stocks/adjust",
+  },
 } as const

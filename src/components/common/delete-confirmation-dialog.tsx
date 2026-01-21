@@ -9,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { AlertTriangle, Loader2 } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 interface DeleteConfirmationDialogProps {
   open: boolean
@@ -70,10 +71,10 @@ export function DeleteConfirmationDialog({
             disabled={isLoading}
           >
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
-              </>
+              <span className="flex items-center gap-2">
+                <span className="animate-spin">⏳</span>
+                {tCommon("loading")}
+              </span>
             ) : (
               "Delete"
             )}

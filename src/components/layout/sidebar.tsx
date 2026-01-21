@@ -147,6 +147,16 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     if (enabledModules.includes('inventory')) {
       const inventorySubmenu: NavItem[] = [
         {
+          title: t("sidebar.products"),
+          href: "/dashboard/products",
+          icon: Package,
+        },
+        {
+          title: t("sidebar.stocks"),
+          href: "/dashboard/stocks",
+          icon: Package,
+        },
+        {
           title: t("sidebar.categories"),
           href: "/dashboard/categories",
           icon: FolderTree,

@@ -28,7 +28,8 @@ import { useAssignUserToRole } from "@/lib/hooks/use-roles"
 import { assignUserToRoleSchema, type AssignUserToRoleInput } from "@/lib/validations/roles"
 import { Role, User } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, UserPlus } from "lucide-react"
+import { UserPlus } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useForm } from "react-hook-form"
 
 interface AssignUserDialogProps {
@@ -44,6 +45,7 @@ export function AssignUserDialog({
   open,
   onOpenChange,
 }: AssignUserDialogProps) {
+  const tCommon = useTranslations("common")
   const assignUserMutation = useAssignUserToRole()
 
   const form = useForm<AssignUserToRoleInput>({
@@ -133,10 +135,10 @@ export function AssignUserDialog({
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Assigning...
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {tCommon("loading")}
+                  </span>
                 ) : (
                   "Assign User"
                 )}

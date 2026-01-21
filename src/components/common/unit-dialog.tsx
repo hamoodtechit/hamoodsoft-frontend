@@ -27,7 +27,7 @@ import {
 } from "@/lib/validations/units"
 import { Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Ruler } from "lucide-react"
+import { Ruler } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -38,6 +38,7 @@ interface UnitDialogProps {
 }
 
 export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
+  const tCommon = useTranslations("common")
   const createUnitMutation = useCreateUnit()
   const updateUnitMutation = useUpdateUnit()
 
@@ -160,10 +161,10 @@ export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEdit ? "Updating..." : "Creating..."}
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {tCommon("loading")}
+                  </span>
                 ) : (
                   isEdit ? "Update Unit" : "Create Unit"
                 )}

@@ -27,7 +27,7 @@ import {
 } from "@/lib/validations/branches"
 import { Branch } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Building2, Loader2 } from "lucide-react"
+import { Building2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -38,6 +38,7 @@ interface BranchDialogProps {
 }
 
 export function BranchDialog({ branch, open, onOpenChange }: BranchDialogProps) {
+  const tCommon = useTranslations("common")
   const createBranchMutation = useCreateBranch()
   const updateBranchMutation = useUpdateBranch()
 
@@ -183,10 +184,10 @@ export function BranchDialog({ branch, open, onOpenChange }: BranchDialogProps) 
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEdit ? "Updating..." : "Creating..."}
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {tCommon("loading")}
+                  </span>
                 ) : (
                   isEdit ? "Update Branch" : "Create Branch"
                 )}

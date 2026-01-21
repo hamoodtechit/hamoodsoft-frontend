@@ -35,7 +35,8 @@ import {
 } from "@/lib/validations/categories"
 import { Category } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { FolderTree, Loader2 } from "lucide-react"
+import { FolderTree } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -50,6 +51,7 @@ export function CategoryDialog({
   open,
   onOpenChange,
 }: CategoryDialogProps) {
+  const tCommon = useTranslations("common")
   const { data: categories = [] } = useCategories()
   const createCategoryMutation = useCreateCategory()
   const updateCategoryMutation = useUpdateCategory()
@@ -204,10 +206,10 @@ export function CategoryDialog({
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEdit ? "Updating..." : "Creating..."}
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {tCommon("loading")}
+                  </span>
                 ) : (
                   isEdit ? "Update Category" : "Create Category"
                 )}

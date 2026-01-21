@@ -333,10 +333,10 @@ export default function ProfilePage() {
                     className="min-w-32"
                   >
                     {updateUserMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {tProfile("saving")}
-                      </>
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        {t("loading")}
+                      </span>
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
@@ -387,10 +387,10 @@ export default function ProfilePage() {
                 disabled={isLoading2FA}
               >
                 {isLoading2FA ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {twoFactorEnabled ? tProfile("disabling") : tProfile("enabling")}
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {t("loading")}
+                  </span>
                 ) : (
                   <>
                     <Shield className="mr-2 h-4 w-4" />

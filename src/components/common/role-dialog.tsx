@@ -30,7 +30,7 @@ import {
 } from "@/lib/validations/roles"
 import { Role } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Shield } from "lucide-react"
+import { Shield } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -197,10 +197,10 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEdit ? "Updating..." : "Creating..."}
-                  </>
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {tCommon("loading")}
+                  </span>
                 ) : (
                   isEdit ? "Update Role" : "Create Role"
                 )}
