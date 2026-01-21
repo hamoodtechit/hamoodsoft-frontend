@@ -1,30 +1,32 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CategoryDialog } from "@/components/common/category-dialog"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { PageLayout } from "@/components/common/page-layout"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  useCategories,
-  useDeleteCategory,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
+import {
+    useCategories,
+    useDeleteCategory,
 } from "@/lib/hooks/use-categories"
 import { Category } from "@/types"
-import { FolderTree, MoreVertical, Plus, Trash2, Pencil } from "lucide-react"
+import { FolderTree, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 
 export default function CategoriesPage() {
   const t = useTranslations("categories")
   const tCommon = useTranslations("common")
-  const { data: categories = [], isLoading } = useCategories()
+  const { selectedBranchId } = useBranchSelection()
+  const { data: categories = [], isLoading } = useCategories(selectedBranchId || undefined)
   const deleteCategoryMutation = useDeleteCategory()
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -144,6 +146,11 @@ export default function CategoriesPage() {
                 <CardTitle>{t("title")}</CardTitle>
                 <CardDescription>
                   {t("description")}
+                  {selectedBranchId && (
+                    <span className="ml-2 text-xs">
+                      ({t("filteredByBranch")})
+                    </span>
+                  )}
                 </CardDescription>
               </div>
             </div>

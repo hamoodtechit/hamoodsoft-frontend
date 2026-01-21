@@ -10,26 +10,27 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
 } from "@/components/ui/sheet"
 import { useAttributes, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from "@/lib/hooks/use-attributes"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import {
-  useCreateProductVariant,
-  useDeleteProductVariant,
-  useProductVariants,
-  useUpdateProductVariant,
+    useCreateProductVariant,
+    useDeleteProductVariant,
+    useProductVariants,
+    useUpdateProductVariant,
 } from "@/lib/hooks/use-product-variants"
 import { useDeleteProduct, useProducts } from "@/lib/hooks/use-products"
 import { Attribute, Product, ProductVariant } from "@/types"
@@ -48,6 +49,7 @@ export default function ProductsPage() {
   const locale = params.locale as string
 
   const currentBusiness = useCurrentBusiness()
+  const { selectedBranchId } = useBranchSelection()
   const deleteMutation = useDeleteProduct()
 
   const [search, setSearch] = useState("")
@@ -56,8 +58,13 @@ export default function ProductsPage() {
 
   const queryParams = useMemo(() => {
     const trimmed = search.trim()
-    return { page, limit, search: trimmed || undefined }
-  }, [page, limit, search])
+    return { 
+      page, 
+      limit, 
+      search: trimmed || undefined,
+      branchId: selectedBranchId || undefined
+    }
+  }, [page, limit, search, selectedBranchId])
 
   const { data, isLoading } = useProducts(queryParams)
   const products = data?.items ?? []
@@ -178,7 +185,14 @@ export default function ProductsPage() {
               </div>
               <div>
                 <CardTitle>{t("title")}</CardTitle>
-                <CardDescription>{t("description")}</CardDescription>
+                <CardDescription>
+                  {t("description")}
+                  {selectedBranchId && (
+                    <span className="ml-2 text-xs">
+                      ({t("filteredByBranch")})
+                    </span>
+                  )}
+                </CardDescription>
               </div>
             </div>
 

@@ -1,24 +1,25 @@
 "use client"
 
+import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
+import { PageLayout } from "@/components/common/page-layout"
+import { UnitDialog } from "@/components/common/unit-dialog"
+import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UnitDialog } from "@/components/common/unit-dialog"
-import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { PageLayout } from "@/components/common/page-layout"
-import { SkeletonList } from "@/components/skeletons/skeleton-list"
-import { useUnits, useDeleteUnit } from "@/lib/hooks/use-units"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useDeleteUnit, useUnits } from "@/lib/hooks/use-units"
 import { Unit } from "@/types"
-import { Ruler, MoreVertical, Plus, Trash2, Pencil } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { MoreVertical, Pencil, Plus, Ruler, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function UnitsPage() {
@@ -30,7 +31,8 @@ export default function UnitsPage() {
   const locale = params.locale as string
   const { user } = useAuth()
   const currentBusiness = useCurrentBusiness()
-  const { data: units = [], isLoading } = useUnits()
+  const { selectedBranchId } = useBranchSelection()
+  const { data: units = [], isLoading } = useUnits(selectedBranchId || undefined)
   const deleteUnitMutation = useDeleteUnit()
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -101,6 +103,11 @@ export default function UnitsPage() {
                 <CardTitle>{t("title")}</CardTitle>
                 <CardDescription>
                   {t("description")}
+                  {selectedBranchId && (
+                    <span className="ml-2 text-xs">
+                      ({t("filteredByBranch")})
+                    </span>
+                  )}
                 </CardDescription>
               </div>
             </div>

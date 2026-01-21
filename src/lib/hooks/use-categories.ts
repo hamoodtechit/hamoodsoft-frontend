@@ -2,14 +2,13 @@
 
 import { categoriesApi } from "@/lib/api/categories"
 import { CreateCategoryInput, UpdateCategoryInput } from "@/lib/validations/categories"
-import { Category } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useCategories() {
+export function useCategories(branchId?: string) {
   return useQuery({
-    queryKey: ["categories"],
-    queryFn: () => categoriesApi.getCategories(),
+    queryKey: ["categories", branchId],
+    queryFn: () => categoriesApi.getCategories(branchId),
   })
 }
 

@@ -12,9 +12,10 @@ export const categoriesApi = {
     return response.data.data
   },
 
-  getCategories: async (): Promise<Category[]> => {
+  getCategories: async (branchId?: string): Promise<Category[]> => {
     const response = await apiClient.get<ApiResponse<Category[]>>(
-      endpoints.categories.list
+      endpoints.categories.list,
+      { params: branchId ? { branchId } : undefined }
     )
     return response.data.data
   },

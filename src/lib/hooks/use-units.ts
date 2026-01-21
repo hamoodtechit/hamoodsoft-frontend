@@ -2,14 +2,13 @@
 
 import { unitsApi } from "@/lib/api/units"
 import { CreateUnitInput, UpdateUnitInput } from "@/lib/validations/units"
-import { Unit } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useUnits() {
+export function useUnits(branchId?: string) {
   return useQuery({
-    queryKey: ["units"],
-    queryFn: () => unitsApi.getUnits(),
+    queryKey: ["units", branchId],
+    queryFn: () => unitsApi.getUnits(branchId),
   })
 }
 

@@ -12,9 +12,10 @@ export const unitsApi = {
     return response.data.data
   },
 
-  getUnits: async (): Promise<Unit[]> => {
+  getUnits: async (branchId?: string): Promise<Unit[]> => {
     const response = await apiClient.get<ApiResponse<Unit[]>>(
-      endpoints.units.list
+      endpoints.units.list,
+      { params: branchId ? { branchId } : undefined }
     )
     return response.data.data
   },

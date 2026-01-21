@@ -9,6 +9,7 @@ export type ProductsListParams = {
   search?: string
   categoryId?: string
   unitId?: string
+  branchId?: string
 }
 
 type ProductsResponseShape = {
