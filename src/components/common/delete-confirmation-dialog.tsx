@@ -31,6 +31,7 @@ export function DeleteConfirmationDialog({
   itemName,
   isLoading = false,
 }: DeleteConfirmationDialogProps) {
+  const tCommon = useTranslations("common")
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">

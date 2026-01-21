@@ -28,6 +28,7 @@ import {
 import { Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Ruler } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 

@@ -28,6 +28,7 @@ import {
 import { Branch } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Building2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 

@@ -31,6 +31,7 @@ import {
 import { Role } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Shield } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -41,6 +42,7 @@ interface RoleDialogProps {
 }
 
 export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
+  const tCommon = useTranslations("common")
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
 
