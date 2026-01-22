@@ -9,21 +9,25 @@ import { toast } from "sonner"
 export function useProducts(params?: ProductsListParams) {
   // Create a stable query key that includes all relevant params
   // This ensures React Query properly detects changes and refetches
+  // Always include branchId explicitly (even if undefined) so React Query detects changes
+  const branchId = params?.branchId
   const queryKey = [
     "products",
-    params?.page,
-    params?.limit,
-    params?.search,
-    params?.categoryId,
-    params?.unitId,
-    params?.branchId, // Explicitly include branchId so changes trigger refetch
-  ]
+    params?.page ?? 1,
+    params?.limit ?? 10,
+    params?.search ?? "",
+    params?.categoryId ?? null,
+    params?.unitId ?? null,
+    branchId ?? null, // Explicitly include branchId (null if undefined) so changes trigger refetch
+  ] as const
 
   return useQuery({
     queryKey,
     queryFn: () => productsApi.getProducts(params),
     // Refetch when window regains focus to ensure fresh data
     refetchOnWindowFocus: true,
+    // Don't cache stale data - always refetch when query key changes
+    staleTime: 0,
   })
 }
 

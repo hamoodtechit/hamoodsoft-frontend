@@ -1,42 +1,42 @@
 "use client"
 
 import { AttributeDialog } from "@/components/common/attribute-dialog"
+import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
+import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ProductDialog } from "@/components/common/product-dialog"
 import { ProductVariantDialog } from "@/components/common/product-variant-dialog"
+import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet"
-import { DataTable, type Column } from "@/components/common/data-table"
-import { ExportButton } from "@/components/common/export-button"
-import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { type ProductsListParams } from "@/lib/api/products"
 import { useAttributes, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from "@/lib/hooks/use-attributes"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import {
-    useCreateProductVariant,
-    useDeleteProductVariant,
-    useProductVariants,
-    useUpdateProductVariant,
+  useCreateProductVariant,
+  useDeleteProductVariant,
+  useProductVariants,
+  useUpdateProductVariant,
 } from "@/lib/hooks/use-product-variants"
 import { useDeleteProduct, useProducts } from "@/lib/hooks/use-products"
-import { type ProductsListParams } from "@/lib/api/products"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Attribute, Product, ProductVariant } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -87,10 +87,9 @@ export default function ProductsPage() {
       params.search = trimmed
     }
     
-    // Only include branchId if it has a value (don't send undefined)
-    if (selectedBranchId) {
-      params.branchId = selectedBranchId
-    }
+    // Always include branchId (even if null) so React Query detects changes
+    // The API will handle null/undefined by not filtering
+    params.branchId = selectedBranchId || undefined
     
     return params
   }, [page, limit, search, selectedBranchId])

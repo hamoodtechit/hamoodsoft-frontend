@@ -3,20 +3,20 @@
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useBranches } from "@/lib/hooks/use-branches"
@@ -25,10 +25,10 @@ import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products"
 import { useUnits } from "@/lib/hooks/use-units"
 import { cn } from "@/lib/utils"
 import {
-    createProductSchema,
-    updateProductSchema,
-    type CreateProductInput,
-    type UpdateProductInput,
+  createProductSchema,
+  updateProductSchema,
+  type CreateProductInput,
+  type UpdateProductInput,
 } from "@/lib/validations/products"
 import { Branch, Category, Product, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
