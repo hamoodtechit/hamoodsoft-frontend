@@ -20,7 +20,17 @@
     "next": "পরবর্তী",
     "previous": "পূর্ববর্তী",
     "optional": "ঐচ্ছিক",
-    "create": "তৈরি করুন"
+    "create": "তৈরি করুন",
+    "export": "রপ্তানি",
+    "exportExcel": "এক্সেল এ রপ্তানি",
+    "exportCSV": "CSV এ রপ্তানি",
+    "exportSuccess": "রপ্তানি সফল! ফাইল ডাউনলোড হয়েছে।",
+    "exportError": "রপ্তানি ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "cards": "কার্ড",
+    "table": "টেবিল",
+    "view": "দেখুন",
+    "selectAll": "সব নির্বাচন করুন",
+    "selected": "নির্বাচিত"
   },
   "auth": {
     "login": "লগইন",
@@ -216,6 +226,7 @@
     "reason": "কারণ",
     "reasonPlaceholder": "সমন্বয়ের কারণ লিখুন",
     "searchPlaceholder": "স্টক খুঁজুন...",
+    "productName": "পণ্য",
     "noStocks": "এখনো কোনো স্টক নেই",
     "noStocksDescription": "আপনার প্রথম স্টক এন্ট্রি তৈরি করে শুরু করুন",
     "noBranchSelected": "কোনো শাখা নির্বাচিত নেই",

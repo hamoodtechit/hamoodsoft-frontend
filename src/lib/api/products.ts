@@ -64,9 +64,20 @@ export const productsApi = {
   },
 
   getProducts: async (params?: ProductsListParams): Promise<PaginatedResult<Product>> => {
+    // Clean params - remove undefined/null/empty values
+    const cleanParams: Record<string, any> = {}
+    if (params) {
+      Object.keys(params).forEach((key) => {
+        const value = params[key as keyof ProductsListParams]
+        if (value !== undefined && value !== null && value !== "") {
+          cleanParams[key] = value
+        }
+      })
+    }
+    
     const response = await apiClient.get<ApiResponse<PaginatedResult<Product> | ProductsResponseShape | Product[]>>(
       endpoints.products.list,
-      { params }
+      { params: cleanParams }
     )
     return normalizeProductsList(response.data.data)
   },

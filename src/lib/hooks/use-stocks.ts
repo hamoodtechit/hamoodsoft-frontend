@@ -1,17 +1,20 @@
 "use client"
 
-import { stocksApi } from "@/lib/api/stocks"
-import { AdjustStockInput, CreateStockInput } from "@/lib/validations/stocks"
+import { stocksApi, StocksListParams, StockHistoryListParams, StockAdjustmentsListParams } from "@/lib/api/stocks"
+import { AdjustStockInput, CreateStockInput, UpdateStockInput, UpdateAdjustmentInput } from "@/lib/validations/stocks"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useStocks() {
+// List stocks with pagination and filters
+export function useStocks(params?: StocksListParams) {
   return useQuery({
-    queryKey: ["stocks"],
-    queryFn: () => stocksApi.list(),
+    queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId],
+    queryFn: () => stocksApi.list(params),
+    refetchOnWindowFocus: true,
   })
 }
 
+// Get single stock by ID
 export function useStock(id: string | undefined) {
   return useQuery({
     queryKey: ["stock", id],
@@ -20,54 +23,25 @@ export function useStock(id: string | undefined) {
   })
 }
 
-export function useStocksByBranch(branchId: string | undefined) {
+// List stock history with pagination and filters
+export function useStockHistory(params?: StockHistoryListParams) {
   return useQuery({
-    queryKey: ["stocks", "branch", branchId],
-    queryFn: () => stocksApi.listByBranch(branchId!),
-    enabled: !!branchId,
+    queryKey: ["stockHistory", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId],
+    queryFn: () => stocksApi.listHistory(params),
+    refetchOnWindowFocus: true,
   })
 }
 
-export function useStocksByProduct(productId: string | undefined) {
+// List stock adjustments with pagination and filters
+export function useStockAdjustments(params?: StockAdjustmentsListParams) {
   return useQuery({
-    queryKey: ["stocks", "product", productId],
-    queryFn: () => stocksApi.listByProduct(productId!),
-    enabled: !!productId,
+    queryKey: ["stockAdjustments", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId],
+    queryFn: () => stocksApi.listAdjustments(params),
+    refetchOnWindowFocus: true,
   })
 }
 
-export function useStockHistoryByBranch(branchId: string | undefined) {
-  return useQuery({
-    queryKey: ["stockHistory", "branch", branchId],
-    queryFn: () => stocksApi.historyByBranch(branchId!),
-    enabled: !!branchId,
-  })
-}
-
-export function useStockHistoryByProduct(productId: string | undefined) {
-  return useQuery({
-    queryKey: ["stockHistory", "product", productId],
-    queryFn: () => stocksApi.historyByProduct(productId!),
-    enabled: !!productId,
-  })
-}
-
-export function useStockHistoryByBranchAndProduct(branchId: string | undefined, productId: string | undefined) {
-  return useQuery({
-    queryKey: ["stockHistory", "branch", branchId, "product", productId],
-    queryFn: () => stocksApi.historyByBranchAndProduct(branchId!, productId!),
-    enabled: !!branchId && !!productId,
-  })
-}
-
-export function useStockHistoryByStock(stockId: string | undefined) {
-  return useQuery({
-    queryKey: ["stockHistory", "stock", stockId],
-    queryFn: () => stocksApi.historyByStock(stockId!),
-    enabled: !!stockId,
-  })
-}
-
+// Create stock mutation
 export function useCreateStock() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -86,12 +60,35 @@ export function useCreateStock() {
   })
 }
 
+// Update stock mutation
+export function useUpdateStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateStockInput }) => stocksApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stocks"] })
+      queryClient.invalidateQueries({ queryKey: ["stock"] })
+      toast.success("Stock updated successfully!")
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update stock. Please try again."
+      toast.error(message)
+    },
+  })
+}
+
+// Create stock adjustment mutation
 export function useAdjustStock() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: AdjustStockInput) => stocksApi.adjust(data),
+    mutationFn: (data: AdjustStockInput) => stocksApi.createAdjustment(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stocks"] })
+      queryClient.invalidateQueries({ queryKey: ["stockHistory"] })
+      queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] })
       toast.success("Stock adjusted successfully!")
     },
     onError: (error: any) => {
@@ -104,3 +101,23 @@ export function useAdjustStock() {
   })
 }
 
+// Update stock adjustment mutation
+export function useUpdateStockAdjustment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateAdjustmentInput }) => 
+      stocksApi.updateAdjustment(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] })
+      queryClient.invalidateQueries({ queryKey: ["stockHistory"] })
+      toast.success("Stock adjustment updated successfully!")
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update stock adjustment. Please try again."
+      toast.error(message)
+    },
+  })
+}

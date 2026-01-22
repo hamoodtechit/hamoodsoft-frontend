@@ -2,6 +2,7 @@
 
 import { CategoryDialog } from "@/components/common/category-dialog"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
+import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
@@ -17,10 +18,11 @@ import {
     useCategories,
     useDeleteCategory,
 } from "@/lib/hooks/use-categories"
+import { type ExportColumn } from "@/lib/utils/export"
 import { Category } from "@/types"
 import { FolderTree, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 export default function CategoriesPage() {
   const t = useTranslations("categories")
@@ -58,6 +60,33 @@ export default function CategoriesPage() {
       })
     }
   }
+
+  // Export columns configuration
+  const exportColumns: ExportColumn<Category>[] = useMemo(() => [
+    { key: "name", header: "Category Name", width: 30 },
+    {
+      key: "parent",
+      header: "Parent Category",
+      width: 30,
+      format: (value, row) => {
+        if (row.parent) return row.parent.name
+        if (row.parentId) return row.parentId // Fallback to ID if parent not loaded
+        return "None (Top Level)"
+      },
+    },
+    {
+      key: "createdAt",
+      header: "Created At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+  ], [])
 
   // Build category tree structure
   const buildCategoryTree = (categories: Category[]): Category[] => {
@@ -154,10 +183,18 @@ export default function CategoriesPage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createCategory")}
-            </Button>
+            <div className="flex items-center gap-2">
+              <ExportButton
+                data={categories}
+                columns={exportColumns}
+                filename="categories"
+                disabled={isLoading || categories.length === 0}
+              />
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createCategory")}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

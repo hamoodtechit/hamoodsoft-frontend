@@ -73,13 +73,12 @@ export const endpoints = {
     list: "/stocks",
     create: "/stocks",
     getById: (id: string) => `/stocks/${id}`,
-    listByBranch: (branchId: string) => `/stocks/by-branch/${branchId}`,
-    listByProduct: (productId: string) => `/api/stocks/by-product/${productId}`,
-    historyByBranch: (branchId: string) => `/stocks/history/by-branch/${branchId}`,
-    historyByProduct: (productId: string) => `/stocks/history/by-product/${productId}`,
-    historyByBranchAndProduct: (branchId: string, productId: string) =>
-      `/stocks/history/by-branch/${branchId}/by-product/${productId}`,
-    historyByStock: (stockId: string) => `/stocks/${stockId}/history`,
-    adjust: "/stocks/adjust",
+    update: (id: string) => `/stocks/${id}`,
+    adjustments: {
+      list: "/stocks/adjustments",
+      create: "/stocks/adjustments",
+      update: (id: string) => `/stocks/adjustments/${id}`,
+    },
+    history: "/stocks/history",
   },
 } as const

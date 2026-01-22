@@ -23,6 +23,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
+import { DataTable, type Column } from "@/components/common/data-table"
+import { ExportButton } from "@/components/common/export-button"
+import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { useAttributes, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from "@/lib/hooks/use-attributes"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
@@ -33,6 +36,8 @@ import {
     useUpdateProductVariant,
 } from "@/lib/hooks/use-product-variants"
 import { useDeleteProduct, useProducts } from "@/lib/hooks/use-products"
+import { type ProductsListParams } from "@/lib/api/products"
+import { type ExportColumn } from "@/lib/utils/export"
 import { Attribute, Product, ProductVariant } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -55,16 +60,45 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const limit = 10
+  
+  // View mode with localStorage persistence
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("products-view-mode") as ViewMode) || "cards"
+    }
+    return "cards"
+  })
+
+  // Save view mode preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("products-view-mode", viewMode)
+    }
+  }, [viewMode])
 
   const queryParams = useMemo(() => {
     const trimmed = search.trim()
-    return { 
+    const params: ProductsListParams = { 
       page, 
       limit, 
-      search: trimmed || undefined,
-      branchId: selectedBranchId || undefined
     }
+    
+    if (trimmed) {
+      params.search = trimmed
+    }
+    
+    // Only include branchId if it has a value (don't send undefined)
+    if (selectedBranchId) {
+      params.branchId = selectedBranchId
+    }
+    
+    return params
   }, [page, limit, search, selectedBranchId])
+
+  // Reset to page 1 when branch changes
+  useEffect(() => {
+    setPage(1)
+  }, [selectedBranchId])
 
   const { data, isLoading } = useProducts(queryParams)
   const products = data?.items ?? []
@@ -74,6 +108,115 @@ export default function ProductsPage() {
     meta?.totalPages ??
     Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
   const currentPage = meta?.page ?? page
+
+  // Table columns configuration
+  const tableColumns: Column<Product>[] = useMemo(() => [
+    {
+      id: "name",
+      header: t("name"),
+      accessorKey: "name",
+      sortable: true,
+    },
+    {
+      id: "price",
+      header: t("price"),
+      accessorKey: "price",
+      sortable: true,
+      cell: (row) => (
+        <span>
+          {t("priceValue", { price: row.price })}
+          {row.unit?.suffix ? ` / ${row.unit.suffix}` : ""}
+        </span>
+      ),
+    },
+    {
+      id: "unit",
+      header: t("unit"),
+      cell: (row) => row.unit?.name || "-",
+      sortable: false,
+    },
+    {
+      id: "categories",
+      header: t("categories"),
+      cell: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.categories && row.categories.length > 0 ? (
+            row.categories.map((c) => (
+              <Badge key={c.id} variant="secondary" className="text-xs">
+                {c.name}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-muted-foreground text-xs">-</span>
+          )}
+        </div>
+      ),
+      sortable: false,
+    },
+    {
+      id: "manageStocks",
+      header: t("manageStocks"),
+      cell: (row) => (row.manageStocks ? tCommon("yes") : tCommon("no")),
+      sortable: true,
+    },
+    {
+      id: "isVariable",
+      header: t("isVariable"),
+      cell: (row) => (row.isVariable ? tCommon("yes") : tCommon("no")),
+      sortable: true,
+    },
+  ], [t, tCommon])
+
+  // Export columns configuration
+  const exportColumns: ExportColumn<Product>[] = useMemo(() => [
+    { key: "name", header: "Product Name", width: 25 },
+    { key: "description", header: "Description", width: 40 },
+    { key: "price", header: "Price", width: 15 },
+    {
+      key: "unit",
+      header: "Unit",
+      format: (value, row) => row.unit?.name || "-",
+    },
+    {
+      key: "unitSuffix",
+      header: "Unit Suffix",
+      format: (value, row) => row.unit?.suffix || "-",
+    },
+    {
+      key: "categories",
+      header: "Categories",
+      format: (value, row) =>
+        row.categories?.map((c) => c.name).join(", ") || "-",
+    },
+    {
+      key: "branches",
+      header: "Branches",
+      format: (value, row) => {
+        if (!row.branchIds || row.branchIds.length === 0) return "All Branches"
+        return row.branchIds.join(", ")
+      },
+    },
+    {
+      key: "manageStocks",
+      header: "Manage Stocks",
+      format: (value) => (value ? "Yes" : "No"),
+    },
+    {
+      key: "isVariable",
+      header: "Variable Product",
+      format: (value) => (value ? "Yes" : "No"),
+    },
+    {
+      key: "createdAt",
+      header: "Created At",
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated At",
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+  ], [])
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -209,6 +352,13 @@ export default function ProductsPage() {
                   className="pl-9"
                 />
               </div>
+              <ViewToggle view={viewMode} onViewChange={setViewMode} />
+              <ExportButton
+                data={products}
+                columns={exportColumns}
+                filename="products"
+                disabled={isLoading || products.length === 0}
+              />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t("createProduct")}
@@ -229,6 +379,41 @@ export default function ProductsPage() {
                 <Plus className="mr-2 h-4 w-4" />
                 {t("createProduct")}
               </Button>
+            </div>
+          ) : viewMode === "table" ? (
+            <div className="rounded-md border">
+              <DataTable
+                data={products}
+                columns={tableColumns}
+                onRowClick={handleView}
+                actions={(row) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleView(row)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t("viewDetails")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEdit(row)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {tCommon("edit")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(row)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {tCommon("delete")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                emptyMessage={t("noProducts")}
+              />
             </div>
           ) : (
             <div className="space-y-3">

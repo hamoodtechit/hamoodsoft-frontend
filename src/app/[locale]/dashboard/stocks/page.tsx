@@ -1,8 +1,11 @@
 "use client"
 
 import { AdjustStockDialog } from "@/components/common/adjust-stock-dialog"
+import { DataTable, type Column } from "@/components/common/data-table"
+import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { StockDialog } from "@/components/common/stock-dialog"
+import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,14 +28,15 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useProducts } from "@/lib/hooks/use-products"
 import {
-  useStockHistoryByBranch,
-  useStocksByBranch,
+  useStockHistory,
+  useStocks,
 } from "@/lib/hooks/use-stocks"
+import { type ExportColumn } from "@/lib/utils/export"
 import { Stock, StockHistory } from "@/types"
 import { ArrowDown, ArrowUp, History, MoreVertical, Package, Plus, Search } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export default function StocksPage() {
   const t = useTranslations("stocks")
@@ -51,23 +55,41 @@ export default function StocksPage() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [historyStock, setHistoryStock] = useState<Stock | null>(null)
+  
+  // View mode with localStorage persistence
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("stocks-view-mode") as ViewMode) || "cards"
+    }
+    return "cards"
+  })
 
-  const { data: stocksData, isLoading } = useStocksByBranch(selectedBranchId || undefined)
+  // Save view mode preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("stocks-view-mode", viewMode)
+    }
+  }, [viewMode])
+
+  const { data: stocksData, isLoading } = useStocks(
+    selectedBranchId ? { branchId: selectedBranchId } : undefined
+  )
   const stocks = stocksData?.items || []
 
   const { data: productsData } = useProducts()
   const products = productsData?.items || []
   const productMap = new Map(products.map((p) => [p.id, p]))
 
-  const { data: history = [], isLoading: historyLoading } = useStockHistoryByBranch(
-    historyStock?.branchId || undefined
+  const { data: historyData, isLoading: historyLoading } = useStockHistory(
+    historyStock?.branchId ? { branchId: historyStock.branchId } : undefined
   )
+  const history = historyData?.items || []
 
   // Filter stocks by search
   const filteredStocks = stocks.filter((stock) => {
     if (!search.trim()) return true
     const searchLower = search.toLowerCase()
-    const product = productMap.get(stock.productId)
+    const product = stock.product || productMap.get(stock.productId)
     const productName = product?.name || ""
     return (
       productName.toLowerCase().includes(searchLower) ||
@@ -75,6 +97,143 @@ export default function StocksPage() {
       stock.id?.toLowerCase().includes(searchLower)
     )
   })
+
+  // Table columns configuration
+  const tableColumns: Column<Stock>[] = useMemo(() => [
+    {
+      id: "product",
+      header: t("product"),
+      cell: (row) => {
+        const product = row.product || productMap.get(row.productId)
+        return product?.name || row.productId
+      },
+      sortable: false,
+    },
+    {
+      id: "quantity",
+      header: t("quantity"),
+      accessorKey: "quantity",
+      sortable: true,
+      cell: (row) => (
+        <Badge variant={row.quantity > 0 ? "default" : "destructive"}>
+          {row.quantity}
+        </Badge>
+      ),
+    },
+    {
+      id: "purchasePrice",
+      header: t("purchasePrice"),
+      accessorKey: "purchasePrice",
+      sortable: true,
+      cell: (row) => row.purchasePrice ?? "-",
+    },
+    {
+      id: "salePrice",
+      header: t("salePrice"),
+      accessorKey: "salePrice",
+      sortable: true,
+      cell: (row) => row.salePrice ?? "-",
+    },
+    {
+      id: "unit",
+      header: t("unit") || "Unit",
+      cell: (row) => {
+        const unit = row.unit || products.find(p => p.id === row.productId)?.unit
+        return unit?.name || "-"
+      },
+      sortable: false,
+    },
+    {
+      id: "branch",
+      header: t("branch"),
+      cell: (row) => row.branch?.name || "-",
+      sortable: false,
+    },
+  ], [t, productMap, products])
+
+  // Export columns with all nested details
+  const exportColumns: ExportColumn<Stock>[] = useMemo(() => [
+    {
+      key: "product",
+      header: "Product Name",
+      width: 25,
+      format: (value, row) => {
+        const product = row.product || productMap.get(row.productId)
+        return product?.name || row.productId
+      },
+    },
+    {
+      key: "productDescription",
+      header: "Product Description",
+      width: 40,
+      format: (value, row) => {
+        const product = row.product || productMap.get(row.productId)
+        return product?.description || "-"
+      },
+    },
+    {
+      key: "quantity",
+      header: "Quantity",
+      width: 15,
+    },
+    {
+      key: "purchasePrice",
+      header: "Purchase Price",
+      width: 15,
+      format: (value) => value ?? "-",
+    },
+    {
+      key: "salePrice",
+      header: "Sale Price",
+      width: 15,
+      format: (value) => value ?? "-",
+    },
+    {
+      key: "unit",
+      header: "Unit",
+      width: 15,
+      format: (value, row) => {
+        const unit = row.unit || products.find(p => p.id === row.productId)?.unit
+        return unit?.name || "-"
+      },
+    },
+    {
+      key: "unitSuffix",
+      header: "Unit Suffix",
+      width: 15,
+      format: (value, row) => {
+        const unit = row.unit || products.find(p => p.id === row.productId)?.unit
+        return unit?.suffix || "-"
+      },
+    },
+    {
+      key: "branch",
+      header: "Branch",
+      width: 20,
+      format: (value, row) => row.branch?.name || "-",
+    },
+    {
+      key: "productCategories",
+      header: "Product Categories",
+      width: 30,
+      format: (value, row) => {
+        const product = row.product || productMap.get(row.productId)
+        return product?.categories?.map((c) => c.name).join(", ") || "-"
+      },
+    },
+    {
+      key: "createdAt",
+      header: "Created At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+  ], [productMap, products])
 
   // Secure by module access (inventory)
   useEffect(() => {
@@ -145,6 +304,13 @@ export default function StocksPage() {
                   className="pl-9"
                 />
               </div>
+              <ViewToggle view={viewMode} onViewChange={setViewMode} />
+              <ExportButton
+                data={filteredStocks}
+                columns={exportColumns}
+                filename="stocks"
+                disabled={isLoading || filteredStocks.length === 0}
+              />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t("createStock")}
@@ -172,11 +338,38 @@ export default function StocksPage() {
                 {t("createStock")}
               </Button>
             </div>
+          ) : viewMode === "table" ? (
+            <div className="rounded-md border">
+              <DataTable
+                data={filteredStocks}
+                columns={tableColumns}
+                actions={(row) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleViewHistory(row)}>
+                        <History className="mr-2 h-4 w-4" />
+                        {t("viewHistory")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAdjust(row)}>
+                        <Package className="mr-2 h-4 w-4" />
+                        {t("adjustStock")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                emptyMessage={t("noStocks")}
+              />
+            </div>
           ) : (
             <div className="space-y-3">
               {filteredStocks.map((stock) => {
                 const productHistory = getStockHistoryForProduct(stock.productId)
-                const product = productMap.get(stock.productId)
+                const product = stock.product || productMap.get(stock.productId)
                 return (
                   <Card key={stock.id} className="relative">
                     <CardContent className="py-4">

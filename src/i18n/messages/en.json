@@ -20,7 +20,17 @@
     "next": "Next",
     "previous": "Previous",
     "optional": "Optional",
-    "create": "Create"
+    "create": "Create",
+    "export": "Export",
+    "exportExcel": "Export to Excel",
+    "exportCSV": "Export to CSV",
+    "exportSuccess": "Export successful! File downloaded.",
+    "exportError": "Failed to export. Please try again.",
+    "cards": "Cards",
+    "table": "Table",
+    "view": "View",
+    "selectAll": "Select All",
+    "selected": "Selected"
   },
   "auth": {
     "login": "Login",
@@ -216,6 +226,7 @@
     "reason": "Reason",
     "reasonPlaceholder": "Enter reason for adjustment",
     "searchPlaceholder": "Search stocks...",
+    "productName": "Product",
     "noStocks": "No stocks yet",
     "noStocksDescription": "Get started by creating your first stock entry",
     "noBranchSelected": "No Branch Selected",

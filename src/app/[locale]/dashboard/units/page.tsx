@@ -1,26 +1,28 @@
 "use client"
 
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
+import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { UnitDialog } from "@/components/common/unit-dialog"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteUnit, useUnits } from "@/lib/hooks/use-units"
+import { type ExportColumn } from "@/lib/utils/export"
 import { Unit } from "@/types"
 import { MoreVertical, Pencil, Plus, Ruler, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export default function UnitsPage() {
   const t = useTranslations("units")
@@ -86,6 +88,24 @@ export default function UnitsPage() {
     }
   }
 
+  // Export columns configuration
+  const exportColumns: ExportColumn<Unit>[] = useMemo(() => [
+    { key: "name", header: "Unit Name", width: 25 },
+    { key: "suffix", header: "Unit Suffix", width: 20 },
+    {
+      key: "createdAt",
+      header: "Created At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+  ], [])
+
   return (
     <PageLayout
       title={t("title")}
@@ -111,10 +131,18 @@ export default function UnitsPage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createUnit")}
-            </Button>
+            <div className="flex items-center gap-2">
+              <ExportButton
+                data={units}
+                columns={exportColumns}
+                filename="units"
+                disabled={isLoading || units.length === 0}
+              />
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createUnit")}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

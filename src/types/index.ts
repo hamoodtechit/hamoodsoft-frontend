@@ -120,6 +120,9 @@ export interface Stock {
   quantity: number
   purchasePrice?: number | null
   salePrice?: number | null
+  product?: Product
+  branch?: Branch
+  unit?: Unit
   createdAt?: string
   updatedAt?: string
 }
@@ -133,7 +136,26 @@ export interface StockHistory {
   transactionType: "IN" | "OUT"
   quantity: number
   reason?: string | null
+  branch?: Branch
+  product?: Product
+  stock?: Stock
   createdAt?: string
+}
+
+export interface StockAdjustment {
+  id: string
+  businessId?: string
+  branchId: string
+  stockId: string
+  productId: string
+  stockHistoryId: string
+  reason: string
+  branch?: Branch
+  product?: Product
+  stock?: Stock
+  stockHistory?: StockHistory
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface PaginatedResult<T> {

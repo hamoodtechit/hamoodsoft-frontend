@@ -7,9 +7,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export function useProducts(params?: ProductsListParams) {
+  // Create a stable query key that includes all relevant params
+  // This ensures React Query properly detects changes and refetches
+  const queryKey = [
+    "products",
+    params?.page,
+    params?.limit,
+    params?.search,
+    params?.categoryId,
+    params?.unitId,
+    params?.branchId, // Explicitly include branchId so changes trigger refetch
+  ]
+
   return useQuery({
-    queryKey: ["products", params],
+    queryKey,
     queryFn: () => productsApi.getProducts(params),
+    // Refetch when window regains focus to ensure fresh data
+    refetchOnWindowFocus: true,
   })
 }
 
