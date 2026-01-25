@@ -1,12 +1,10 @@
 "use client"
 
-import { AttributeDialog } from "@/components/common/attribute-dialog"
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ProductDialog } from "@/components/common/product-dialog"
-import { ProductVariantDialog } from "@/components/common/product-variant-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
@@ -27,21 +25,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { type ProductsListParams } from "@/lib/api/products"
-import { useAttributes, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from "@/lib/hooks/use-attributes"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
+import { useBranches } from "@/lib/hooks/use-branches"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import {
-  useCreateProductVariant,
-  useDeleteProductVariant,
-  useProductVariants,
-  useUpdateProductVariant,
-} from "@/lib/hooks/use-product-variants"
-import { useDeleteProduct, useProducts } from "@/lib/hooks/use-products"
+import { useDeleteProduct, useProduct, useProducts } from "@/lib/hooks/use-products"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Attribute, Product, ProductVariant } from "@/types"
+import { Product } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
 export default function ProductsPage() {
@@ -51,6 +43,7 @@ export default function ProductsPage() {
   const tModules = useTranslations("modulesPages.inventory")
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const locale = params.locale as string
 
   const currentBusiness = useCurrentBusiness()
@@ -218,26 +211,35 @@ export default function ProductsPage() {
   ], [])
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
-  const [viewProduct, setViewProduct] = useState<Product | null>(null)
+  const [viewProductId, setViewProductId] = useState<string | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
-  const [variantDialogOpen, setVariantDialogOpen] = useState(false)
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
-  const [attributeDialogOpen, setAttributeDialogOpen] = useState(false)
-  const [selectedAttribute, setSelectedAttribute] = useState<Attribute | null>(null)
 
-  const { data: variantsData, isLoading: variantsLoading } = useProductVariants(viewProduct?.id)
-  const variants = variantsData?.items || []
-  const createVariantMutation = useCreateProductVariant(viewProduct?.id)
-  const updateVariantMutation = useUpdateProductVariant(viewProduct?.id)
-  const deleteVariantMutation = useDeleteProductVariant(viewProduct?.id)
+  const { data: viewProduct, isLoading: isViewProductLoading } = useProduct(viewProductId || undefined)
+  // Fetch full product details when editing
+  const { data: editProduct, isLoading: isEditProductLoading } = useProduct(selectedProductId || undefined)
 
-  const { data: attributes = [], isLoading: attributesLoading } = useAttributes(viewProduct?.id)
-  const createAttributeMutation = useCreateAttribute(viewProduct?.id)
-  const updateAttributeMutation = useUpdateAttribute(viewProduct?.id)
-  const deleteAttributeMutation = useDeleteAttribute(viewProduct?.id)
+  // Handle edit from URL query parameter
+  useEffect(() => {
+    const editId = searchParams.get("edit")
+    if (editId && products.length > 0) {
+      setSelectedProductId(editId)
+      setIsDialogOpen(true)
+      // Clean up URL
+      router.replace(`/${locale}/dashboard/products`, { scroll: false })
+    }
+  }, [searchParams, products, locale, router])
+
+  const { data: branchesData } = useBranches()
+  const branches = Array.isArray(branchesData) ? branchesData : []
+  const branchMap = useMemo(() => {
+    const map = new Map<string, any>()
+    branches.forEach((b: any) => map.set(b.id, b))
+    return map
+  }, [branches])
 
   // Secure by module access (inventory)
   useEffect(() => {
@@ -260,46 +262,22 @@ export default function ProductsPage() {
 
   const handleCreate = () => {
     setSelectedProduct(null)
+    setSelectedProductId(null)
     setIsDialogOpen(true)
   }
 
   const handleEdit = (product: Product) => {
-    setSelectedProduct(product)
+    setSelectedProductId(product.id)
+    setSelectedProduct(null) // Clear to ensure fresh fetch
     setIsDialogOpen(true)
   }
 
   const handleView = (product: Product) => {
-    setViewProduct(product)
+    // Fetch full product details using the API
+    setViewProductId(product.id)
     setIsViewOpen(true)
   }
 
-  const openCreateVariant = () => {
-    setSelectedVariant(null)
-    setVariantDialogOpen(true)
-  }
-
-  const openEditVariant = (variant: ProductVariant) => {
-    setSelectedVariant(variant)
-    setVariantDialogOpen(true)
-  }
-
-  const handleDeleteVariant = (variant: ProductVariant) => {
-    deleteVariantMutation.mutate(variant.id)
-  }
-
-  const openCreateAttribute = () => {
-    setSelectedAttribute(null)
-    setAttributeDialogOpen(true)
-  }
-
-  const openEditAttribute = (attribute: Attribute) => {
-    setSelectedAttribute(attribute)
-    setAttributeDialogOpen(true)
-  }
-
-  const handleDeleteAttribute = (attribute: Attribute) => {
-    deleteAttributeMutation.mutate(attribute.id)
-  }
 
   const handleDelete = (product: Product) => {
     setProductToDelete(product)
@@ -502,7 +480,17 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      <ProductDialog product={selectedProduct} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <ProductDialog 
+        product={editProduct || selectedProduct} 
+        open={isDialogOpen} 
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) {
+            setSelectedProductId(null)
+            setSelectedProduct(null)
+          }
+        }} 
+      />
 
       <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
@@ -519,10 +507,32 @@ export default function ProductsPage() {
           className="w-full max-w-3xl mx-auto rounded-t-2xl sm:rounded-2xl sm:max-h-[90vh] overflow-y-auto"
         >
           <SheetHeader>
-            <SheetTitle>{t("detailsTitle")}</SheetTitle>
-            <SheetDescription>{t("detailsDescription")}</SheetDescription>
+            <div className="flex items-start justify-between">
+              <div>
+                <SheetTitle>{t("detailsTitle")}</SheetTitle>
+                <SheetDescription>{t("detailsDescription")}</SheetDescription>
+              </div>
+              {viewProduct && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    router.push(`/${locale}/dashboard/products/${viewProduct.id}`)
+                    setViewProductId(null)
+                  }}
+                  className="ml-auto"
+                >
+                  {t("viewFullDetails") || "View Full Details"}
+                  <Eye className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </SheetHeader>
-          {viewProduct ? (
+          {isViewProductLoading ? (
+            <div className="space-y-4">
+              <SkeletonList count={5} />
+            </div>
+          ) : viewProduct ? (
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -542,6 +552,20 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {viewProduct.brand && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t("brand")}</p>
+                  <div className="rounded-lg border p-3">
+                    <p className="font-medium">{viewProduct.brand.name}</p>
+                    {viewProduct.brand.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {viewProduct.brand.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {viewProduct.categories && viewProduct.categories.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">{t("categories")}</p>
@@ -552,6 +576,28 @@ export default function ProductsPage() {
                       </Badge>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {viewProduct.branchIds && viewProduct.branchIds.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t("branchesOptional")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {viewProduct.branchIds.map((branchId) => {
+                      const branch = branchMap.get(branchId)
+                      return (
+                        <Badge key={branchId} variant="outline">
+                          {branch?.name || branchId}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              {(!viewProduct.branchIds || viewProduct.branchIds.length === 0) && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t("branchesOptional")}</p>
+                  <Badge variant="secondary">{t("branchesHint") || "All Branches"}</Badge>
                 </div>
               )}
 
@@ -581,169 +627,75 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 border-t pt-4">
-                {/* Attributes */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{tAttributes("title")}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {tAttributes("noAttributesDescription")}
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={openCreateAttribute} disabled={!viewProduct}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      {tAttributes("createAttribute")}
-                    </Button>
-                  </div>
-
-                  {attributesLoading ? (
-                    <SkeletonList count={2} />
-                  ) : attributes.length === 0 ? (
-                    <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-                      {tAttributes("noAttributes")}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {attributes.map((a) => (
-                        <Card key={a.id} className="border">
-                          <CardContent className="py-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">{a.name}</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {(a.values || []).join(", ")}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => openEditAttribute(a)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive"
-                                  onClick={() => handleDeleteAttribute(a)}
-                                  disabled={deleteAttributeMutation.isPending}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Variants */}
-                <div className="flex items-center justify-between">
+              {((viewProduct.variants && viewProduct.variants.length > 0) || 
+                (viewProduct.productVariants && viewProduct.productVariants.length > 0)) && (
+                <div className="space-y-3 border-t pt-4">
                   <div>
                     <p className="text-sm font-medium">{t("variants")}</p>
-                    <p className="text-xs text-muted-foreground">{t("noVariantsDescription")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {((viewProduct.variants || viewProduct.productVariants || []).length)} {t("variants")} {t("available") || "available"}
+                    </p>
                   </div>
-                  <Button size="sm" onClick={openCreateVariant} disabled={!viewProduct}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t("addVariant")}
-                  </Button>
-                </div>
-
-                {variantsLoading ? (
-                  <SkeletonList count={2} />
-                ) : variants.length === 0 ? (
-                  <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-                    {t("noVariants")}
-                  </div>
-                ) : (
                   <div className="space-y-2">
-                    {variants.map((v) => (
-                      <Card key={v.id} className="border">
-                        <CardContent className="py-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium truncate">{v.variantName}</p>
-                                <span className="text-xs text-muted-foreground">SKU: {v.sku}</span>
+                    {(viewProduct.variants || viewProduct.productVariants || []).map((v: any, index: number) => {
+                      const variant = v.variantName ? v : {
+                        variantName: v.variantName || "N/A",
+                        sku: v.sku,
+                        price: v.price,
+                        unitId: v.unitId,
+                        options: v.options || {},
+                      }
+                      return (
+                      <Card key={index} className="border">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="font-medium text-sm">{variant.variantName}</p>
+                            </div>
+                            
+                            {variant.options && Object.keys(variant.options).length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(variant.options).map(([key, val]: [string, unknown]) => {
+                                  // Convert "attr-{name}" format to readable attribute names (e.g., "attr-color" -> "Color")
+                                  let displayKey = key
+                                  if (key.startsWith("attr-")) {
+                                    const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
+                                    displayKey = attrName
+                                      .split(" ")
+                                      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                      .join(" ")
+                                  }
+                                  return (
+                                    <Badge key={key} variant="secondary" className="text-xs">
+                                      <span className="font-medium">{displayKey}:</span>{" "}
+                                      <span className="ml-1">{String(val)}</span>
+                                    </Badge>
+                                  )
+                                })}
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                {t("priceValue", { price: v.price })}{" "}
-                                {v.unit?.suffix ? `/ ${v.unit.suffix}` : ""}
-                              </p>
-                              {v.options && Object.keys(v.options).length > 0 && (
-                                <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                                  {Object.entries(v.options).map(([key, val]) => (
-                                    <div key={key} className="flex gap-2">
-                                      <span className="font-medium">{key}:</span>
-                                      <span>{String(val)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => openEditVariant(v)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => handleDeleteVariant(v)}
-                                disabled={deleteVariantMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            )}
+                            
+                            {variant.price !== null && variant.price !== undefined && (
+                              <div className="flex items-center justify-between pt-2 border-t">
+                                <span className="text-xs text-muted-foreground">{t("price")}</span>
+                                <p className="font-semibold">
+                                  {variant.price.toLocaleString()} {viewProduct.unit?.suffix || ""}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                      )
+                    })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ) : null}
         </SheetContent>
       </Sheet>
 
-      {viewProduct ? (
-        <ProductVariantDialog
-          productId={viewProduct.id}
-          variant={selectedVariant}
-          open={variantDialogOpen}
-          onOpenChange={setVariantDialogOpen}
-          onSubmitCreate={(data) =>
-            createVariantMutation.mutate(data, { onSuccess: () => setVariantDialogOpen(false) })
-          }
-          onSubmitUpdate={(id, data) =>
-            updateVariantMutation.mutate(
-              { id, data },
-              { onSuccess: () => setVariantDialogOpen(false) }
-            )
-          }
-          isLoading={createVariantMutation.isPending || updateVariantMutation.isPending}
-        />
-      ) : null}
-
-      {viewProduct ? (
-        <AttributeDialog
-          productId={viewProduct.id}
-          attribute={selectedAttribute}
-          open={attributeDialogOpen}
-          onOpenChange={setAttributeDialogOpen}
-          onSubmitCreate={(data) =>
-            createAttributeMutation.mutate(data, { onSuccess: () => setAttributeDialogOpen(false) })
-          }
-          onSubmitUpdate={(id, data) =>
-            updateAttributeMutation.mutate(
-              { id, data },
-              { onSuccess: () => setAttributeDialogOpen(false) }
-            )
-          }
-          isLoading={createAttributeMutation.isPending || updateAttributeMutation.isPending}
-        />
-      ) : null}
     </PageLayout>
   )
 }

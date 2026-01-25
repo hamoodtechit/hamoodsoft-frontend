@@ -1,5 +1,13 @@
 import { z } from "zod"
 
+const productVariantSchema = z.object({
+  variantName: z.string().min(1, "Variant name is required"),
+  sku: z.string().optional(),
+  price: z.number({ invalid_type_error: "Price must be a number" }).min(0, "Price must be 0 or greater"),
+  unitId: z.string().uuid().optional(),
+  options: z.record(z.string().min(1), z.string().min(1)), // Backend expects attribute names as keys (e.g., "Color", "Size")
+})
+
 export const createProductSchema = z.object({
   name: z
     .string()
@@ -13,6 +21,8 @@ export const createProductSchema = z.object({
   unitId: z.string().min(1, "Unit is required"),
   categoryIds: z.array(z.string()).optional(),
   branchIds: z.array(z.string()).optional(),
+  brandId: z.string().optional(),
+  variants: z.array(productVariantSchema).optional(),
 })
 
 export const updateProductSchema = z.object({
@@ -25,6 +35,8 @@ export const updateProductSchema = z.object({
   unitId: z.string().min(1, "Unit is required").optional(),
   categoryIds: z.array(z.string()).optional(),
   branchIds: z.array(z.string()).optional(),
+  brandId: z.string().optional(),
+  variants: z.array(productVariantSchema).optional(),
 })
 
 export type CreateProductInput = z.infer<typeof createProductSchema>

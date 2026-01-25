@@ -163,6 +163,16 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           href: "/dashboard/units",
           icon: Ruler,
         },
+        {
+          title: t("sidebar.brands"),
+          href: "/dashboard/brands",
+          icon: Package,
+        },
+        {
+          title: t("sidebar.attributes"),
+          href: "/dashboard/attributes",
+          icon: Package,
+        },
       ]
       managementItems.push({
         title: t("sidebar.inventory"),
@@ -211,6 +221,13 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
         submenu: myBusinessSubmenu,
       })
     }
+
+    // Contacts (always available, not module-based) - appears after My Business dropdown
+    managementItems.push({
+      title: t("sidebar.contacts"),
+      href: "/dashboard/contacts",
+      icon: Users,
+    })
 
     if (managementItems.length > 0) {
       sections.push({

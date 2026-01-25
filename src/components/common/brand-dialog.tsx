@@ -18,88 +18,105 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { useCreateBrand, useUpdateBrand } from "@/lib/hooks/use-brands"
 import {
-  createAttributeSchema,
-  updateAttributeSchema,
-  type CreateAttributeInput,
-  type UpdateAttributeInput,
-} from "@/lib/validations/attributes"
-import { Attribute } from "@/types"
+  createBrandSchema,
+  updateBrandSchema,
+  type CreateBrandInput,
+  type UpdateBrandInput,
+} from "@/lib/validations/brands"
+import { Brand } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Building2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 
-interface AttributeDialogProps {
-  attribute: Attribute | null
+interface BrandDialogProps {
+  brand: Brand | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmitCreate: (data: CreateAttributeInput) => void
-  onSubmitUpdate: (id: string, data: UpdateAttributeInput) => void
+  onSubmitCreate: (data: CreateBrandInput) => void
+  onSubmitUpdate: (id: string, data: UpdateBrandInput) => void
   isLoading: boolean
 }
 
-export function AttributeDialog({
-  attribute,
+export function BrandDialog({
+  brand,
   open,
   onOpenChange,
   onSubmitCreate,
   onSubmitUpdate,
-  isLoading,
-}: AttributeDialogProps) {
-  const t = useTranslations("attributes")
+  isLoading: externalIsLoading,
+}: BrandDialogProps) {
+  const t = useTranslations("brands")
   const tCommon = useTranslations("common")
+  const createMutation = useCreateBrand()
+  const updateMutation = useUpdateBrand()
 
-  const isEdit = !!attribute
-  const schema = isEdit ? updateAttributeSchema : createAttributeSchema
+  const isEdit = !!brand
+  const isLoading = externalIsLoading || createMutation.isPending || updateMutation.isPending
+  const schema = isEdit ? updateBrandSchema : createBrandSchema
 
   const defaultValues = useMemo(() => {
-    if (!attribute) {
-      return { name: "", values: [] as string[] }
+    if (!brand) {
+      return {
+        name: "",
+        description: "",
+      }
     }
     return {
-      name: attribute.name || "",
-      values: attribute.values || [],
+      name: brand.name || "",
+      description: brand.description || "",
     }
-  }, [attribute])
+  }, [brand])
 
-  const [valuesText, setValuesText] = useState<string>((defaultValues.values || []).join(", "))
-
-  const form = useForm<CreateAttributeInput | UpdateAttributeInput>({
+  const form = useForm<CreateBrandInput | UpdateBrandInput>({
     resolver: zodResolver(schema as any),
     defaultValues,
   })
 
   useEffect(() => {
     form.reset(defaultValues)
-    setValuesText((defaultValues.values || []).join(", "))
   }, [defaultValues, form])
 
-  const parseValues = (text: string) =>
-    text
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean)
-
-  const onSubmit = (data: CreateAttributeInput | UpdateAttributeInput) => {
-    const values = parseValues(valuesText)
-    data = { ...data, values }
-
-    if (isEdit && attribute) {
-      onSubmitUpdate(attribute.id, data as UpdateAttributeInput)
-      return
+  const onSubmit = (data: CreateBrandInput | UpdateBrandInput) => {
+    if (isEdit && brand) {
+      updateMutation.mutate(
+        { id: brand.id, data: data as UpdateBrandInput },
+        {
+          onSuccess: () => {
+            onSubmitUpdate(brand.id, data as UpdateBrandInput)
+            onOpenChange(false)
+          },
+        }
+      )
+    } else {
+      createMutation.mutate(data as CreateBrandInput, {
+        onSuccess: () => {
+          onSubmitCreate(data as CreateBrandInput)
+          onOpenChange(false)
+          form.reset()
+        },
+      })
     }
-    onSubmitCreate(data as CreateAttributeInput)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("editAttribute") : t("createAttribute")}</DialogTitle>
-          <DialogDescription>
-            {isEdit ? t("editAttributeDescription") : t("createAttributeDescription")}
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>{isEdit ? t("editBrand") : t("createBrand")}</DialogTitle>
+              <DialogDescription>
+                {isEdit ? t("editBrandDescription") : t("createBrandDescription")}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
@@ -120,23 +137,13 @@ export function AttributeDialog({
 
             <FormField
               control={form.control}
-              name="values"
+              name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("values")}</FormLabel>
+                  <FormLabel>{t("description")}</FormLabel>
                   <FormControl>
-                    <Input
-                      value={valuesText}
-                      onChange={(e) => {
-                        setValuesText(e.target.value)
-                        const parsed = parseValues(e.target.value)
-                        field.onChange(parsed)
-                      }}
-                      placeholder={t("valuesPlaceholder")}
-                      disabled={isLoading}
-                    />
+                    <Input {...field} placeholder={t("descriptionPlaceholder")} disabled={isLoading} />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">{t("valuesHelp")}</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -170,4 +177,3 @@ export function AttributeDialog({
     </Dialog>
   )
 }
-

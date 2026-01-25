@@ -23,16 +23,31 @@ type ProductsResponseShape = {
   }
 }
 
+function normalizeProduct(product: any): Product {
+  // Normalize productVariants to variants
+  if (product.productVariants && !product.variants) {
+    product.variants = product.productVariants.map((pv: any) => ({
+      variantName: pv.variantName,
+      sku: pv.sku,
+      price: pv.price,
+      unitId: pv.unitId,
+      options: pv.options || {},
+    }))
+  }
+  return product as Product
+}
+
 function normalizeProductsList(data: PaginatedResult<Product> | ProductsResponseShape | Product[]): PaginatedResult<Product> {
   // If backend already returns { items, meta }
   if (!Array.isArray(data) && "items" in data) {
     const meta = data.meta || {}
+    const items = (data.items || []).map(normalizeProduct)
     return {
-      items: data.items || [],
+      items,
       meta: {
         page: meta.page ?? 1,
-        limit: meta.limit ?? (data.items?.length || 10),
-        total: meta.total ?? data.items?.length ?? 0,
+        limit: meta.limit ?? (items.length || 10),
+        total: meta.total ?? items.length ?? 0,
         totalPages: meta.totalPages ?? undefined,
         ...meta,
       },
@@ -41,11 +56,14 @@ function normalizeProductsList(data: PaginatedResult<Product> | ProductsResponse
 
   // If backend returns full PaginatedResult with meta nested
   if (!Array.isArray(data) && "meta" in data && "items" in data) {
-    return data as PaginatedResult<Product>
+    return {
+      ...data,
+      items: (data as PaginatedResult<Product>).items.map(normalizeProduct),
+    }
   }
 
   // Fallback: plain array
-  const items = Array.isArray(data) ? data : []
+  const items = Array.isArray(data) ? data.map(normalizeProduct) : []
   return {
     items,
     meta: {
@@ -83,8 +101,8 @@ export const productsApi = {
   },
 
   getProductById: async (id: string): Promise<Product> => {
-    const response = await apiClient.get<ApiResponse<Product>>(endpoints.products.getById(id))
-    return response.data.data
+    const response = await apiClient.get<ApiResponse<any>>(endpoints.products.getById(id))
+    return normalizeProduct(response.data.data)
   },
 
   updateProduct: async (id: string, data: UpdateProductInput): Promise<Product> => {

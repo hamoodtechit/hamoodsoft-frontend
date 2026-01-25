@@ -1,26 +1,33 @@
 "use client"
 
-import { attributesApi } from "@/lib/api/attributes"
+import { attributesApi, type AttributesListParams } from "@/lib/api/attributes"
 import { CreateAttributeInput, UpdateAttributeInput } from "@/lib/validations/attributes"
 import { Attribute } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useAttributes(productId: string | undefined) {
+export function useAttributes(params?: AttributesListParams) {
   return useQuery({
-    queryKey: ["attributes", productId],
-    queryFn: () => attributesApi.listByProduct(productId!),
-    enabled: !!productId,
+    queryKey: ["attributes", params],
+    queryFn: () => attributesApi.list(params),
   })
 }
 
-export function useCreateAttribute(productId: string | undefined) {
+export function useAttribute(id: string | undefined) {
+  return useQuery({
+    queryKey: ["attribute", id],
+    queryFn: () => attributesApi.getById(id!),
+    enabled: !!id,
+  })
+}
+
+export function useCreateAttribute() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: CreateAttributeInput) => attributesApi.create(productId!, data),
+    mutationFn: (data: CreateAttributeInput) => attributesApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attributes", productId] })
+      queryClient.invalidateQueries({ queryKey: ["attributes"] })
       toast.success("Attribute created successfully!")
     },
     onError: (error: any) => {
@@ -33,14 +40,14 @@ export function useCreateAttribute(productId: string | undefined) {
   })
 }
 
-export function useUpdateAttribute(productId: string | undefined) {
+export function useUpdateAttribute() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateAttributeInput }) =>
       attributesApi.update(id, data),
     onSuccess: (updated: Attribute) => {
-      queryClient.invalidateQueries({ queryKey: ["attributes", productId] })
+      queryClient.invalidateQueries({ queryKey: ["attributes"] })
       queryClient.invalidateQueries({ queryKey: ["attribute", updated.id] })
       toast.success("Attribute updated successfully!")
     },
@@ -54,13 +61,13 @@ export function useUpdateAttribute(productId: string | undefined) {
   })
 }
 
-export function useDeleteAttribute(productId: string | undefined) {
+export function useDeleteAttribute() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (id: string) => attributesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attributes", productId] })
+      queryClient.invalidateQueries({ queryKey: ["attributes"] })
       toast.success("Attribute deleted successfully!")
     },
     onError: (error: any) => {

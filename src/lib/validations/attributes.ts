@@ -1,7 +1,6 @@
 import { z } from "zod"
 
 export const createAttributeSchema = z.object({
-  productId: z.string().min(1, "Product ID is required"),
   name: z
     .string()
     .min(1, "Attribute name is required")
@@ -13,7 +12,6 @@ export const createAttributeSchema = z.object({
 })
 
 export const updateAttributeSchema = z.object({
-  productId: z.string().min(1, "Product ID is required").optional(),
   name: z.string().min(2).max(60).optional(),
   values: z.array(z.string().min(1)).min(1).optional(),
 })

@@ -1,9 +1,11 @@
 "use client"
 
 import { CategoryDialog } from "@/components/common/category-dialog"
+import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
+import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +15,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import {
     useCategories,
@@ -20,9 +23,9 @@ import {
 } from "@/lib/hooks/use-categories"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Category } from "@/types"
-import { FolderTree, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
+import { FolderTree, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export default function CategoriesPage() {
   const t = useTranslations("categories")
@@ -34,6 +37,32 @@ export default function CategoriesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
+  const [search, setSearch] = useState("")
+  
+  // View mode with localStorage persistence
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("categories-view-mode") as ViewMode) || "cards"
+    }
+    return "cards"
+  })
+
+  // Save view mode preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("categories-view-mode", viewMode)
+    }
+  }, [viewMode])
+
+  // Filter categories by search
+  const filteredCategories = useMemo(() => {
+    if (!search.trim()) return categories
+    const searchLower = search.toLowerCase()
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(searchLower) ||
+      (category.parent?.name && category.parent.name.toLowerCase().includes(searchLower))
+    )
+  }, [categories, search])
 
   const handleCreate = () => {
     setSelectedCategory(null)
@@ -156,7 +185,61 @@ export default function CategoriesPage() {
     })
   }
 
-  const categoryTree = buildCategoryTree(categories)
+  const categoryTree = buildCategoryTree(filteredCategories)
+
+  // Table columns configuration
+  const tableColumns: Column<Category>[] = useMemo(() => [
+    {
+      id: "name",
+      header: t("name"),
+      accessorKey: "name",
+      sortable: true,
+    },
+    {
+      id: "parent",
+      header: t("parentCategory") || "Parent Category",
+      cell: (row) => row.parent?.name || "-",
+      sortable: false,
+    },
+    {
+      id: "createdAt",
+      header: tCommon("createdAt"),
+      cell: (row) => (
+        <span className="text-muted-foreground">
+          {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
+        </span>
+      ),
+      sortable: true,
+    },
+    {
+      id: "actions",
+      header: tCommon("actions"),
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">{tCommon("openMenu")}</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleEdit(row)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {tCommon("edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleDelete(row)}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {tCommon("delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableHiding: false,
+    },
+  ], [t, tCommon])
 
   return (
     <PageLayout
@@ -184,11 +267,12 @@ export default function CategoriesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
-                data={categories}
+                data={filteredCategories}
                 columns={exportColumns}
                 filename="categories"
-                disabled={isLoading || categories.length === 0}
+                disabled={isLoading || filteredCategories.length === 0}
               />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -198,20 +282,45 @@ export default function CategoriesPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t("searchPlaceholder") || "Search categories..."}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : categories.length === 0 ? (
+          ) : filteredCategories.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderTree className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{t("noCategories")}</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {search ? t("noResults") || "No results found" : t("noCategories")}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                {t("noCategoriesDescription")}
+                {search
+                  ? t("noResultsDescription") || "Try adjusting your search"
+                  : t("noCategoriesDescription")}
               </p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createCategory")}
-              </Button>
+              {!search && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createCategory")}
+                </Button>
+              )}
             </div>
+          ) : viewMode === "table" ? (
+            <DataTable
+              columns={tableColumns}
+              data={filteredCategories}
+              getRowId={(row) => row.id}
+              enableRowSelection={false}
+              emptyMessage={t("noCategories")}
+            />
           ) : (
             <div className="space-y-2">{renderCategoryTree(categoryTree)}</div>
           )}

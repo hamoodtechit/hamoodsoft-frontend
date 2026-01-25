@@ -71,6 +71,14 @@ export interface Role {
   updatedAt?: string
 }
 
+export interface ProductVariantInput {
+  variantName: string
+  sku?: string
+  price?: number
+  unitId?: string
+  options: Record<string, string>
+}
+
 export interface Product {
   id: string
   businessId?: string
@@ -80,8 +88,12 @@ export interface Product {
   price: number
   unitId: string
   categoryIds?: string[]
+  brandId?: string | null
+  variants?: ProductVariantInput[]
+  productVariants?: ProductVariant[] // API response field
   unit?: Unit
   categories?: Category[]
+  brand?: Brand
   isVariable?: boolean
   manageStocks?: boolean
   createdAt?: string
@@ -104,9 +116,18 @@ export interface ProductVariant {
 export interface Attribute {
   id: string
   businessId?: string
-  productId: string
+  brandId?: string
   name: string
   values: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Brand {
+  id: string
+  businessId?: string
+  name: string
+  description?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -154,6 +175,56 @@ export interface StockAdjustment {
   product?: Product
   stock?: Stock
   stockHistory?: StockHistory
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface PurchaseItem {
+  id?: string
+  itemName: string
+  itemDescription?: string
+  unit: string
+  price: number
+  quantity: number
+}
+
+export type PurchaseStatus = "PENDING" | "COMPLETED" | "CANCELLED"
+
+export interface Purchase {
+  id: string
+  businessId?: string
+  branchId: string
+  contactId: string
+  status: PurchaseStatus
+  paidAmount: number
+  dueAmount: number
+  totalPrice: number // API returns totalPrice, not totalAmount
+  totalAmount?: number // Keep for backward compatibility
+  items: PurchaseItem[]
+  branch?: Branch
+  contact?: Contact
+  poNumber?: string
+  poSequence?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type ContactType = "CUSTOMER" | "SUPPLIER"
+
+export interface Contact {
+  id: string
+  businessId?: string
+  type: ContactType
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  isIndividual: boolean
+  companyName?: string
+  companyAddress?: string
+  companyPhone?: string
+  balance: number
+  creditLimit: number
   createdAt?: string
   updatedAt?: string
 }

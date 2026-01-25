@@ -64,10 +64,18 @@ export const endpoints = {
     delete: (id: string) => `/product-variants/${id}`,
   },
   attributes: {
-    create: (productId: string) => `/attributes/${productId}`,
-    listByProduct: (productId: string) => `/attributes/by-product/${productId}`,
+    create: "/attributes",
+    list: "/attributes",
+    getById: (id: string) => `/attributes/${id}`,
     update: (id: string) => `/attributes/${id}`,
     delete: (id: string) => `/attributes/${id}`,
+  },
+  brands: {
+    create: "/brands",
+    list: "/brands",
+    getById: (id: string) => `/brands/${id}`,
+    update: (id: string) => `/brands/${id}`,
+    delete: (id: string) => `/brands/${id}`,
   },
   stocks: {
     list: "/stocks",
@@ -80,5 +88,19 @@ export const endpoints = {
       update: (id: string) => `/stocks/adjustments/${id}`,
     },
     history: "/stocks/history",
+  },
+  purchases: {
+    create: "/purchases",
+    list: "/purchases",
+    getById: (id: string) => `/purchases/${id}`,
+    update: (id: string) => `/purchases/${id}`,
+    delete: (id: string) => `/purchases/${id}`,
+  },
+  contacts: {
+    create: "/contacts",
+    list: "/contacts",
+    getById: (id: string) => `/contacts/${id}`,
+    update: (id: string) => `/contacts/${id}`,
+    delete: (id: string) => `/contacts/${id}`,
   },
 } as const

@@ -1,34 +1,35 @@
 "use client"
 
+import { AttributeDialog } from "@/components/common/attribute-dialog"
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
-import { UnitDialog } from "@/components/common/unit-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { useDeleteUnit, useUnits } from "@/lib/hooks/use-units"
+import { useAttributes, useCreateAttribute, useDeleteAttribute, useUpdateAttribute } from "@/lib/hooks/use-attributes"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Unit } from "@/types"
-import { MoreVertical, Pencil, Plus, Ruler, Search, Trash2 } from "lucide-react"
+import { Attribute } from "@/types"
+import { MoreVertical, Pencil, Plus, Search, Tag, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
-export default function UnitsPage() {
-  const t = useTranslations("units")
+export default function AttributesPage() {
+  const t = useTranslations("attributes")
   const tCommon = useTranslations("common")
   const tModules = useTranslations("modulesPages.inventory")
   const params = useParams()
@@ -37,18 +38,21 @@ export default function UnitsPage() {
   const { user } = useAuth()
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
-  const { data: units = [], isLoading } = useUnits(selectedBranchId || undefined)
-  const deleteUnitMutation = useDeleteUnit()
-  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
+  const { data: attributesData, isLoading } = useAttributes()
+  const attributes = attributesData?.items || []
+  const createAttributeMutation = useCreateAttribute()
+  const updateAttributeMutation = useUpdateAttribute()
+  const deleteAttributeMutation = useDeleteAttribute()
+  const [selectedAttribute, setSelectedAttribute] = useState<Attribute | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null)
+  const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(null)
   const [search, setSearch] = useState("")
   
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("units-view-mode") as ViewMode) || "cards"
+      return (localStorage.getItem("attributes-view-mode") as ViewMode) || "cards"
     }
     return "cards"
   })
@@ -56,19 +60,19 @@ export default function UnitsPage() {
   // Save view mode preference
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("units-view-mode", viewMode)
+      localStorage.setItem("attributes-view-mode", viewMode)
     }
   }, [viewMode])
 
-  // Filter units by search
-  const filteredUnits = useMemo(() => {
-    if (!search.trim()) return units
+  // Filter attributes by search
+  const filteredAttributes = useMemo(() => {
+    if (!search.trim()) return attributes
     const searchLower = search.toLowerCase()
-    return units.filter((unit) =>
-      unit.name.toLowerCase().includes(searchLower) ||
-      unit.suffix.toLowerCase().includes(searchLower)
+    return attributes.filter((attribute) =>
+      attribute.name.toLowerCase().includes(searchLower) ||
+      attribute.values.some((value) => value.toLowerCase().includes(searchLower))
     )
-  }, [units, search])
+  }, [attributes, search])
 
   // Check if user has access to inventory module
   useEffect(() => {
@@ -82,9 +86,7 @@ export default function UnitsPage() {
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              {tModules("noAccessDescription")}
-            </p>
+            <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
           </CardContent>
         </Card>
       </PageLayout>
@@ -92,33 +94,54 @@ export default function UnitsPage() {
   }
 
   const handleCreate = () => {
-    setSelectedUnit(null)
+    setSelectedAttribute(null)
     setIsDialogOpen(true)
   }
 
-  const handleEdit = (unit: Unit) => {
-    setSelectedUnit(unit)
+  const handleEdit = (attribute: Attribute) => {
+    setSelectedAttribute(attribute)
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (unit: Unit) => {
-    setUnitToDelete(unit)
+  const handleDelete = (attribute: Attribute) => {
+    setAttributeToDelete(attribute)
     setIsDeleteDialogOpen(true)
   }
 
   const confirmDelete = () => {
-    if (unitToDelete) {
-      deleteUnitMutation.mutate(unitToDelete.id, {
+    if (attributeToDelete) {
+      deleteAttributeMutation.mutate(attributeToDelete.id, {
         onSuccess: () => {
           setIsDeleteDialogOpen(false)
-          setUnitToDelete(null)
+          setAttributeToDelete(null)
         },
       })
     }
   }
 
+  const handleSubmitCreate = (data: any) => {
+    createAttributeMutation.mutate(data, {
+      onSuccess: () => {
+        setIsDialogOpen(false)
+        setSelectedAttribute(null)
+      },
+    })
+  }
+
+  const handleSubmitUpdate = (id: string, data: any) => {
+    updateAttributeMutation.mutate(
+      { id, data },
+      {
+        onSuccess: () => {
+          setIsDialogOpen(false)
+          setSelectedAttribute(null)
+        },
+      }
+    )
+  }
+
   // Table columns configuration
-  const tableColumns: Column<Unit>[] = useMemo(() => [
+  const tableColumns: Column<Attribute>[] = useMemo(() => [
     {
       id: "name",
       header: t("name"),
@@ -126,11 +149,18 @@ export default function UnitsPage() {
       sortable: true,
     },
     {
-      id: "suffix",
-      header: t("suffix"),
-      accessorKey: "suffix",
-      sortable: true,
-      cell: (row) => <span className="font-mono">{row.suffix}</span>,
+      id: "values",
+      header: t("values"),
+      cell: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.values.map((value, idx) => (
+            <Badge key={idx} variant="outline" className="text-xs">
+              {value}
+            </Badge>
+          ))}
+        </div>
+      ),
+      sortable: false,
     },
     {
       id: "createdAt",
@@ -173,59 +203,50 @@ export default function UnitsPage() {
   ], [t, tCommon])
 
   // Export columns configuration
-  const exportColumns: ExportColumn<Unit>[] = useMemo(() => [
-    { key: "name", header: "Unit Name", width: 25 },
-    { key: "suffix", header: "Unit Suffix", width: 20 },
-    {
-      key: "createdAt",
-      header: "Created At",
-      width: 20,
-      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
-    },
-    {
-      key: "updatedAt",
-      header: "Updated At",
-      width: 20,
-      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
-    },
-  ], [])
+  const exportColumns: ExportColumn<Attribute>[] = useMemo(
+    () => [
+      { key: "name", header: "Attribute Name", width: 30 },
+      {
+        key: "values",
+        header: "Values",
+        width: 50,
+        format: (value, row) => row.values.join(", "),
+      },
+      {
+        key: "createdAt",
+        header: "Created At",
+        width: 20,
+        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+      },
+    ],
+    []
+  )
 
   return (
-    <PageLayout
-      title={t("title")}
-      description={t("description")}
-      maxWidth="full"
-    >
+    <PageLayout title={t("title")} description={t("description")} maxWidth="full">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Ruler className="h-6 w-6" />
+                <Tag className="h-6 w-6" />
               </div>
               <div>
                 <CardTitle>{t("title")}</CardTitle>
-                <CardDescription>
-                  {t("description")}
-                  {selectedBranchId && (
-                    <span className="ml-2 text-xs">
-                      ({t("filteredByBranch")})
-                    </span>
-                  )}
-                </CardDescription>
+                <CardDescription>{t("description")}</CardDescription>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
-                data={filteredUnits}
+                data={filteredAttributes}
                 columns={exportColumns}
-                filename="units"
-                disabled={isLoading || filteredUnits.length === 0}
+                filename="attributes"
+                disabled={isLoading || filteredAttributes.length === 0}
               />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
-                {t("createUnit")}
+                {t("createAttribute")}
               </Button>
             </div>
           </div>
@@ -235,7 +256,7 @@ export default function UnitsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder={t("searchPlaceholder") || "Search units..."}
+                placeholder={t("searchPlaceholder") || "Search attributes..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -244,42 +265,48 @@ export default function UnitsPage() {
           </div>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : filteredUnits.length === 0 ? (
+          ) : filteredAttributes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Ruler className="h-12 w-12 text-muted-foreground mb-4" />
+              <Tag className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                {search ? t("noResults") || "No results found" : t("noUnits")}
+                {search ? t("noResults") || "No results found" : t("noAttributes")}
               </h3>
               <p className="text-muted-foreground mb-4">
                 {search
                   ? t("noResultsDescription") || "Try adjusting your search"
-                  : t("noUnitsDescription")}
+                  : t("noAttributesDescription")}
               </p>
               {!search && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {t("createUnit")}
+                  {t("createAttribute")}
                 </Button>
               )}
             </div>
           ) : viewMode === "table" ? (
             <DataTable
               columns={tableColumns}
-              data={filteredUnits}
+              data={filteredAttributes}
               getRowId={(row) => row.id}
               enableRowSelection={false}
-              emptyMessage={t("noUnits")}
+              emptyMessage={t("noAttributes")}
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredUnits.map((unit) => (
-                <Card key={unit.id} className="relative">
+              {filteredAttributes.map((attribute) => (
+                <Card key={attribute.id} className="relative">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{unit.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {t("suffix")}: <span className="font-mono font-medium">{unit.suffix}</span>
+                        <CardTitle className="text-lg">{attribute.name}</CardTitle>
+                        <CardDescription className="mt-2">
+                          <div className="flex flex-wrap gap-1">
+                            {attribute.values.map((value, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {value}
+                              </Badge>
+                            ))}
+                          </div>
                         </CardDescription>
                       </div>
                       <DropdownMenu>
@@ -289,12 +316,12 @@ export default function UnitsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(unit)}>
+                          <DropdownMenuItem onClick={() => handleEdit(attribute)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {tCommon("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(unit)}
+                            onClick={() => handleDelete(attribute)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -311,10 +338,13 @@ export default function UnitsPage() {
         </CardContent>
       </Card>
 
-      <UnitDialog
-        unit={selectedUnit}
+      <AttributeDialog
+        attribute={selectedAttribute}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        onSubmitCreate={handleSubmitCreate}
+        onSubmitUpdate={handleSubmitUpdate}
+        isLoading={createAttributeMutation.isPending || updateAttributeMutation.isPending}
       />
 
       <DeleteConfirmationDialog
@@ -322,8 +352,8 @@ export default function UnitsPage() {
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
         title={t("deleteConfirmTitle")}
-        description={t("deleteConfirmDescription", { name: unitToDelete?.name || "" })}
-        isLoading={deleteUnitMutation.isPending}
+        description={t("deleteConfirmDescription")}
+        isLoading={deleteAttributeMutation.isPending}
       />
     </PageLayout>
   )
