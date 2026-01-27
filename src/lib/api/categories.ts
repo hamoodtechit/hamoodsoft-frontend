@@ -17,6 +17,14 @@ export const categoriesApi = {
       endpoints.categories.list,
       { params: branchId ? { branchId } : undefined }
     )
+    console.log("📦 Categories API Response:", {
+      branchId,
+      rawResponse: response.data,
+      categories: response.data.data,
+      categoriesWithParent: response.data.data.filter(c => c.parentId),
+      categoriesWithoutParent: response.data.data.filter(c => !c.parentId),
+      totalCount: response.data.data.length,
+    })
     return response.data.data
   },
 

@@ -10,16 +10,16 @@ import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import {
-    useCategories,
-    useDeleteCategory,
+  useCategories,
+  useDeleteCategory,
 } from "@/lib/hooks/use-categories"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Category } from "@/types"
@@ -33,6 +33,18 @@ export default function CategoriesPage() {
   const { selectedBranchId } = useBranchSelection()
   const { data: categories = [], isLoading } = useCategories(selectedBranchId || undefined)
   const deleteCategoryMutation = useDeleteCategory()
+
+  // Debug: Log categories data
+  useEffect(() => {
+    console.log("🌳 Categories Page - Raw Categories Data:", {
+      categories,
+      categoriesCount: categories.length,
+      categoriesWithParentId: categories.filter(c => c.parentId),
+      categoriesWithoutParentId: categories.filter(c => !c.parentId),
+      sampleCategory: categories[0],
+      allParentIds: categories.map(c => ({ id: c.id, name: c.name, parentId: c.parentId })),
+    })
+  }, [categories])
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -54,14 +66,77 @@ export default function CategoriesPage() {
     }
   }, [viewMode])
 
-  // Filter categories by search
-  const filteredCategories = useMemo(() => {
-    if (!search.trim()) return categories
+  // Flatten nested categories to get all categories (including nested children)
+  const allCategoriesFlat = useMemo(() => {
+    const flattened: Category[] = []
+    
+    const traverse = (cats: Category[]) => {
+      cats.forEach((cat) => {
+        // Add the category itself (without children for flat display)
+        flattened.push({
+          ...cat,
+          children: undefined,
+        })
+        
+        // Recursively traverse children if they exist
+        if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
+          traverse((cat as any).children)
+        }
+      })
+    }
+    
+    traverse(categories)
+    console.log("📊 All Categories Flat (for table view):", {
+      allCategoriesFlat: flattened,
+      count: flattened.length,
+      withParentId: flattened.filter(c => c.parentId),
+      withoutParentId: flattened.filter(c => !c.parentId),
+    })
+    return flattened
+  }, [categories])
+
+  // Filter categories by search (for table view - uses flattened list)
+  const filteredCategoriesForTable = useMemo(() => {
+    if (!search.trim()) return allCategoriesFlat
     const searchLower = search.toLowerCase()
-    return categories.filter((category) =>
+    return allCategoriesFlat.filter((category) =>
       category.name.toLowerCase().includes(searchLower) ||
       (category.parent?.name && category.parent.name.toLowerCase().includes(searchLower))
     )
+  }, [allCategoriesFlat, search])
+
+  // Filter categories by search (for tree/card view - uses nested structure)
+  const filteredCategoriesForTree = useMemo(() => {
+    if (!search.trim()) return categories
+    const searchLower = search.toLowerCase()
+    
+    // Filter nested structure recursively
+    const filterNested = (cats: Category[]): Category[] => {
+      return cats.flatMap((cat) => {
+        const matchesSearch =
+          cat.name.toLowerCase().includes(searchLower) ||
+          (cat.parent?.name && cat.parent.name.toLowerCase().includes(searchLower))
+
+        const filteredChildren =
+          (cat as any).children && Array.isArray((cat as any).children)
+            ? filterNested((cat as any).children)
+            : []
+
+        // Include category if it matches or has matching children
+        if (matchesSearch || filteredChildren.length > 0) {
+          return [
+            {
+              ...cat,
+              children: filteredChildren,
+            } as Category,
+          ]
+        }
+
+        return []
+      })
+    }
+    
+    return filterNested(categories)
   }, [categories, search])
 
   const handleCreate = () => {
@@ -117,33 +192,140 @@ export default function CategoriesPage() {
     },
   ], [])
 
+  // Flatten nested category structure to get all categories
+  const flattenCategories = (categories: Category[]): Category[] => {
+    const flattened: Category[] = []
+    
+    const traverse = (cats: Category[]) => {
+      cats.forEach((cat) => {
+        // Add the category itself
+        flattened.push({
+          ...cat,
+          children: undefined, // Remove children for flat structure
+        })
+        
+        // Recursively traverse children if they exist
+        if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
+          traverse((cat as any).children)
+        }
+      })
+    }
+    
+    traverse(categories)
+    return flattened
+  }
+
+  // Recursively process nested category structure
+  const processNestedCategories = (categories: Category[]): (Category & { children: Category[] })[] => {
+    return categories.map((cat) => {
+      const processed: Category & { children: Category[] } = {
+        ...cat,
+        children: [],
+      }
+      
+      // If this category has nested children, process them recursively
+      if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
+        processed.children = processNestedCategories((cat as any).children)
+      }
+      
+      return processed
+    })
+  }
+
   // Build category tree structure
   const buildCategoryTree = (categories: Category[]): Category[] => {
+    console.log("🌲 Building Category Tree - Input:", {
+      categories,
+      categoriesCount: categories.length,
+      hasNestedChildren: categories.some(c => (c as any).children?.length > 0),
+      firstCategory: categories[0],
+      firstCategoryChildren: (categories[0] as any)?.children,
+    })
+
+    // Check if categories are already nested (API returned nested structure)
+    const hasNestedStructure = categories.some(c => (c as any).children?.length > 0)
+    
+    // If API already returned nested structure, process it recursively
+    if (hasNestedStructure) {
+      console.log("🌲 API returned nested structure, processing recursively")
+      const tree = processNestedCategories(categories)
+      console.log("🌲 Category Tree (from nested API):", {
+        tree,
+        treeCount: tree.length,
+        treeStructure: tree.map(c => ({
+          name: c.name,
+          id: c.id,
+          childrenCount: c.children?.length || 0,
+          children: c.children?.map((ch: any) => ({ name: ch.name, id: ch.id })) || [],
+        })),
+      })
+      return tree
+    }
+
+    // Otherwise, flatten and rebuild from flat structure
+    const flatCategories = flattenCategories(categories)
+    console.log("🌲 Flattened categories:", {
+      flatCategories,
+      flatCount: flatCategories.length,
+    })
+
     const categoryMap = new Map<string, Category & { children: Category[] }>()
     const rootCategories: Category[] = []
 
     // First pass: create map with children arrays
-    categories.forEach((cat) => {
+    flatCategories.forEach((cat) => {
       categoryMap.set(cat.id, { ...cat, children: [] })
     })
 
+    console.log("🌲 Category Map Created:", {
+      mapSize: categoryMap.size,
+      mapKeys: Array.from(categoryMap.keys()),
+    })
+
     // Second pass: build tree
-    categories.forEach((cat) => {
+    flatCategories.forEach((cat) => {
       const categoryWithChildren = categoryMap.get(cat.id)!
       if (cat.parentId && categoryMap.has(cat.parentId)) {
         const parent = categoryMap.get(cat.parentId)!
+        console.log(`🌲 Adding child "${cat.name}" (${cat.id}) to parent "${parent.name}" (${cat.parentId})`)
         parent.children.push(categoryWithChildren)
       } else {
+        console.log(`🌲 Adding root category "${cat.name}" (${cat.id}) - parentId: ${cat.parentId}`)
         rootCategories.push(categoryWithChildren)
       }
+    })
+
+    console.log("🌲 Category Tree Built:", {
+      rootCategories,
+      rootCount: rootCategories.length,
+      rootCategoriesWithChildren: rootCategories.filter(c => (c as any).children?.length > 0),
+      treeStructure: rootCategories.map(c => ({
+        name: c.name,
+        id: c.id,
+        childrenCount: (c as any).children?.length || 0,
+        children: (c as any).children?.map((ch: any) => ({ name: ch.name, id: ch.id })) || [],
+      })),
     })
 
     return rootCategories
   }
 
   const renderCategoryTree = (categoryList: Category[], level = 0) => {
+    console.log(`🎨 Rendering Category Tree - Level ${level}:`, {
+      categoryList,
+      categoryListCount: categoryList.length,
+      categoriesWithChildren: categoryList.filter(c => (c as any).children?.length > 0),
+    })
+
     return categoryList.map((category) => {
       const hasChildren = (category as any).children?.length > 0
+      console.log(`🎨 Rendering category "${category.name}" (${category.id}):`, {
+        hasChildren,
+        children: (category as any).children,
+        childrenCount: (category as any).children?.length || 0,
+        level,
+      })
+
       return (
         <div key={category.id} className="space-y-2">
           <div
@@ -155,6 +337,11 @@ export default function CategoriesPage() {
               <FolderTree className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">{category.name}</div>
+                {hasChildren && (
+                  <div className="text-xs text-muted-foreground">
+                    {(category as any).children.length} subcategor{(category as any).children.length === 1 ? "y" : "ies"}
+                  </div>
+                )}
               </div>
             </div>
             <DropdownMenu>
@@ -185,7 +372,20 @@ export default function CategoriesPage() {
     })
   }
 
-  const categoryTree = buildCategoryTree(filteredCategories)
+  const categoryTree = buildCategoryTree(filteredCategoriesForTree)
+
+  // Debug: Log filtered categories and tree
+  useEffect(() => {
+    console.log("🔍 Filtered Categories for Table:", {
+      filteredCategoriesForTable,
+      filteredCount: filteredCategoriesForTable.length,
+      searchTerm: search,
+    })
+    console.log("🌳 Category Tree Result:", {
+      categoryTree,
+      treeCount: categoryTree.length,
+    })
+  }, [filteredCategoriesForTable, categoryTree, search])
 
   // Table columns configuration
   const tableColumns: Column<Category>[] = useMemo(() => [
@@ -269,10 +469,10 @@ export default function CategoriesPage() {
             <div className="flex items-center gap-2">
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
-                data={filteredCategories}
+                data={filteredCategoriesForTable}
                 columns={exportColumns}
                 filename="categories"
-                disabled={isLoading || filteredCategories.length === 0}
+                disabled={isLoading || filteredCategoriesForTable.length === 0}
               />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -295,7 +495,7 @@ export default function CategoriesPage() {
           </div>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : filteredCategories.length === 0 ? (
+          ) : (viewMode === "table" ? filteredCategoriesForTable : filteredCategoriesForTree).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderTree className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">
@@ -316,7 +516,7 @@ export default function CategoriesPage() {
           ) : viewMode === "table" ? (
             <DataTable
               columns={tableColumns}
-              data={filteredCategories}
+              data={filteredCategoriesForTable}
               getRowId={(row) => row.id}
               enableRowSelection={false}
               emptyMessage={t("noCategories")}

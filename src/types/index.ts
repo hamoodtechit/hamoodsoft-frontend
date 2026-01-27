@@ -139,8 +139,11 @@ export interface Stock {
   productId: string
   unitId: string
   quantity: number
+  sku?: string // SKU field from stock
   purchasePrice?: number | null
   salePrice?: number | null
+  profitMarginPercent?: number
+  profitMarginAmount?: number
   product?: Product
   branch?: Branch
   unit?: Unit
@@ -205,6 +208,50 @@ export interface Purchase {
   contact?: Contact
   poNumber?: string
   poSequence?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type SaleStatus = "DRAFT" | "SOLD" | "PENDING"
+export type PaymentStatus = "PAID" | "DUE" | "PARTIAL"
+
+export interface SaleItem {
+  id?: string
+  saleId?: string
+  branchId?: string
+  businessId?: string
+  sku?: string
+  itemName: string
+  itemDescription?: string
+  unit: string
+  price: number
+  quantity: number
+  discountType?: "NONE" | "PERCENTAGE" | "FIXED"
+  discountAmount?: number
+  totalPrice?: number
+  saleReturnId?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Sale {
+  id: string
+  businessId?: string
+  branchId: string
+  contactId: string
+  status: SaleStatus
+  paymentStatus: PaymentStatus
+  paidAmount: number
+  totalAmount?: number
+  totalPrice?: number
+  discountType?: "NONE" | "PERCENTAGE" | "FIXED"
+  discountAmount?: number
+  items?: SaleItem[] // For backward compatibility
+  saleItems?: SaleItem[] // API response uses saleItems
+  invoiceNumber?: string
+  invoiceSequence?: number
+  branch?: Branch
+  contact?: Contact
   createdAt?: string
   updatedAt?: string
 }

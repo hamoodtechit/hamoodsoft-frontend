@@ -33,7 +33,6 @@ function normalizeContactsList(data: PaginatedResult<Contact> | ContactsResponse
         limit: meta.limit ?? (data.items?.length || 10),
         total: meta.total ?? data.items?.length ?? 0,
         totalPages: meta.totalPages ?? undefined,
-        ...meta,
       },
     }
   }

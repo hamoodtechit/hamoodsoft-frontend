@@ -2,31 +2,31 @@
 
 import { Button } from "@/components/ui/button"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useAttributes } from "@/lib/hooks/use-attributes"
 import { useUnits } from "@/lib/hooks/use-units"
 import { cn } from "@/lib/utils"
 import {
-    createProductVariantSchema,
-    productVariantOptionsSchema,
-    updateProductVariantSchema,
-    type CreateProductVariantInput,
-    type UpdateProductVariantInput,
+  createProductVariantSchema,
+  productVariantOptionsSchema,
+  updateProductVariantSchema,
+  type CreateProductVariantInput,
+  type UpdateProductVariantInput,
 } from "@/lib/validations/product-variants"
 import { Attribute, ProductVariant, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -56,7 +56,8 @@ export function ProductVariantDialog({
   const t = useTranslations("productVariants")
   const tCommon = useTranslations("common")
   const { data: units = [] } = useUnits()
-  const { data: attributes = [] } = useAttributes(productId)
+  const { data: attributesData } = useAttributes()
+  const attributes = attributesData?.items ?? []
 
   const isEdit = !!variant
   const schema = isEdit ? updateProductVariantSchema : createProductVariantSchema

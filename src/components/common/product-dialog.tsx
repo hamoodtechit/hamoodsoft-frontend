@@ -17,6 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Form,
   FormControl,
   FormField,
@@ -26,6 +31,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAttributes, useCreateAttribute } from "@/lib/hooks/use-attributes"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useBrands, useCreateBrand } from "@/lib/hooks/use-brands"
@@ -41,7 +47,7 @@ import {
 } from "@/lib/validations/products"
 import { Branch, Brand, Category, Product, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Package, Plus } from "lucide-react"
+import { ChevronDown, Package, Plus, Search, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -176,6 +182,8 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false)
   const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
+  const [categorySearchQuery, setCategorySearchQuery] = useState("")
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const createAttributeMutation = useCreateAttribute()
   const createUnitMutation = useCreateUnit()
   const createBrandMutation = useCreateBrand()
@@ -184,15 +192,31 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
 
   // Track if we've initialized from product variants (to prevent resetting user selections)
   const hasInitializedFromProduct = useRef(false)
+  const previousProductIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     // Only reset form when product changes or dialog opens/closes
     if (!open) {
       hasInitializedFromProduct.current = false
+      previousProductIdRef.current = null
       return
     }
 
-    form.reset(defaultValues)
+    // Check if product actually changed (not just brand or other fields)
+    const currentProductId = product?.id || null
+    const productChanged = previousProductIdRef.current !== currentProductId
+    
+    // Only reset form if product actually changed
+    if (productChanged) {
+      form.reset(defaultValues)
+      previousProductIdRef.current = currentProductId
+    } else if (previousProductIdRef.current === null && !product && open) {
+      // First time opening for new product - only reset once
+      if (!hasInitializedFromProduct.current) {
+        form.reset(defaultValues)
+        previousProductIdRef.current = null
+      }
+    }
     
     // Handle both variants and productVariants from API
     const existingVariants = (product as any)?.productVariants || product?.variants || []
@@ -289,7 +313,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         hasInitializedFromProduct.current = true
       }
     }
-  }, [open, product, form, replace, availableAttributes, attributesData, brandIdForAttributes])
+  }, [open, product?.id, form, replace, availableAttributes, attributesData])
 
   // Reset state when dialog closes completely
   useEffect(() => {
@@ -534,9 +558,54 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }
 
   const unitOptions = units as Unit[]
-  const categoryOptions = categories as Category[]
   const branchOptions = branches as Branch[]
   const brandOptions = brands as Brand[]
+
+  // Flatten categories to include all (parent + children) for selection
+  const flattenCategoriesForSelection = useMemo(() => {
+    const flattened: Array<Category & { parentName?: string; level: number }> = []
+    
+    const traverse = (cats: Category[], level = 0, parentName?: string) => {
+      cats.forEach((cat) => {
+        flattened.push({
+          ...cat,
+          children: undefined,
+          parentName,
+          level,
+        })
+        
+        // Recursively traverse children if they exist
+        if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
+          traverse((cat as any).children, level + 1, cat.name)
+        }
+      })
+    }
+    
+    traverse(categories)
+    return flattened
+  }, [categories])
+
+  // Create a map of category ID to all its children IDs (recursive)
+  const categoryChildrenMap = useMemo(() => {
+    const map = new Map<string, string[]>()
+    
+    const getChildrenIds = (cat: Category): string[] => {
+      const childrenIds: string[] = []
+      if ((cat as any).children && Array.isArray((cat as any).children)) {
+        (cat as any).children.forEach((child: Category) => {
+          childrenIds.push(child.id)
+          childrenIds.push(...getChildrenIds(child))
+        })
+      }
+      return childrenIds
+    }
+    
+    flattenCategoriesForSelection.forEach((cat) => {
+      map.set(cat.id, getChildrenIds(cat))
+    })
+    
+    return map
+  }, [flattenCategoriesForSelection])
 
   const selectedAttributes = availableAttributes.filter((attr) =>
     selectedAttributeIds.includes(attr.id)
@@ -681,9 +750,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                         )}
                         value={field.value || ""}
                         onChange={(e) => {
-                          field.onChange(e.target.value)
-                          // Clear selected attributes when brand changes
+                          const newBrandId = e.target.value
+                          field.onChange(newBrandId)
+                          // Clear selected attributes when brand changes (but don't reset form)
                           setSelectedAttributeIds([])
+                          setSelectedAttributeValues({})
+                          replace([])
                         }}
                         disabled={isLoading}
                       >
@@ -716,6 +788,35 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
               name="categoryIds"
               render={({ field }) => {
                 const selected = Array.isArray(field.value) ? field.value : []
+
+                // Filter categories based on search
+                const filteredCategories = flattenCategoriesForSelection.filter((cat) =>
+                  cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                )
+
+                // Get selected category names for display
+                const selectedCategoryNames = flattenCategoriesForSelection
+                  .filter((cat) => selected.includes(cat.id))
+                  .map((cat) => cat.name)
+
+                // Handle category selection with auto-select children
+                const handleCategoryToggle = (categoryId: string, checked: boolean) => {
+                  let newSelected: string[]
+                  
+                  if (checked) {
+                    // Add category and all its children
+                    const childrenIds = categoryChildrenMap.get(categoryId) || []
+                    newSelected = [...new Set([...selected, categoryId, ...childrenIds])]
+                  } else {
+                    // Remove category and all its children
+                    const childrenIds = categoryChildrenMap.get(categoryId) || []
+                    const idsToRemove = new Set([categoryId, ...childrenIds])
+                    newSelected = selected.filter((id) => !idsToRemove.has(id))
+                  }
+                  
+                  field.onChange(newSelected)
+                }
+
                 return (
                   <FormItem>
                     <div className="flex items-center justify-between">
@@ -732,34 +833,112 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                       </Button>
                     </div>
                     <FormControl>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {categoryOptions.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">{t("noCategoriesHint")}</p>
-                        ) : (
-                          categoryOptions.map((cat) => {
-                            const checked = selected.includes(cat.id)
-                            return (
-                              <label
-                                key={cat.id}
-                                className={cn(
-                                  "flex items-center gap-2 rounded-md border p-2",
-                                  checked ? "border-primary bg-primary/5" : "border-border"
+                      <div>
+                        <DropdownMenu open={isCategoryDropdownOpen} onOpenChange={setIsCategoryDropdownOpen}>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full justify-between"
+                              disabled={isLoading}
+                            >
+                              <span className="truncate">
+                                {selected.length === 0
+                                  ? t("selectCategories") || "Select categories..."
+                                  : `${selected.length} ${selected.length === 1 ? "category" : "categories"} selected`}
+                              </span>
+                              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[400px] p-0" align="start">
+                            <div className="flex items-center border-b px-3">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                              <Input
+                                placeholder={t("searchCategories") || "Search categories..."}
+                                value={categorySearchQuery}
+                                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <ScrollArea className="h-[300px]">
+                              <div className="p-2">
+                                {filteredCategories.length === 0 ? (
+                                  <p className="py-6 text-center text-sm text-muted-foreground">
+                                    {t("noCategoriesFound") || "No categories found"}
+                                  </p>
+                                ) : (
+                                  filteredCategories.map((cat) => {
+                                    const checked = selected.includes(cat.id)
+                                    const childrenIds = categoryChildrenMap.get(cat.id) || []
+                                    const allChildrenSelected = childrenIds.length > 0 && childrenIds.every((id) => selected.includes(id))
+                                    
+                                    return (
+                                      <label
+                                        key={cat.id}
+                                        className={cn(
+                                          "flex items-center gap-2 rounded-md p-2 hover:bg-accent",
+                                          checked && "bg-accent"
+                                        )}
+                                      >
+                                        <Checkbox
+                                          checked={checked}
+                                          onCheckedChange={(val) => handleCategoryToggle(cat.id, val === true)}
+                                          disabled={isLoading}
+                                        />
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">{cat.name}</span>
+                                            {cat.parentName && (
+                                              <span className="text-xs text-muted-foreground">
+                                                ({cat.parentName})
+                                              </span>
+                                            )}
+                                            {childrenIds.length > 0 && (
+                                              <Badge variant="secondary" className="text-xs">
+                                                {childrenIds.length} {childrenIds.length === 1 ? "sub" : "subs"}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {checked && childrenIds.length > 0 && !allChildrenSelected && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                              {childrenIds.filter((id) => selected.includes(id)).length} of {childrenIds.length} subcategories selected
+                                            </p>
+                                          )}
+                                        </div>
+                                      </label>
+                                    )
+                                  })
                                 )}
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(val) => {
-                                    const next = val
-                                      ? [...selected, cat.id]
-                                      : selected.filter((id) => id !== cat.id)
-                                    field.onChange(next)
-                                  }}
-                                  disabled={isLoading}
-                                />
-                                <span className="text-sm">{cat.name}</span>
-                              </label>
-                            )
-                          })
+                              </div>
+                            </ScrollArea>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        
+                        {/* Display selected categories as badges */}
+                        {selected.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {selectedCategoryNames.map((name, idx) => {
+                              const categoryId = flattenCategoriesForSelection.find((c) => c.name === name)?.id
+                              return (
+                                <Badge key={categoryId || idx} variant="secondary" className="gap-1">
+                                  {name}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (categoryId) {
+                                        handleCategoryToggle(categoryId, false)
+                                      }
+                                    }}
+                                    className="ml-1 rounded-full hover:bg-secondary-foreground/20"
+                                    disabled={isLoading}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
                     </FormControl>

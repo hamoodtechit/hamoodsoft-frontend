@@ -1,15 +1,8 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowUpDown, MoreVertical, ArrowUp, ArrowDown } from "lucide-react"
-import { useState, useMemo } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
+import { useMemo, useState } from "react"
 
 export interface Column<T> {
   id: string
@@ -25,7 +18,18 @@ interface DataTableProps<T> {
   columns: Column<T>[]
   onRowClick?: (row: T) => void
   actions?: (row: T) => React.ReactNode
+  /**
+   * Row selection (legacy prop name in some pages)
+   * - enableRowSelection=false disables selection UI
+   * - selectable=true enables selection UI
+   */
   selectable?: boolean
+  enableRowSelection?: boolean
+  /**
+   * Legacy compatibility: some pages pass getRowId (TanStack style).
+   * Our table uses row.id internally; we accept this prop to avoid TS errors.
+   */
+  getRowId?: (row: T) => string
   onSelectionChange?: (selected: T[]) => void
   emptyMessage?: string
 }
@@ -38,9 +42,14 @@ export function DataTable<T extends { id: string }>({
   onRowClick,
   actions,
   selectable = false,
+  enableRowSelection,
+  getRowId,
   onSelectionChange,
   emptyMessage = "No data available",
 }: DataTableProps<T>) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _getRowId = getRowId
+  const isSelectable = enableRowSelection ?? selectable
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
@@ -128,7 +137,7 @@ export function DataTable<T extends { id: string }>({
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b bg-muted/50">
-            {selectable && (
+            {isSelectable && (
               <th className="w-12 px-4 py-3 text-left">
                 <Checkbox
                   checked={allSelected}
@@ -176,7 +185,7 @@ export function DataTable<T extends { id: string }>({
               } ${selectedRows.has(row.id) ? "bg-muted/30" : ""}`}
               onClick={() => onRowClick?.(row)}
             >
-              {selectable && (
+              {isSelectable && (
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedRows.has(row.id)}

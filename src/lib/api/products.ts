@@ -49,16 +49,16 @@ function normalizeProductsList(data: PaginatedResult<Product> | ProductsResponse
         limit: meta.limit ?? (items.length || 10),
         total: meta.total ?? items.length ?? 0,
         totalPages: meta.totalPages ?? undefined,
-        ...meta,
       },
     }
   }
 
   // If backend returns full PaginatedResult with meta nested
   if (!Array.isArray(data) && "meta" in data && "items" in data) {
+    const paginatedData = data as PaginatedResult<Product>
     return {
-      ...data,
-      items: (data as PaginatedResult<Product>).items.map(normalizeProduct),
+      items: paginatedData.items.map(normalizeProduct),
+      meta: paginatedData.meta,
     }
   }
 

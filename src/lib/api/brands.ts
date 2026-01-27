@@ -43,7 +43,6 @@ function normalizeBrandsList(
       limit: meta.limit ?? (items?.length || 10),
       total: meta.total ?? items?.length ?? 0,
       totalPages: meta.totalPages ?? undefined,
-      ...meta,
     },
   }
 }

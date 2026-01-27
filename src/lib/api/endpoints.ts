@@ -103,4 +103,11 @@ export const endpoints = {
     update: (id: string) => `/contacts/${id}`,
     delete: (id: string) => `/contacts/${id}`,
   },
+  sales: {
+    create: "/sales",
+    list: "/sales",
+    getById: (id: string) => `/sales/${id}`,
+    update: (id: string) => `/sales/${id}`,
+    delete: (id: string) => `/sales/${id}`,
+  },
 } as const
