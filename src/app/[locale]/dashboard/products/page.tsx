@@ -394,65 +394,81 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {products.map((p) => (
-                <Card key={p.id} className="relative">
-                  <CardContent className="py-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold truncate">{p.name}</h4>
-                          <span className="text-sm text-muted-foreground">
-                            {t("priceValue", { price: p.price })}
-                            {p.unit?.suffix ? ` / ${p.unit.suffix}` : ""}
-                          </span>
-                        </div>
-                        {p.description ? (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {p.description}
-                          </p>
-                        ) : null}
-                        {p.categories && p.categories.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {p.categories.map((c) => (
-                              <span
-                                key={c.id}
-                                className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                              >
-                                {c.name}
-                              </span>
-                            ))}
+              {products.map((p) => {
+                // Get product image from first variant or null
+                const productImage = p.productVariants && p.productVariants.length > 0
+                  ? p.productVariants[0]?.thumbnailUrl || (p.productVariants[0]?.images && p.productVariants[0].images[0])
+                  : null
+
+                return (
+                  <Card key={p.id} className="relative">
+                    <CardContent className="py-4">
+                      <div className="flex items-start justify-between gap-4">
+                        {productImage && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={productImage}
+                              alt={p.name}
+                              className="h-16 w-16 rounded-md object-cover border"
+                            />
                           </div>
                         )}
-                      </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold truncate">{p.name}</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {t("priceValue", { price: p.price })}
+                              {p.unit?.suffix ? ` / ${p.unit.suffix}` : ""}
+                            </span>
+                          </div>
+                          {p.description ? (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {p.description}
+                            </p>
+                          ) : null}
+                          {p.categories && p.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {p.categories.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                                >
+                                  {c.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleView(p)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {t("viewDetails")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(p)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(p)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleView(p)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              {t("viewDetails")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(p)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(p)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
 
               <div className="flex items-center justify-between pt-2">
                 <p className="text-sm text-muted-foreground">

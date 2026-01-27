@@ -861,6 +861,11 @@ export default function PointOfSalePage() {
                       const isSelected = lastSelectedProductId === product.id
                       const inCart = cartProductIdSet.has(product.id)
 
+                      // Get product image from first variant or null
+                      const productImage = variants && variants.length > 0 && variants[0]?.variant
+                        ? variants[0].variant.thumbnailUrl || (variants[0].variant.images && variants[0].variant.images[0])
+                        : null
+
                       return (
                         <button
                           key={product.id}
@@ -877,6 +882,15 @@ export default function PointOfSalePage() {
                           {inCart && (
                             <div className="absolute right-2 top-2 rounded-full bg-primary text-primary-foreground p-1">
                               <Check className="h-3 w-3" />
+                            </div>
+                          )}
+                          {productImage && (
+                            <div className="w-full aspect-square rounded-md overflow-hidden bg-muted mb-2">
+                              <img
+                                src={productImage}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           )}
                           <div className="font-medium text-sm line-clamp-2 pr-6">{product.name}</div>

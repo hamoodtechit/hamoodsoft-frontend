@@ -621,12 +621,12 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               )}
                             />
 
-                            <FormItem>
-                              <FormLabel>{t("totalPrice") || "Total"}</FormLabel>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">{t("totalPrice") || "Total"}</Label>
                               <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm">
                                 {calculateItemTotal(form.watch(`items.${index}` as any)).toFixed(2)}
                               </div>
-                            </FormItem>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">

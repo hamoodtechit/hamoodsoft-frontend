@@ -108,6 +108,8 @@ export interface ProductVariant {
   unitId: string
   variantName: string
   options?: Record<string, string>
+  thumbnailUrl?: string | null
+  images?: string[]
   unit?: Unit
   createdAt?: string
   updatedAt?: string
@@ -272,6 +274,27 @@ export interface Contact {
   companyPhone?: string
   balance: number
   creditLimit: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Media {
+  id: string
+  businessId: string
+  name: string
+  type: "image" | "document"
+  resourceType: "image" | "raw"
+  provider: string
+  folder: string
+  publicId: string
+  url: string
+  secureUrl: string
+  format: string
+  bytes: number | null
+  width: number | null
+  height: number | null
+  originalFilename: string
+  mimeType: string
   createdAt?: string
   updatedAt?: string
 }

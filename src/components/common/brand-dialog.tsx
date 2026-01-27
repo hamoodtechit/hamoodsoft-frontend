@@ -140,7 +140,7 @@ export function BrandDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("description")}</FormLabel>
+                  <FormLabel>{t("brandDescription")}</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder={t("descriptionPlaceholder")} disabled={isLoading} />
                   </FormControl>

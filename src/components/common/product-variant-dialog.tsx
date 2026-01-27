@@ -1,5 +1,6 @@
 "use client"
 
+import { MediaDialog } from "@/components/common/media-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/validations/product-variants"
 import { Attribute, ProductVariant, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Image as ImageIcon, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -101,6 +103,8 @@ export function ProductVariantDialog({
         unitId: "",
         variantName: "",
         options: {} as Record<string, string>,
+        thumbnailUrl: "",
+        images: [] as string[],
       }
     }
     return {
@@ -109,6 +113,8 @@ export function ProductVariantDialog({
       unitId: variant.unitId || "",
       variantName: variant.variantName || "",
       options: variant.options || {},
+      thumbnailUrl: variant.thumbnailUrl || "",
+      images: variant.images || [],
     }
   }, [variant])
 
@@ -120,11 +126,15 @@ export function ProductVariantDialog({
   const [optionsText, setOptionsText] = useState<string>(toText(defaultValues.options))
   const [attributeSelections, setAttributeSelections] = useState<Record<string, string>>({})
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
+  const [selectingThumbnail, setSelectingThumbnail] = useState(false)
 
   useEffect(() => {
     form.reset(defaultValues)
     setOptionsText(toText(defaultValues.options))
     setAttributeSelections(defaultValues.options || {})
+    setMediaDialogOpen(false)
+    setSelectingThumbnail(false)
   }, [defaultValues, form])
 
   const onSubmit = (data: CreateProductVariantInput | UpdateProductVariantInput) => {
@@ -247,6 +257,114 @@ export function ProductVariantDialog({
               )}
             />
 
+            {/* Thumbnail Image */}
+            <FormField
+              control={form.control}
+              name="thumbnailUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("thumbnail") || "Thumbnail Image"}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      {field.value ? (
+                        <div className="relative inline-block">
+                          <img
+                            src={field.value}
+                            alt="Thumbnail"
+                            className="h-24 w-24 rounded-md object-cover border"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6"
+                            onClick={() => field.onChange("")}
+                            disabled={isLoading}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="h-24 w-24 rounded-md border border-dashed flex items-center justify-center">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectingThumbnail(true)
+                          setMediaDialogOpen(true)
+                        }}
+                        disabled={isLoading}
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        {field.value ? t("changeThumbnail") || "Change Thumbnail" : t("selectThumbnail") || "Select Thumbnail"}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Gallery Images */}
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("images") || "Gallery Images"}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      {field.value && field.value.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {field.value.map((url, index) => (
+                            <div key={index} className="relative">
+                              <img
+                                src={url}
+                                alt={`Gallery ${index + 1}`}
+                                className="h-20 w-20 rounded-md object-cover border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6"
+                                onClick={() => {
+                                  const currentImages = field.value || []
+                                  const newImages = currentImages.filter((_, i) => i !== index)
+                                  field.onChange(newImages)
+                                }}
+                                disabled={isLoading}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectingThumbnail(false)
+                          setMediaDialogOpen(true)
+                        }}
+                        disabled={isLoading}
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        {t("addImages") || "Add Images"}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="options"
@@ -351,6 +469,28 @@ export function ProductVariantDialog({
             </DialogFooter>
           </form>
         </Form>
+
+        {/* Media Dialog */}
+        <MediaDialog
+          open={mediaDialogOpen}
+          onOpenChange={setMediaDialogOpen}
+          type="image"
+          multiple={!selectingThumbnail}
+          onSelect={(media) => {
+            if (selectingThumbnail) {
+              // Single selection for thumbnail
+              const selectedMedia = Array.isArray(media) ? media[0] : media
+              form.setValue("thumbnailUrl", selectedMedia.secureUrl || selectedMedia.url)
+            } else {
+              // Multiple selection for gallery
+              const selectedMedia = Array.isArray(media) ? media : [media]
+              const currentImages = form.getValues("images") || []
+              const newUrls = selectedMedia.map((m) => m.secureUrl || m.url)
+              form.setValue("images", [...currentImages, ...newUrls])
+            }
+            setMediaDialogOpen(false)
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

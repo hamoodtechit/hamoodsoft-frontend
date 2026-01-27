@@ -20,6 +20,8 @@ export const createProductVariantSchema = z.object({
     .max(160, "Variant name must be less than 160 characters")
     .optional(),
   options: productVariantOptionsSchema,
+  thumbnailUrl: z.string().min(1).optional(),
+  images: z.array(z.string().min(1)).optional(),
 })
 
 export const updateProductVariantSchema = z.object({
@@ -36,6 +38,8 @@ export const updateProductVariantSchema = z.object({
     .max(160, "Variant name must be less than 160 characters")
     .optional(),
   options: productVariantOptionsSchema.optional(),
+  thumbnailUrl: z.string().min(1).optional(),
+  images: z.array(z.string().min(1)).optional(),
 })
 
 export type CreateProductVariantInput = z.infer<typeof createProductVariantSchema>

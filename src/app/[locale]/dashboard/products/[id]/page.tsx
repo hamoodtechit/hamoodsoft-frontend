@@ -151,7 +151,7 @@ export default function ProductDetailsPage() {
                 </div>
                 {product.description && (
                   <div>
-                    <p className="text-sm text-muted-foreground">{t("description")}</p>
+                    <p className="text-sm text-muted-foreground">{t("productDescription")}</p>
                     <p className="font-medium">{product.description}</p>
                   </div>
                 )}

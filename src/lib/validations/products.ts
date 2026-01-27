@@ -6,6 +6,8 @@ const productVariantSchema = z.object({
   price: z.number({ invalid_type_error: "Price must be a number" }).min(0, "Price must be 0 or greater"),
   unitId: z.string().uuid().optional(),
   options: z.record(z.string().min(1), z.string().min(1)), // Backend expects attribute names as keys (e.g., "Color", "Size")
+  thumbnailUrl: z.string().min(1).optional(),
+  images: z.array(z.string().min(1)).optional(),
 })
 
 export const createProductSchema = z.object({

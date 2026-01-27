@@ -110,4 +110,10 @@ export const endpoints = {
     update: (id: string) => `/sales/${id}`,
     delete: (id: string) => `/sales/${id}`,
   },
+  media: {
+    upload: "/media/upload",
+    list: "/media",
+    update: (id: string) => `/media/${id}`,
+    delete: (id: string) => `/media/${id}`,
+  },
 } as const
