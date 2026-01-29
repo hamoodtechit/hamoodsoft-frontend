@@ -13,19 +13,37 @@ export const categoriesApi = {
   },
 
   getCategories: async (branchId?: string): Promise<Category[]> => {
-    const response = await apiClient.get<ApiResponse<Category[]>>(
-      endpoints.categories.list,
-      { params: branchId ? { branchId } : undefined }
-    )
-    console.log("📦 Categories API Response:", {
-      branchId,
-      rawResponse: response.data,
-      categories: response.data.data,
-      categoriesWithParent: response.data.data.filter(c => c.parentId),
-      categoriesWithoutParent: response.data.data.filter(c => !c.parentId),
-      totalCount: response.data.data.length,
-    })
-    return response.data.data
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(
+        endpoints.categories.list,
+        { params: branchId ? { branchId } : undefined }
+      )
+      
+      // Backend returns { success: true, message: string, data: { items: CategoryNode[], meta: {...} } }
+      // where CategoryNode has nested children arrays
+      const responseData = response.data.data
+      
+      // Handle paginated response { items, meta }
+      let categories: Category[] = []
+      if (responseData && typeof responseData === 'object') {
+        if ('items' in responseData && Array.isArray(responseData.items)) {
+          categories = responseData.items
+        } else if (Array.isArray(responseData)) {
+          categories = responseData
+        }
+      }
+      
+      
+      return categories
+    } catch (error: any) {
+      console.error("❌ Error fetching categories:", error)
+      console.error("Error details:", {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      })
+      return []
+    }
   },
 
   getCategoryById: async (id: string): Promise<Category> => {

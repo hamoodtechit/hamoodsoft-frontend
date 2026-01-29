@@ -27,6 +27,7 @@ import { salesApi } from "@/lib/api/sales"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
+import { useBrands } from "@/lib/hooks/use-brands"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useCategories } from "@/lib/hooks/use-categories"
 import { useContacts } from "@/lib/hooks/use-contacts"
@@ -58,7 +59,7 @@ import {
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface CartItem {
@@ -92,6 +93,8 @@ export default function PointOfSalePage() {
   // State management
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all")
+  const [selectedBrandId, setSelectedBrandId] = useState<string>("all")
+  const [barcodeInput, setBarcodeInput] = useState("")
   const [selectedContactId, setSelectedContactId] = useState<string>("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -126,9 +129,11 @@ export default function PointOfSalePage() {
   const [calculatorValue, setCalculatorValue] = useState("0")
   const [calculatorDisplay, setCalculatorDisplay] = useState("")
 
-  // Fetch data
+  // Fetch data with API-side filtering and searching
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({
     branchId: selectedBranchId || undefined,
+    categoryId: selectedCategoryId !== "all" ? selectedCategoryId : undefined,
+    search: searchQuery.trim() || undefined,
     limit: 1000,
   })
   const products = productsData?.items || []
@@ -143,6 +148,8 @@ export default function PointOfSalePage() {
   const contacts = contactsData?.items || []
 
   const { data: categories = [] } = useCategories(selectedBranchId || undefined)
+  const { data: brandsData } = useBrands()
+  const brands = brandsData?.items || []
   const { data: branches = [] } = useBranches()
 
   // Recent transactions
@@ -203,16 +210,33 @@ export default function PointOfSalePage() {
     }
   }
 
-  // Stock map by SKU
+  // Stock map by SKU - includes both separate stocks query and product.stocks
   const stockMapBySku = useMemo(() => {
     const map = new Map<string, Stock>()
+    
+    // Add stocks from separate query
     stocks.forEach((stock) => {
       if (stock.sku) {
         map.set(stock.sku, stock)
       }
     })
+    
+    // Also add stocks from product.stocks array (if available)
+    products.forEach((product) => {
+      if (product.stocks && Array.isArray(product.stocks)) {
+        product.stocks.forEach((stock) => {
+          if (stock.sku) {
+            // Only add if not already in map (separate query takes precedence)
+            if (!map.has(stock.sku)) {
+              map.set(stock.sku, stock)
+            }
+          }
+        })
+      }
+    })
+    
     return map
-  }, [stocks])
+  }, [stocks, products])
 
   // Check access
   useEffect(() => {
@@ -221,29 +245,19 @@ export default function PointOfSalePage() {
     }
   }, [currentBusiness, locale, router])
 
-  // Filter products by category and search
+  // Filter products by brand (client-side since API doesn't support brandId filter yet)
+  // Category and search are handled by API
   const filteredProducts = useMemo(() => {
     let filtered = products
 
-    // Filter by category
-    if (selectedCategoryId !== "all") {
-      filtered = filtered.filter((p) => p.categoryIds?.includes(selectedCategoryId))
-    }
-
-    // Filter by search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter((p) => {
-        const nameMatch = p.name.toLowerCase().includes(query)
-        const descMatch = p.description?.toLowerCase().includes(query)
-        const variants = p.productVariants || p.variants || []
-        const skuMatch = variants.some((v: any) => v.sku?.toLowerCase().includes(query))
-        return nameMatch || descMatch || skuMatch
-      })
+    // Filter by brand (client-side)
+    if (selectedBrandId !== "all") {
+      filtered = filtered.filter((p) => p.brandId === selectedBrandId)
     }
 
     return filtered
-  }, [products, selectedCategoryId, searchQuery])
+  }, [products, selectedBrandId])
+
 
   const cartProductIdSet = useMemo(() => {
     return new Set(cart.map((c) => c.productId).filter(Boolean) as string[])
@@ -259,22 +273,81 @@ export default function PointOfSalePage() {
   // Get product variants/SKUs
   const getProductVariants = (product: Product): Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> => {
     const variants: Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> = []
+    
+    // Use productVariants from API response, or fallback to variants (normalized)
     const productVariants = product.productVariants || product.variants || []
 
     if (productVariants.length > 0) {
       productVariants.forEach((variant: any) => {
-        if (variant.sku) {
-          const stock = stockMapBySku.get(variant.sku)
-          variants.push({
-            sku: variant.sku,
-            variant: variant,
-            stock,
-          })
+        // Ensure we have a SKU (use variant.sku or variant.id as fallback)
+        const sku = variant.sku || variant.id || product.id
+        
+        // Try to find stock: multiple strategies
+        let stock: Stock | undefined = undefined
+        
+        // Strategy 1: Find by SKU in stockMapBySku
+        stock = stockMapBySku.get(sku)
+        
+        // Strategy 2: Find by SKU in product.stocks
+        if (!stock && product.stocks && Array.isArray(product.stocks)) {
+          stock = product.stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
         }
+        
+        // Strategy 3: Try from separate stocks query by SKU
+        if (!stock) {
+          stock = stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
+        }
+        
+        // Strategy 4: For variable products, if variant has no stock but product has stocks, 
+        // try to find any stock for this product (variant might not have explicit SKU match)
+        // This handles cases where stock SKU doesn't match variant SKU exactly
+        if (!stock && product.stocks && Array.isArray(product.stocks)) {
+          // Try to find stock by productId and branchId (for variable products)
+          // Use the first stock found for this product/branch
+          stock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+        }
+        
+        // Strategy 5: Try from separate stocks query by productId (fallback for variable products)
+        if (!stock) {
+          stock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+        }
+        
+        // Get price: Use stock.salePrice if available (real-world: stock has actual selling price)
+        // Otherwise use variant.price, then product.price
+        const variantPrice = stock?.salePrice ?? variant.price ?? product.price ?? 0
+        
+        // Map variant to ProductVariant type
+        const variantData: ProductVariant = {
+          id: variant.id || '',
+          productId: product.id,
+          sku: sku,
+          price: variantPrice,
+          unitId: variant.unitId || product.unitId,
+          variantName: variant.variantName || '',
+          options: variant.options || {},
+          thumbnailUrl: variant.thumbnailUrl || null,
+          images: variant.images || [],
+        }
+        
+        variants.push({
+          sku,
+          variant: variantData,
+          stock,
+        })
       })
     } else {
-      const productStocks = stocks.filter((s) => s.productId === product.id && s.branchId === selectedBranchId)
-      const stock = productStocks.length > 0 ? productStocks[0] : undefined
+      // No variants - use product-level stock
+      // First try from separate stocks query
+      let stock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+      
+      // If not found, try from product.stocks
+      if (!stock && product.stocks && Array.isArray(product.stocks)) {
+        stock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+      }
+      
+      // Get price: Use stock.salePrice if available, otherwise product.price
+      const productPrice = stock?.salePrice ?? product.price ?? 0
+      
       variants.push({
         sku: stock?.sku || product.id, // Use product ID as fallback SKU
         variant: null,
@@ -370,10 +443,35 @@ export default function PointOfSalePage() {
     variant: ProductVariant | null,
     stock: Stock | undefined
   ) => {
-    const price = variant?.price || product.price || 0
     const unit = product.unit?.suffix || "pcs"
-    const availableQty = stock?.quantity || 0
     const managesStock = product.manageStocks !== false
+
+    // If stock not found but product has stocks, try to find it
+    let finalStock = stock
+    if (!finalStock && product.stocks && Array.isArray(product.stocks)) {
+      // Try to find stock by SKU first
+      finalStock = product.stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
+      // If not found, try by productId (for variable products)
+      if (!finalStock) {
+        finalStock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+      }
+    }
+    
+    // Also try from separate stocks query
+    if (!finalStock) {
+      finalStock = stocks.find((s) => (s.sku === sku || s.productId === product.id) && s.branchId === selectedBranchId)
+    }
+    
+    // Get price: Use stock.salePrice if available (real-world: stock has actual selling price)
+    // Otherwise use variant.price, then product.price
+    const price = finalStock?.salePrice ?? variant?.price ?? product.price ?? 0
+    
+    const availableQty = finalStock?.quantity || 0
+
+    // Build item name with variant name if available
+    const itemName = variant?.variantName 
+      ? `${product.name} - ${variant.variantName}`
+      : product.name
 
     const existingItemIndex = cart.findIndex(
       (item) => item.productId === product.id && item.sku === sku
@@ -385,7 +483,7 @@ export default function PointOfSalePage() {
       const newQuantity = currentItem.quantity + 1
 
       if (managesStock && availableQty > 0) {
-        const currentAvailableQty = stock?.quantity || 0
+        const currentAvailableQty = finalStock?.quantity || 0
         if (newQuantity > currentAvailableQty) {
           playSound("error")
           toast.error(`Only ${currentAvailableQty} available in stock`)
@@ -399,21 +497,28 @@ export default function PointOfSalePage() {
         playSound("add")
       }
 
-      updatedCart[existingItemIndex].availableQuantity = stock?.quantity || 0
+      updatedCart[existingItemIndex].availableQuantity = finalStock?.quantity || 0
       updatedCart[existingItemIndex].totalPrice = calculateItemTotal(updatedCart[existingItemIndex])
       setCart(updatedCart)
     } else {
-      if (managesStock && availableQty <= 0) {
-        playSound("error")
-        toast.error("This item is out of stock")
-        return
+      // Real-world scenario: Block if manages stock AND (stock exists with quantity 0 OR stock not found for variable products)
+      // For variable products, if stock exists but quantity is 0, block it
+      // For non-variable products, only block if stock exists and quantity is 0
+      if (managesStock) {
+        if (finalStock !== undefined && availableQty <= 0) {
+          playSound("error")
+          toast.error("This item is out of stock")
+          return
+        }
+        // For variable products without stock, don't block (allow selection)
+        // For non-variable products without stock, allow adding (stock not set)
       }
 
       const newItem: CartItem = {
         productId: product.id,
-        sku: sku || product.id, // Ensure SKU is always present
+        sku: finalStock?.sku || sku || product.id, // Use stock SKU if available, otherwise variant/product SKU
         variantId: variant?.id,
-        itemName: product.name,
+        itemName,
         itemDescription: product.description || "",
         unit,
         price,
@@ -427,6 +532,110 @@ export default function PointOfSalePage() {
       setCart([...cart, newItem])
     }
   }
+
+  // Handle barcode scanning (moved after addToCartWithSku and handleProductClick)
+  const handleBarcodeScan = useCallback((barcode: string) => {
+    if (!barcode.trim()) return
+
+    // Find product by barcode
+    let foundProduct: Product | null = null
+    let foundVariant: any = null
+    let foundStock: Stock | undefined = undefined
+
+    // Search in products
+    for (const product of products) {
+      // Check product barcode
+      if (product.barcode === barcode) {
+        foundProduct = product
+        // Find stock for regular product
+        if (product.stocks && Array.isArray(product.stocks)) {
+          foundStock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+        }
+        if (!foundStock) {
+          foundStock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+        }
+        break
+      }
+
+      // Check variant SKUs (barcode scanner might scan SKU)
+      const variants = product.productVariants || product.variants || []
+      for (const variant of variants) {
+        if (variant.sku === barcode) {
+          foundProduct = product
+          foundVariant = variant
+          // Find stock for this variant
+          if (product.stocks && Array.isArray(product.stocks)) {
+            foundStock = product.stocks.find((s) => s.sku === variant.sku && s.branchId === selectedBranchId)
+          }
+          if (!foundStock) {
+            foundStock = stocks.find((s) => s.sku === variant.sku && s.branchId === selectedBranchId)
+          }
+          break
+        }
+      }
+      if (foundProduct) break
+    }
+
+    if (foundProduct) {
+      const managesStock = foundProduct.manageStocks !== false
+      
+      // Check stock availability before adding
+      if (managesStock) {
+        if (foundStock === undefined) {
+          playSound("error")
+          toast.error("Stock not available for this item")
+          setBarcodeInput("")
+          return
+        }
+        if (foundStock.quantity <= 0) {
+          playSound("error")
+          toast.error("This item is out of stock")
+          setBarcodeInput("")
+          return
+        }
+      }
+      
+      // If variant found, add directly to cart
+      if (foundVariant) {
+        // Get price from stock if available
+        const variantPrice = foundStock?.salePrice ?? foundVariant.price ?? foundProduct.price ?? 0
+        
+        const variantData: ProductVariant = {
+          id: foundVariant.id || '',
+          productId: foundProduct.id,
+          sku: foundVariant.sku,
+          price: variantPrice,
+          unitId: foundVariant.unitId || foundProduct.unitId,
+          variantName: foundVariant.variantName || '',
+          options: foundVariant.options || {},
+          thumbnailUrl: foundVariant.thumbnailUrl || null,
+          images: foundVariant.images || [],
+        }
+        addToCartWithSku(foundProduct, foundVariant.sku, variantData, foundStock)
+        playSound("add")
+        toast.success(`Added ${foundProduct.name}${foundVariant.variantName ? ` - ${foundVariant.variantName}` : ''}`)
+      } else {
+        // Regular product - handle normally (will check stock in handleProductClick/addToCartWithSku)
+        handleProductClick(foundProduct)
+      }
+      setBarcodeInput("")
+    } else {
+      playSound("error")
+      toast.error("Product not found")
+      setBarcodeInput("")
+    }
+  }, [products, stocks, selectedBranchId, addToCartWithSku, handleProductClick])
+
+  // Handle barcode input (scan or manual entry)
+  useEffect(() => {
+    if (barcodeInput.length >= 3) {
+      // Debounce barcode input (barcode scanners typically send data quickly)
+      const timer = setTimeout(() => {
+        handleBarcodeScan(barcodeInput)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [barcodeInput, handleBarcodeScan])
 
   // Update quantity
   const updateQuantity = (index: number, delta: number) => {
@@ -766,53 +975,102 @@ export default function PointOfSalePage() {
           {/* Filters Bar */}
           <Card>
             <CardContent className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Branch Filter */}
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Branch</Label>
-                  <Select value={selectedBranchId || ""} onValueChange={switchBranch}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                {/* First Row: Branch, Category, Brand */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Branch Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Branch</Label>
+                    <Select value={selectedBranchId || ""} onValueChange={switchBranch}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Category Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Category</Label>
+                    <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Brand Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Brand</Label>
+                    <Select value={selectedBrandId} onValueChange={setSelectedBrandId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All brands" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Brands</SelectItem>
+                        {brands.map((brand) => (
+                          <SelectItem key={brand.id} value={brand.id}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Category Filter */}
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Category</Label>
-                  <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Second Row: Barcode Scanner & Search */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Barcode Scanner */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">
+                      Barcode Scanner
+                      <span className="ml-2 text-xs text-muted-foreground/70">(Scan or type)</span>
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Scan barcode or enter SKU..."
+                        value={barcodeInput}
+                        onChange={(e) => setBarcodeInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          // Enter key to trigger scan
+                          if (e.key === "Enter" && barcodeInput.trim()) {
+                            e.preventDefault()
+                            handleBarcodeScan(barcodeInput)
+                          }
+                        }}
+                        className="pl-9"
+                        autoFocus={false}
+                      />
+                    </div>
+                  </div>
 
-                {/* Search */}
-                <div className="md:col-span-2">
-                  <Label className="text-xs text-muted-foreground mb-1 block">Search Products</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, SKU..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
+                  {/* Search */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Search Products</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, SKU..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -851,20 +1109,54 @@ export default function PointOfSalePage() {
                     {searchQuery ? "No products found" : "No products available"}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {filteredProducts.map((product) => {
                       const variants = getProductVariants(product)
-                      const hasMultipleSkus = variants.length > 1
+                      const hasMultipleVariants = variants.length > 1
+                      const firstVariant = variants[0]?.variant
                       const stock = variants[0]?.stock
-                      const availableQty = stock?.quantity || 0
-                      const isOutOfStock = product.manageStocks !== false && availableQty === 0
+                      const managesStock = product.manageStocks !== false
+                      
+                      // For variable products, check if any variant has stock
+                      let availableQty = stock?.quantity || 0
+                      if (hasMultipleVariants && !stock) {
+                        // Check if any variant has stock
+                        const variantWithStock = variants.find((v) => v.stock && v.stock.quantity > 0)
+                        if (variantWithStock) {
+                          availableQty = variantWithStock.stock?.quantity || 0
+                        }
+                      }
+                      
+                      // Real-world scenario: Mark as out of stock if manages stock
+                      // 1. If stock doesn't exist → Out of stock (can't sell without stock)
+                      // 2. If stock exists but quantity is 0 → Out of stock
+                      // For variable products, check all variants - if all are out of stock or missing, mark as out of stock
+                      let isOutOfStock = false
+                      if (managesStock) {
+                        if (hasMultipleVariants) {
+                          // Check if all variants are out of stock or missing stock
+                          const allOutOfStock = variants.every((v) => {
+                            const vStock = v.stock
+                            return vStock === undefined || vStock.quantity === 0
+                          })
+                          isOutOfStock = allOutOfStock
+                        } else {
+                          // For non-variable products: out of stock if stock doesn't exist OR quantity is 0
+                          isOutOfStock = stock === undefined || stock.quantity === 0
+                        }
+                      }
                       const isSelected = lastSelectedProductId === product.id
                       const inCart = cartProductIdSet.has(product.id)
 
-                      // Get product image from first variant or null
-                      const productImage = variants && variants.length > 0 && variants[0]?.variant
-                        ? variants[0].variant.thumbnailUrl || (variants[0].variant.images && variants[0].variant.images[0])
-                        : null
+                      // Get product image: prefer variant image, then product image
+                      const productImage = firstVariant?.thumbnailUrl || 
+                        (firstVariant?.images && firstVariant.images[0]) ||
+                        product.thumbnailUrl ||
+                        (product.images && product.images[0]) ||
+                        null
+
+                      // Get display price: Use stock.salePrice if available, otherwise variant/product price
+                      const displayPrice = stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0
 
                       return (
                         <button
@@ -872,49 +1164,97 @@ export default function PointOfSalePage() {
                           onClick={() => !isOutOfStock && handleProductClick(product)}
                           disabled={isOutOfStock}
                           className={cn(
-                            "p-3 border rounded-lg text-left hover:bg-accent hover:border-primary transition-colors",
-                            "flex flex-col space-y-1.5 relative overflow-hidden",
-                            isOutOfStock && "opacity-50 cursor-not-allowed",
-                            inCart && "border-primary/60 bg-primary/5",
-                            isSelected && "ring-2 ring-primary ring-offset-2"
+                            "group relative bg-card border-2 rounded-xl overflow-hidden",
+                            "transition-all duration-200 ease-in-out",
+                            "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
+                            "active:scale-[0.98]",
+                            "flex flex-col h-full",
+                            isOutOfStock && "opacity-60 cursor-not-allowed hover:shadow-none",
+                            inCart && "border-primary/40 bg-primary/5 shadow-md shadow-primary/5",
+                            isSelected && "ring-2 ring-primary ring-offset-2 shadow-lg"
                           )}
                         >
+                          {/* In Cart Indicator */}
                           {inCart && (
-                            <div className="absolute right-2 top-2 rounded-full bg-primary text-primary-foreground p-1">
-                              <Check className="h-3 w-3" />
+                            <div className="absolute right-2 top-2 z-10 rounded-full bg-primary text-primary-foreground p-1.5 shadow-md">
+                              <Check className="h-3.5 w-3.5" />
                             </div>
                           )}
-                          {productImage && (
-                            <div className="w-full aspect-square rounded-md overflow-hidden bg-muted mb-2">
+                          
+                          {/* Variant Badge */}
+                          {hasMultipleVariants && (
+                            <Badge 
+                              className="absolute left-2 top-2 z-10 text-xs font-semibold shadow-sm" 
+                              variant="secondary"
+                            >
+                              {variants.length} variants
+                            </Badge>
+                          )}
+                          
+                          {/* Product Image */}
+                          <div className="relative w-full aspect-square bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+                            {productImage ? (
                               <img
                                 src={productImage}
                                 alt={product.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               />
-                            </div>
-                          )}
-                          <div className="font-medium text-sm line-clamp-2 pr-6">{product.name}</div>
-                          {product.price !== undefined && (
-                            <div className="text-base font-bold text-primary">
-                              {product.price.toFixed(2)}
-                              {product.unit?.suffix && ` / ${product.unit.suffix}`}
-                            </div>
-                          )}
-                          {hasMultipleSkus && (
-                            <div className="text-xs text-muted-foreground">
-                              {variants.length} variants
-                            </div>
-                          )}
-                          {product.manageStocks !== false && (
-                            <div
-                              className={cn(
-                                "text-xs",
-                                isOutOfStock ? "text-destructive" : "text-muted-foreground"
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-12 w-12 text-muted-foreground/40" />
+                              </div>
+                            )}
+                            {/* Overlay gradient for better text readability */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          
+                          {/* Product Info */}
+                          <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                            <div>
+                              <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-1.5 group-hover:text-primary transition-colors">
+                                {product.name}
+                              </h3>
+                              
+                              {displayPrice > 0 && (
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-lg font-bold text-primary">
+                                    {displayPrice.toFixed(2)}
+                                  </span>
+                                  {product.unit?.suffix && (
+                                    <span className="text-xs text-muted-foreground">
+                                      / {product.unit.suffix}
+                                    </span>
+                                  )}
+                                </div>
                               )}
-                            >
-                              {isOutOfStock ? "Out of stock" : `${availableQty} available`}
                             </div>
-                          )}
+                            
+                            {/* Stock Status */}
+                            {managesStock && (
+                              <div className="flex items-center gap-1.5">
+                                {isOutOfStock ? (
+                                  <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                                    Out of stock
+                                  </Badge>
+                                ) : stock !== undefined ? (
+                                  <Badge 
+                                    variant={availableQty > 10 ? "default" : "secondary"} 
+                                    className="text-xs px-2 py-0.5"
+                                  >
+                                    {availableQty} available
+                                  </Badge>
+                                ) : hasMultipleVariants ? (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                    Select variant
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    Stock not set
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </button>
                       )
                     })}
@@ -1026,53 +1366,101 @@ export default function PointOfSalePage() {
                         Cart is empty
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {cart.map((item, index) => (
-                          <div key={index} className="p-2 border rounded-lg space-y-2 bg-muted/30">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">{item.itemName}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {item.price.toFixed(2)} × {item.quantity} {item.unit}
+                      <div className="space-y-3">
+                        {cart.map((item, index) => {
+                          // Get product to check if it has variants
+                          const product = products.find((p) => p.id === item.productId)
+                          const variant = product?.productVariants?.find((v) => v.id === item.variantId) ||
+                                          product?.variants?.find((v) => v.id === item.variantId)
+                          
+                          // Get variant image
+                          const variantImage = variant?.thumbnailUrl || 
+                            (variant?.images && variant.images[0]) ||
+                            product?.thumbnailUrl ||
+                            (product?.images && product.images[0]) ||
+                            null
+
+                          // Format variant options for display
+                          const optionsText = variant?.options 
+                            ? Object.entries(variant.options)
+                                .map(([key, value]) => {
+                                  // Remove 'attr-' prefix if present
+                                  const cleanKey = key.replace(/^attr-/, '')
+                                  return `${cleanKey}: ${value}`
+                                })
+                                .join(', ')
+                            : ''
+
+                          return (
+                            <div key={index} className="p-4 border-2 rounded-xl bg-card hover:border-primary/30 transition-colors space-y-3 shadow-sm">
+                              <div className="flex items-start gap-3">
+                                {variantImage && (
+                                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 border">
+                                    <img
+                                      src={variantImage}
+                                      alt={item.itemName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm mb-1">{item.itemName}</div>
+                                  {optionsText && (
+                                    <div className="flex flex-wrap gap-1 mb-1.5">
+                                      {optionsText.split(', ').map((option, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs px-1.5 py-0">
+                                          {option}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {item.sku && item.sku !== item.productId && (
+                                    <div className="text-xs text-muted-foreground mb-1">
+                                      SKU: {item.sku}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.price.toFixed(2)} × {item.quantity} {item.unit}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                                  onClick={() => removeFromCart(index)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="flex items-center justify-between pt-2 border-t">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => updateQuantity(index, -1)}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-sm font-semibold w-10 text-center">
+                                    {item.quantity}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => updateQuantity(index, 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="text-lg font-bold text-primary">
+                                  {item.totalPrice.toFixed(2)}
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive"
-                                onClick={() => removeFromCart(index)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => updateQuantity(index, -1)}
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <span className="text-sm font-medium w-8 text-center">
-                                  {item.quantity}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => updateQuantity(index, 1)}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <div className="font-bold text-sm">
-                                {item.totalPrice.toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -1289,70 +1677,139 @@ export default function PointOfSalePage() {
         </div>
       </div>
 
-      {/* SKU Selection Dialog */}
+      {/* Variant Selection Dialog */}
       <Dialog open={isSkuDialogOpen} onOpenChange={setIsSkuDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Select SKU</DialogTitle>
-            <DialogDescription>
-              {selectedProductForSku && `Select SKU for ${selectedProductForSku.name}`}
+            <DialogTitle className="text-xl">Select Variant</DialogTitle>
+            <DialogDescription className="text-base">
+              {selectedProductForSku && `Choose a variant for "${selectedProductForSku.name}"`}
             </DialogDescription>
           </DialogHeader>
           {selectedProductForSku && (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {getProductVariants(selectedProductForSku).map((variant, index) => {
-                const stock = variant.stock
-                const availableQty = stock?.quantity || 0
-                const isOutOfStock = selectedProductForSku.manageStocks !== false && availableQty === 0
+            <ScrollArea className="max-h-[500px] pr-4">
+              <div className="space-y-3">
+                {getProductVariants(selectedProductForSku).map((variantData, index) => {
+                  const variant = variantData.variant
+                  const stock = variantData.stock
+                  const availableQty = stock?.quantity || 0
+                  const managesStock = selectedProductForSku.manageStocks !== false
+                  // Out of stock if: manages stock AND (stock doesn't exist OR quantity is 0)
+                  const isOutOfStock = managesStock && (stock === undefined || stock.quantity === 0)
 
-                return (
-                  <button
-                    key={variant.sku || index}
+                  // Get variant image
+                  const variantImage = variant?.thumbnailUrl || 
+                    (variant?.images && variant.images[0]) ||
+                    selectedProductForSku.thumbnailUrl ||
+                    (selectedProductForSku.images && selectedProductForSku.images[0]) ||
+                    null
+
+                // Get variant price: Use stock.salePrice if available, otherwise variant/product price
+                const variantPrice = stock?.salePrice ?? variant?.price ?? selectedProductForSku.price ?? 0
+
+                  // Format variant options for display
+                  const optionsText = variant?.options 
+                    ? Object.entries(variant.options)
+                        .map(([key, value]) => {
+                          // Remove 'attr-' prefix if present
+                          const cleanKey = key.replace(/^attr-/, '')
+                          return `${cleanKey}: ${value}`
+                        })
+                        .join(', ')
+                    : ''
+
+                  return (
+                    <button
+                      key={variantData.sku || index}
                     onClick={() => {
-                      if (!isOutOfStock || !selectedProductForSku.manageStocks) {
+                      if (!isOutOfStock) {
                         addToCartWithSku(
                           selectedProductForSku,
-                          variant.sku,
-                          variant.variant,
-                          variant.stock
+                          variantData.sku,
+                          variant,
+                          stock
                         )
                         setIsSkuDialogOpen(false)
                         setSelectedProductForSku(null)
                       }
                     }}
-                    disabled={isOutOfStock && selectedProductForSku.manageStocks}
-                    className={cn(
-                      "w-full p-3 border rounded-lg text-left hover:bg-accent transition-colors",
-                      isOutOfStock && selectedProductForSku.manageStocks && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">{variant.sku || "No SKU"}</div>
-                        {variant.variant && (
-                          <div className="text-xs text-muted-foreground">
-                            {variant.variant.variantName}
-                          </div>
-                        )}
-                        {selectedProductForSku.manageStocks && (
-                          <div className={cn(
-                            "text-xs mt-1",
-                            isOutOfStock ? "text-destructive" : "text-muted-foreground"
-                          )}>
-                            {isOutOfStock ? "Out of stock" : `${availableQty} available`}
+                    disabled={isOutOfStock}
+                      className={cn(
+                        "group w-full p-4 border-2 rounded-xl text-left",
+                        "transition-all duration-200",
+                        "hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
+                        "active:scale-[0.98]",
+                        "flex items-center gap-4 bg-card",
+                        isOutOfStock && managesStock && "opacity-50 cursor-not-allowed hover:shadow-none"
+                      )}
+                    >
+                      {/* Variant Image */}
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 border">
+                        {variantImage ? (
+                          <img
+                            src={variantImage}
+                            alt={variant?.variantName || selectedProductForSku.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-8 w-8 text-muted-foreground/40" />
                           </div>
                         )}
                       </div>
-                      {variant.variant?.price && (
-                        <div className="font-bold text-primary">
-                          {variant.variant.price.toFixed(2)}
+                      
+                      {/* Variant Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                          {variant?.variantName || selectedProductForSku.name}
                         </div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+                        {optionsText && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {optionsText.split(', ').map((option, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {option}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>SKU: {variantData.sku}</span>
+                          {managesStock && (
+                            <>
+                              <span>•</span>
+                              {isOutOfStock ? (
+                                <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                                  Out of stock
+                                </Badge>
+                              ) : (
+                                <Badge 
+                                  variant={availableQty > 10 ? "default" : "secondary"} 
+                                  className="text-xs px-2 py-0.5"
+                                >
+                                  {availableQty} available
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-xl font-bold text-primary">
+                          {variantPrice.toFixed(2)}
+                        </div>
+                        {selectedProductForSku.unit?.suffix && (
+                          <div className="text-xs text-muted-foreground">
+                            / {selectedProductForSku.unit.suffix}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>

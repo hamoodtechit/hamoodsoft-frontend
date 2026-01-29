@@ -25,6 +25,16 @@ export const createProductSchema = z.object({
   branchIds: z.array(z.string()).optional(),
   brandId: z.string().optional(),
   variants: z.array(productVariantSchema).optional(),
+  alertQuantity: z.number().min(0, "Alert quantity must be 0 or greater").nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  barcodeType: z.string().nullable().optional(),
+  weight: z.number().min(0, "Weight must be 0 or greater").nullable().optional(),
+  profitMarginAmount: z.number().min(0, "Profit margin amount must be 0 or greater").optional(),
+  profitMarginPercent: z.number().min(0, "Profit margin percent must be 0 or greater").max(100, "Profit margin percent cannot exceed 100").optional(),
+  purchasePrice: z.number().min(0, "Purchase price must be 0 or greater").optional(),
+  salePrice: z.number().min(0, "Sale price must be 0 or greater").optional(),
+  thumbnailUrl: z.string().nullable().optional(),
+  images: z.array(z.string().min(1)).optional(),
 })
 
 export const updateProductSchema = z.object({
@@ -39,6 +49,16 @@ export const updateProductSchema = z.object({
   branchIds: z.array(z.string()).optional(),
   brandId: z.string().optional(),
   variants: z.array(productVariantSchema).optional(),
+  alertQuantity: z.number().min(0, "Alert quantity must be 0 or greater").nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  barcodeType: z.string().nullable().optional(),
+  weight: z.number().min(0, "Weight must be 0 or greater").nullable().optional(),
+  profitMarginAmount: z.number().min(0, "Profit margin amount must be 0 or greater").optional(),
+  profitMarginPercent: z.number().min(0, "Profit margin percent must be 0 or greater").max(100, "Profit margin percent cannot exceed 100").optional(),
+  purchasePrice: z.number().min(0, "Purchase price must be 0 or greater").optional(),
+  salePrice: z.number().min(0, "Sale price must be 0 or greater").optional(),
+  thumbnailUrl: z.string().nullable().optional(),
+  images: z.array(z.string().min(1)).optional(),
 })
 
 export type CreateProductInput = z.infer<typeof createProductSchema>

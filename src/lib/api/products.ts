@@ -27,11 +27,14 @@ function normalizeProduct(product: any): Product {
   // Normalize productVariants to variants
   if (product.productVariants && !product.variants) {
     product.variants = product.productVariants.map((pv: any) => ({
+      id: pv.id,
       variantName: pv.variantName,
       sku: pv.sku,
       price: pv.price,
       unitId: pv.unitId,
       options: pv.options || {},
+      thumbnailUrl: pv.thumbnailUrl || undefined,
+      images: pv.images && Array.isArray(pv.images) && pv.images.length > 0 ? pv.images : undefined,
     }))
   }
   return product as Product

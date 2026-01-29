@@ -4,7 +4,7 @@ import { PageLayout } from "@/components/common/page-layout"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useProduct } from "@/lib/hooks/use-products"
 import { ArrowLeft, Edit, Package } from "lucide-react"
@@ -23,6 +23,7 @@ export default function ProductDetailsPage() {
   const productId = params.id as string
 
   const { data: product, isLoading } = useProduct(productId)
+  console.log(product)
   const { data: branches } = useBranches()
   const [activeTab, setActiveTab] = useState<TabType>("overview")
 
@@ -266,59 +267,110 @@ export default function ProductDetailsPage() {
         {/* Variants Tab */}
         {activeTab === "variants" && (
           <div className="space-y-4">
-            {product.productVariants && product.productVariants.length > 0 ? (
+            {((product.productVariants && product.productVariants.length > 0) || (product.variants && product.variants.length > 0)) ? (
               <>
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">{t("variants")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {product.productVariants.length} {t("variants")} {t("available") || "available"}
+                      {(product.productVariants || product.variants || []).length} {t("variants")} {t("available") || "available"}
                     </p>
                   </div>
                 </div>
-                <div className="grid gap-4">
-                  {product.productVariants.map((variant) => (
-                    <Card key={variant.id}>
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium">{variant.variantName}</p>
-                            </div>
-                            {variant.price !== null && variant.price !== undefined && (
-                              <div className="text-right">
-                                <p className="font-semibold">
-                                  {variant.price.toLocaleString()} {product.unit?.suffix || ""}
-                                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(product.productVariants || product.variants || []).map((variant: any) => {
+                    const variantImage = variant.thumbnailUrl || (variant.images && Array.isArray(variant.images) && variant.images.length > 0 ? variant.images[0] : null)
+                    const variantImages = variant.images && Array.isArray(variant.images) ? variant.images : []
+                    return (
+                      <Card key={variant.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="flex flex-col sm:flex-row">
+                            {/* Variant Image */}
+                            {variantImage ? (
+                              <div className="w-full sm:w-32 h-32 sm:h-auto bg-muted border-b sm:border-b-0 sm:border-r flex-shrink-0">
+                                <img
+                                  src={variantImage}
+                                  alt={variant.variantName || "Variant"}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-full sm:w-32 h-32 sm:h-auto bg-muted border-b sm:border-b-0 sm:border-r flex-shrink-0 flex items-center justify-center">
+                                <Package className="h-8 w-8 text-muted-foreground" />
                               </div>
                             )}
-                          </div>
+                            
+                            {/* Variant Details */}
+                            <div className="flex-1 p-4 space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-base">{variant.variantName || "Unnamed Variant"}</h4>
+                                  {variant.sku && (
+                                    <p className="text-xs text-muted-foreground mt-1">SKU: {variant.sku}</p>
+                                  )}
+                                </div>
+                                {variant.price !== null && variant.price !== undefined && variant.price > 0 && (
+                                  <div className="text-right flex-shrink-0">
+                                    <p className="font-bold text-lg text-primary">
+                                      {variant.price.toLocaleString()}
+                                    </p>
+                                    {product.unit?.suffix && (
+                                      <p className="text-xs text-muted-foreground">/{product.unit.suffix}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
 
-                          {variant.options && Object.keys(variant.options).length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(variant.options).map(([key, val]) => {
-                                // Convert "attr-{name}" format to readable attribute names
-                                let displayKey = key
-                                if (key.startsWith("attr-")) {
-                                  const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
-                                  displayKey = attrName
-                                    .split(" ")
-                                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                                    .join(" ")
-                                }
-                                return (
-                                  <Badge key={key} variant="secondary" className="text-xs">
-                                    <span className="font-medium">{displayKey}:</span>{" "}
-                                    <span className="ml-1">{String(val)}</span>
-                                  </Badge>
-                                )
-                              })}
+                              {/* Variant Options */}
+                              {variant.options && Object.keys(variant.options).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {Object.entries(variant.options).map(([key, val]) => {
+                                    let displayKey = key
+                                    if (key.startsWith("attr-")) {
+                                      const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
+                                      displayKey = attrName
+                                        .split(" ")
+                                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                        .join(" ")
+                                    }
+                                    return (
+                                      <Badge key={key} variant="outline" className="text-xs">
+                                        <span className="font-medium">{displayKey}:</span>{" "}
+                                        <span className="ml-1">{String(val)}</span>
+                                      </Badge>
+                                    )
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Gallery Images */}
+                              {variantImages.length > 1 && (
+                                <div className="pt-2 border-t">
+                                  <p className="text-xs text-muted-foreground mb-2">Gallery Images ({variantImages.length})</p>
+                                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                    {variantImages.slice(0, 5).map((img: string, idx: number) => (
+                                      <div key={idx} className="w-12 h-12 rounded border overflow-hidden flex-shrink-0">
+                                        <img
+                                          src={img}
+                                          alt={`Gallery ${idx + 1}`}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    ))}
+                                    {variantImages.length > 5 && (
+                                      <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center flex-shrink-0">
+                                        <span className="text-xs text-muted-foreground">+{variantImages.length - 5}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               </>
             ) : (
@@ -334,14 +386,93 @@ export default function ProductDetailsPage() {
 
         {/* Stock Tab */}
         {activeTab === "stock" && (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                {t("stockManagementComingSoon") || "Stock management coming soon"}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {product.stocks && product.stocks.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">{t("stock") || "Stock"}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {product.stocks.length} {t("stockEntries") || "stock entries"} {t("available") || "available"}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4">
+                  {product.stocks.map((stock) => {
+                    const branch = branchMap.get(stock.branchId)
+                    return (
+                      <Card key={stock.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">
+                                  {branch?.name || stock.branchId}
+                                </h4>
+                                <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
+                                  {stock.quantity} {product.unit?.suffix || ""}
+                                </Badge>
+                              </div>
+                              {stock.sku && (
+                                <p className="text-sm text-muted-foreground">
+                                  SKU: {stock.sku}
+                                </p>
+                              )}
+                              <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                                {stock.purchasePrice !== null && stock.purchasePrice !== undefined && (
+                                  <div>
+                                    <span className="text-muted-foreground">{t("purchasePrice") || "Purchase Price"}:</span>
+                                    <span className="ml-2 font-medium">{stock.purchasePrice.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {stock.salePrice !== null && stock.salePrice !== undefined && (
+                                  <div>
+                                    <span className="text-muted-foreground">{t("salePrice") || "Sale Price"}:</span>
+                                    <span className="ml-2 font-medium">{stock.salePrice.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {stock.profitMarginAmount !== null && stock.profitMarginAmount !== undefined && (
+                                  <div>
+                                    <span className="text-muted-foreground">{t("profitMarginAmount") || "Profit Margin Amount"}:</span>
+                                    <span className="ml-2 font-medium">{stock.profitMarginAmount.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {stock.profitMarginPercent !== null && stock.profitMarginPercent !== undefined && (
+                                  <div>
+                                    <span className="text-muted-foreground">{t("profitMarginPercent") || "Profit Margin %"}:</span>
+                                    <span className="ml-2 font-medium">{stock.profitMarginPercent}%</span>
+                                  </div>
+                                )}
+                              </div>
+                              {stock.createdAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  {t("createdAt") || "Created"}: {new Date(stock.createdAt).toLocaleString()}
+                                </p>
+                              )}
+                              {stock.updatedAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  {t("updatedAt") || "Updated"}: {new Date(stock.updatedAt).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    {t("noStockData") || "No stock data available"}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
     </PageLayout>

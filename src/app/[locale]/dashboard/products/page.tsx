@@ -93,6 +93,7 @@ export default function ProductsPage() {
   }, [selectedBranchId])
 
   const { data, isLoading } = useProducts(queryParams)
+  console.log("data", data)
   const products = data?.items ?? []
   const meta = data?.meta
   const total = meta?.total ?? products.length
@@ -110,6 +111,12 @@ export default function ProductsPage() {
       sortable: true,
     },
     {
+      id: "brand",
+      header: t("brand") || "Brand",
+      cell: (row) => row.brand?.name || "-",
+      sortable: false,
+    },
+    {
       id: "price",
       header: t("price"),
       accessorKey: "price",
@@ -120,6 +127,20 @@ export default function ProductsPage() {
           {row.unit?.suffix ? ` / ${row.unit.suffix}` : ""}
         </span>
       ),
+    },
+    {
+      id: "purchasePrice",
+      header: t("purchasePrice") || "Purchase Price",
+      accessorKey: "purchasePrice",
+      sortable: true,
+      cell: (row) => row.purchasePrice ? row.purchasePrice.toFixed(2) : "-",
+    },
+    {
+      id: "salePrice",
+      header: t("salePrice") || "Sale Price",
+      accessorKey: "salePrice",
+      sortable: true,
+      cell: (row) => row.salePrice ? row.salePrice.toFixed(2) : "-",
     },
     {
       id: "unit",
@@ -144,6 +165,20 @@ export default function ProductsPage() {
         </div>
       ),
       sortable: false,
+    },
+    {
+      id: "barcode",
+      header: t("barcode") || "Barcode",
+      accessorKey: "barcode",
+      sortable: false,
+      cell: (row) => row.barcode || "-",
+    },
+    {
+      id: "alertQuantity",
+      header: t("alertQuantity") || "Alert Qty",
+      accessorKey: "alertQuantity",
+      sortable: true,
+      cell: (row) => row.alertQuantity ?? "-",
     },
     {
       id: "manageStocks",
@@ -395,10 +430,10 @@ export default function ProductsPage() {
           ) : (
             <div className="space-y-3">
               {products.map((p) => {
-                // Get product image from first variant or null
-                const productImage = p.productVariants && p.productVariants.length > 0
+                // Get product image from product thumbnail, first variant, or null
+                const productImage = p.thumbnailUrl || (p.productVariants && p.productVariants.length > 0
                   ? p.productVariants[0]?.thumbnailUrl || (p.productVariants[0]?.images && p.productVariants[0].images[0])
-                  : null
+                  : null) || (p.images && p.images.length > 0 ? p.images[0] : null)
 
                 return (
                   <Card key={p.id} className="relative">
@@ -414,30 +449,66 @@ export default function ProductsPage() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-semibold truncate">{p.name}</h4>
-                            <span className="text-sm text-muted-foreground">
+                            {p.brand && (
+                              <Badge variant="outline" className="text-xs">
+                                {p.brand.name}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            <span className="text-base font-semibold text-primary">
                               {t("priceValue", { price: p.price })}
                               {p.unit?.suffix ? ` / ${p.unit.suffix}` : ""}
                             </span>
+                            {p.purchasePrice !== undefined && p.purchasePrice > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                Purchase: {p.purchasePrice.toFixed(2)}
+                              </span>
+                            )}
+                            {p.salePrice !== undefined && p.salePrice > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                Sale: {p.salePrice.toFixed(2)}
+                              </span>
+                            )}
                           </div>
                           {p.description ? (
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                               {p.description}
                             </p>
                           ) : null}
-                          {p.categories && p.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {p.categories.map((c) => (
-                                <span
-                                  key={c.id}
-                                  className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                                >
-                                  {c.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-2 mt-2 items-center">
+                            {p.categories && p.categories.length > 0 && (
+                              <>
+                                {p.categories.map((c) => (
+                                  <Badge key={c.id} variant="secondary" className="text-xs">
+                                    {c.name}
+                                  </Badge>
+                                ))}
+                              </>
+                            )}
+                            {p.barcode && (
+                              <Badge variant="outline" className="text-xs">
+                                Barcode: {p.barcode}
+                              </Badge>
+                            )}
+                            {p.alertQuantity !== null && p.alertQuantity !== undefined && (
+                              <Badge variant="outline" className="text-xs">
+                                Alert Qty: {p.alertQuantity}
+                              </Badge>
+                            )}
+                            {p.isVariable && (
+                              <Badge variant="secondary" className="text-xs">
+                                Variable
+                              </Badge>
+                            )}
+                            {p.manageStocks && (
+                              <Badge variant="secondary" className="text-xs">
+                                Stock Managed
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         <DropdownMenu>

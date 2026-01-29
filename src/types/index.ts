@@ -72,11 +72,14 @@ export interface Role {
 }
 
 export interface ProductVariantInput {
+  id?: string
   variantName: string
   sku?: string
   price?: number
   unitId?: string
   options: Record<string, string>
+  thumbnailUrl?: string | null
+  images?: string[]
 }
 
 export interface Product {
@@ -96,6 +99,17 @@ export interface Product {
   brand?: Brand
   isVariable?: boolean
   manageStocks?: boolean
+  alertQuantity?: number | null
+  barcode?: string | null
+  barcodeType?: string | null
+  weight?: number | null
+  profitMarginAmount?: number
+  profitMarginPercent?: number
+  purchasePrice?: number
+  salePrice?: number
+  thumbnailUrl?: string | null
+  images?: string[]
+  stocks?: Stock[] // Stock data from API response
   createdAt?: string
   updatedAt?: string
 }

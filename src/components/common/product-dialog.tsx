@@ -38,6 +38,7 @@ import { useBranches } from "@/lib/hooks/use-branches"
 import { useBrands, useCreateBrand } from "@/lib/hooks/use-brands"
 import { useCategories, useCreateCategory } from "@/lib/hooks/use-categories"
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products"
+import { useCreateStock } from "@/lib/hooks/use-stocks"
 import { useCreateUnit, useUnits } from "@/lib/hooks/use-units"
 import { cn } from "@/lib/utils"
 import {
@@ -88,6 +89,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
+  const createStockMutation = useCreateStock()
 
   const isEdit = !!product
   const isLoading = createMutation.isPending || updateMutation.isPending
@@ -110,10 +112,42 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
           thumbnailUrl?: string
           images?: string[]
         }>,
+        barcodeType: "EAN_13",
       }
     }
     // Handle both variants and productVariants from API
-    const variants = (product as any).productVariants || product.variants || []
+    const variantsRaw = (product as any).productVariants || product.variants || []
+    
+    console.log("🔍 Product Dialog - Loading variants for edit:", {
+      productId: product.id,
+      productName: product.name,
+      variantsRaw,
+      variantsRawLength: variantsRaw.length,
+    })
+    
+    // Normalize variants to ensure they have the correct structure for the form
+    const variants = variantsRaw.map((v: any, index: number) => {
+      const normalized = {
+        id: v.id,
+        variantName: v.variantName || "",
+        sku: v.sku || "",
+        price: v.price ?? 0,
+        unitId: v.unitId || "",
+        options: v.options || {},
+        thumbnailUrl: v.thumbnailUrl || undefined,
+        images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
+      }
+      
+      console.log(`  Variant ${index}:`, {
+        original: v,
+        normalized,
+        hasThumbnail: !!normalized.thumbnailUrl,
+        hasImages: !!normalized.images,
+        imagesCount: normalized.images?.length || 0,
+      })
+      
+      return normalized
+    })
     return {
       name: product.name || "",
       description: product.description || "",
@@ -123,6 +157,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       branchIds: product.branchIds || [],
       brandId: product.brandId || "",
       variants: variants,
+      alertQuantity: product.alertQuantity ?? null,
+      barcode: product.barcode ?? null,
+      barcodeType: "EAN_13", // Always use EAN_13
+      weight: product.weight ?? null,
+      thumbnailUrl: product.thumbnailUrl ?? null,
+      images: product.images && Array.isArray(product.images) && product.images.length > 0 ? product.images : undefined,
     }
   }, [product])
 
@@ -193,6 +233,8 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
+  // Stock entries per branch: { branchId: { quantity, purchasePrice, salePrice, unitId } }
+  const [stockEntries, setStockEntries] = useState<Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string }>>({})
   const createAttributeMutation = useCreateAttribute()
   const createUnitMutation = useCreateUnit()
   const createBrandMutation = useCreateBrand()
@@ -469,6 +511,8 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         options,
         sku: "", // Empty SKU - user can fill or auto-generate
         price: 0, // Required - default to 0, user must set
+        thumbnailUrl: "",
+        images: [],
       }
     })
 
@@ -481,6 +525,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     if (data.brandId === "") {
       data.brandId = undefined
     }
+
+    // Remove pricing fields that are managed in stock, not product
+    delete (data as any).purchasePrice
+    delete (data as any).salePrice
+    delete (data as any).profitMarginAmount
+    delete (data as any).profitMarginPercent
 
     // Clean up empty variants array
     if (data.variants && data.variants.length === 0) {
@@ -521,14 +571,33 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
             }
           })
         }
+
+        const thumbnailUrl =
+          typeof (variant as any).thumbnailUrl === "string" && (variant as any).thumbnailUrl.trim().length > 0
+            ? (variant as any).thumbnailUrl.trim()
+            : undefined
+
+        const imagesRaw = (variant as any).images
+        const images =
+          Array.isArray(imagesRaw)
+            ? imagesRaw
+                .filter((u: any): u is string => typeof u === "string" && u.trim().length > 0)
+                .map((u: string) => u.trim())
+            : undefined
+
         return {
           variantName: variant.variantName || "",
-          sku: variant.sku?.trim() || undefined, // Clean SKU, make undefined if empty
+          // Don't send SKU to backend - it's managed by backend
           price: variant.price ?? 0, // Price is required, default to 0 if not set
           options: Object.keys(cleanedOptions).length > 0 ? cleanedOptions : {}, // Ensure options is always an object
+          thumbnailUrl,
+          images: images && images.length > 0 ? images : undefined,
         }
       }).filter((variant) => variant.variantName && variant.variantName.length > 0) // Remove variants with empty names
     }
+
+    // Always set barcodeType to EAN_13
+    data.barcodeType = "EAN_13"
 
     // Log for debugging (only in development)
     if (process.env.NODE_ENV === "development") {
@@ -553,10 +622,39 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     }
 
     createMutation.mutate(data as CreateProductInput, {
-      onSuccess: () => {
+      onSuccess: async (createdProduct) => {
+        // Create stock entries for each selected branch
+        if (createdProduct && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0) {
+          const stockPromises = selectedBranchIds.map((branchId: string) => {
+            const stock = stockEntries[branchId]
+            if (stock && stock.quantity > 0 && stock.unitId) {
+              return createStockMutation.mutateAsync({
+                branchId,
+                productId: createdProduct.id,
+                unitId: stock.unitId,
+                quantity: stock.quantity,
+                purchasePrice: stock.purchasePrice,
+                salePrice: stock.salePrice,
+              }).catch((error) => {
+                console.error(`Error creating stock for branch ${branchId}:`, error)
+                return null
+              })
+            }
+            return Promise.resolve(null)
+          })
+          
+          try {
+            await Promise.all(stockPromises)
+          } catch (error) {
+            console.error("Error creating stock entries:", error)
+            // Still close dialog even if stock creation fails
+          }
+        }
+        
         onOpenChange(false)
         form.reset()
         setSelectedAttributeIds([])
+        setStockEntries({})
       },
       onError: (error) => {
         if (process.env.NODE_ENV === "development") {
@@ -569,6 +667,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const unitOptions = units as Unit[]
   const branchOptions = branches as Branch[]
   const brandOptions = brands as Brand[]
+  
+  // Watch branchIds to get selected branches for stock section
+  const selectedBranchIds = useWatch({
+    control: form.control,
+    name: "branchIds",
+  }) || []
 
   // Flatten categories to include all (parent + children) for selection
   const flattenCategoriesForSelection = useMemo(() => {
@@ -987,6 +1091,20 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                                       ? [...selected, b.id]
                                       : selected.filter((id) => id !== b.id)
                                     field.onChange(next)
+                                    // Initialize stock entry for new branch
+                                    if (val && !stockEntries[b.id]) {
+                                      setStockEntries(prev => ({
+                                        ...prev,
+                                        [b.id]: { quantity: 0, unitId: form.getValues("unitId") || "" }
+                                      }))
+                                    } else if (!val) {
+                                      // Remove stock entry when branch is unchecked
+                                      setStockEntries(prev => {
+                                        const updated = { ...prev }
+                                        delete updated[b.id]
+                                        return updated
+                                      })
+                                    }
                                   }}
                                   disabled={isLoading}
                                 />
@@ -1003,6 +1121,316 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 )
               }}
             />
+
+            {/* Stock Section - Only show when creating (not editing) */}
+            {!isEdit && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0 && (
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  <Label className="text-base font-semibold">{t("stock") || "Stock Information"}</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("stockDescription") || "Add stock information for each selected branch"}
+                </p>
+                <div className="space-y-4">
+                  {selectedBranchIds.map((branchId: string) => {
+                    const branch = branchOptions.find(b => b.id === branchId)
+                    const stock = stockEntries[branchId] || { quantity: 0, unitId: form.getValues("unitId") || "" }
+                    return (
+                      <Card key={branchId} className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="font-medium">{branch?.name || "Branch"}</Label>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">{t("quantity") || "Quantity"}</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={stock.quantity || ""}
+                                onChange={(e) => {
+                                  setStockEntries(prev => ({
+                                    ...prev,
+                                    [branchId]: { ...prev[branchId], quantity: parseFloat(e.target.value) || 0 }
+                                  }))
+                                }}
+                                placeholder="0"
+                                disabled={isLoading}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">{t("unit") || "Unit"}</Label>
+                              <select
+                                value={stock.unitId || form.getValues("unitId") || ""}
+                                onChange={(e) => {
+                                  setStockEntries(prev => ({
+                                    ...prev,
+                                    [branchId]: { ...prev[branchId], unitId: e.target.value }
+                                  }))
+                                }}
+                                disabled={isLoading}
+                                className={cn(
+                                  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                  "disabled:cursor-not-allowed disabled:opacity-50 mt-1"
+                                )}
+                              >
+                                <option value="">{t("selectUnit") || "Select unit"}</option>
+                                {unitOptions.map((unit) => (
+                                  <option key={unit.id} value={unit.id}>
+                                    {unit.name} ({unit.suffix})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                {t("purchasePrice") || "Purchase Price"} ({tCommon("optional")})
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={stock.purchasePrice || ""}
+                                onChange={(e) => {
+                                  setStockEntries(prev => ({
+                                    ...prev,
+                                    [branchId]: { ...prev[branchId], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined }
+                                  }))
+                                }}
+                                placeholder="0.00"
+                                disabled={isLoading}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                {t("salePrice") || "Sale Price"} ({tCommon("optional")})
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={stock.salePrice || form.getValues("price") || ""}
+                                onChange={(e) => {
+                                  setStockEntries(prev => ({
+                                    ...prev,
+                                    [branchId]: { ...prev[branchId], salePrice: e.target.value ? parseFloat(e.target.value) : undefined }
+                                  }))
+                                }}
+                                placeholder={form.getValues("price")?.toString() || "0.00"}
+                                disabled={isLoading}
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Product Images */}
+            <div className="space-y-3">
+              <FormField
+                control={form.control}
+                name="thumbnailUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("thumbnail") || "Product Thumbnail"}</FormLabel>
+                    <FormControl>
+                      <div className="space-y-2">
+                        {field.value ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={field.value}
+                              alt="Thumbnail"
+                              className="h-24 w-24 rounded-md object-cover border"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-1 -right-1 h-5 w-5"
+                              onClick={() => field.onChange(null)}
+                              disabled={isLoading}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="h-24 w-24 rounded-md border border-dashed flex items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setMediaDialogVariantIndex(-1) // -1 means product thumbnail
+                            setSelectingThumbnail(true)
+                            setMediaDialogOpen(true)
+                          }}
+                          disabled={isLoading}
+                        >
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          {field.value ? (t("changeThumbnail") || "Change") : (t("selectThumbnail") || "Select")}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="images"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("images") || "Product Images"}</FormLabel>
+                    <FormControl>
+                      <div className="space-y-2">
+                        {field.value && field.value.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {field.value.map((url, imgIndex) => (
+                              <div key={imgIndex} className="relative">
+                                <img
+                                  src={url}
+                                  alt={`Gallery ${imgIndex + 1}`}
+                                  className="h-16 w-16 rounded-md object-cover border"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute -top-1 -right-1 h-4 w-4"
+                                  onClick={() => {
+                                    const currentImages = field.value || []
+                                    const newImages = currentImages.filter((_, i) => i !== imgIndex)
+                                    field.onChange(newImages.length > 0 ? newImages : undefined)
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <X className="h-2 w-2" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setMediaDialogVariantIndex(-1) // -1 means product images
+                            setSelectingThumbnail(false)
+                            setMediaDialogOpen(true)
+                          }}
+                          disabled={isLoading}
+                        >
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          {t("addImages") || "Add Images"}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Barcode & Inventory */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="barcode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("barcode") || "Barcode"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder={t("barcodePlaceholder") || "Enter barcode"}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="barcodeType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("barcodeType") || "Barcode Type"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        value="EAN_13"
+                        disabled
+                        className="bg-muted"
+                        readOnly
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="weight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("weight") || "Weight"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        placeholder="0.00"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="alertQuantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("alertQuantity") || "Alert Quantity"}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        placeholder="0"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Attributes Selection */}
             <div className="space-y-3">
@@ -1202,14 +1630,15 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-xs">
-                                    SKU <span className="text-muted-foreground">(for stock)</span>
+                                    SKU <span className="text-muted-foreground">(read-only)</span>
                                   </FormLabel>
                                   <FormControl>
                                     <Input
                                       {...field}
                                       placeholder="SKU-001"
-                                      disabled={isLoading}
-                                      className="h-8"
+                                      disabled={isLoading || isEdit}
+                                      readOnly={isEdit}
+                                      className={cn("h-8", isEdit && "bg-muted")}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1446,16 +1875,32 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         onSelect={(media) => {
           if (mediaDialogVariantIndex === null) return
 
-          if (selectingThumbnail) {
-            // Single selection for thumbnail
-            const selectedMedia = Array.isArray(media) ? media[0] : media
-            form.setValue(`variants.${mediaDialogVariantIndex}.thumbnailUrl`, selectedMedia.secureUrl || selectedMedia.url)
+          if (mediaDialogVariantIndex === -1) {
+            // Product-level images
+            if (selectingThumbnail) {
+              // Single selection for product thumbnail
+              const selectedMedia = Array.isArray(media) ? media[0] : media
+              form.setValue("thumbnailUrl", selectedMedia.secureUrl || selectedMedia.url)
+            } else {
+              // Multiple selection for product gallery
+              const selectedMedia = Array.isArray(media) ? media : [media]
+              const currentImages = form.getValues("images") || []
+              const newUrls = selectedMedia.map((m) => m.secureUrl || m.url)
+              form.setValue("images", [...currentImages, ...newUrls])
+            }
           } else {
-            // Multiple selection for gallery
-            const selectedMedia = Array.isArray(media) ? media : [media]
-            const currentImages = form.getValues(`variants.${mediaDialogVariantIndex}.images`) || []
-            const newUrls = selectedMedia.map((m) => m.secureUrl || m.url)
-            form.setValue(`variants.${mediaDialogVariantIndex}.images`, [...currentImages, ...newUrls])
+            // Variant-level images
+            if (selectingThumbnail) {
+              // Single selection for variant thumbnail
+              const selectedMedia = Array.isArray(media) ? media[0] : media
+              form.setValue(`variants.${mediaDialogVariantIndex}.thumbnailUrl`, selectedMedia.secureUrl || selectedMedia.url)
+            } else {
+              // Multiple selection for variant gallery
+              const selectedMedia = Array.isArray(media) ? media : [media]
+              const currentImages = form.getValues(`variants.${mediaDialogVariantIndex}.images`) || []
+              const newUrls = selectedMedia.map((m) => m.secureUrl || m.url)
+              form.setValue(`variants.${mediaDialogVariantIndex}.images`, [...currentImages, ...newUrls])
+            }
           }
           setMediaDialogOpen(false)
           setMediaDialogVariantIndex(null)
