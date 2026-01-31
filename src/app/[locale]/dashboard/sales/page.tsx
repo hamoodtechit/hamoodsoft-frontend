@@ -29,8 +29,9 @@ import { type SalesListParams } from "@/lib/api/sales"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
+import { useProducts } from "@/lib/hooks/use-products"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Sale } from "@/types"
+import { Sale, Product } from "@/types"
 import { Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -90,6 +91,51 @@ export default function SalesPage() {
   }, [selectedBranchId])
 
   const { data, isLoading } = useSales(queryParams)
+  
+  // Fetch products to match with sale items for images
+  const { data: productsData } = useProducts({ limit: 1000, branchId: selectedBranchId || undefined })
+  const allProducts = productsData?.items ?? []
+  
+  // Create product map by SKU and by ID for quick lookup
+  const productMapBySku = useMemo(() => {
+    const map = new Map<string, Product>()
+    allProducts.forEach(product => {
+      // Map by product barcode/SKU if exists
+      if (product.barcode) {
+        map.set(product.barcode, product)
+      }
+      // Map variants by SKU
+      const variants = product.productVariants || product.variants || []
+      variants.forEach((variant: any) => {
+        if (variant.sku) {
+          map.set(variant.sku, product)
+        }
+      })
+    })
+    return map
+  }, [allProducts])
+  
+  // Helper to get product image from SKU
+  const getProductImageBySku = (sku?: string): string | null => {
+    if (!sku) return null
+    const product = productMapBySku.get(sku)
+    if (!product) return null
+    
+    // Get product image (same logic as products page)
+    if (product.thumbnailUrl) return product.thumbnailUrl
+    const variants = product.productVariants || product.variants || []
+    if (variants.length > 0) {
+      const variant = variants.find((v: any) => v.sku === sku) || variants[0]
+      if (variant.thumbnailUrl) return variant.thumbnailUrl
+      if (variant.images && Array.isArray(variant.images) && variant.images.length > 0) {
+        return variant.images[0]
+      }
+    }
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images[0]
+    }
+    return null
+  }
   
   // Helper to get items from sale (handles both items and saleItems)
   const getSaleItems = (sale: Sale) => {
@@ -745,34 +791,46 @@ export default function SalesPage() {
                 <h4 className="font-medium">{t("items")}</h4>
                 {getSaleItems(viewSale).length > 0 ? (
                   <div className="space-y-2">
-                    {getSaleItems(viewSale).map((item, index) => (
-                      <Card key={index} className="border">
-                        <CardContent className="py-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium">{item.itemName}</p>
-                              {item.itemDescription && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {item.itemDescription}
-                                </p>
+                    {getSaleItems(viewSale).map((item, index) => {
+                      const productImage = getProductImageBySku(item.sku)
+                      return (
+                        <Card key={index} className="border">
+                          <CardContent className="py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              {productImage && (
+                                <div className="flex-shrink-0">
+                                  <img
+                                    src={productImage}
+                                    alt={item.itemName}
+                                    className="h-16 w-16 rounded-md object-cover border"
+                                  />
+                                </div>
                               )}
-                              <div className="flex items-center gap-4 mt-2 text-sm">
-                                <span>
-                                  {t("quantity")}: {item.quantity} {item.unit}
-                                </span>
-                                <span>
-                                  {t("price")}: {item.price.toFixed(2)}
-                                </span>
-                                <span className="font-medium">
-                                  {t("subtotal")}:{" "}
-                                  {(item.price * item.quantity).toFixed(2)}
-                                </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium">{item.itemName}</p>
+                                {item.itemDescription && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {item.itemDescription}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-4 mt-2 text-sm">
+                                  <span>
+                                    {t("quantity")}: {item.quantity} {item.unit}
+                                  </span>
+                                  <span>
+                                    {t("price")}: {item.price.toFixed(2)}
+                                  </span>
+                                  <span className="font-medium">
+                                    {t("subtotal")}:{" "}
+                                    {(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">

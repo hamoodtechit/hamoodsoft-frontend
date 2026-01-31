@@ -124,6 +124,44 @@ export default function ProductDetailsPage() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Product Images Gallery */}
+            {(() => {
+              const allImages: string[] = []
+              
+              // Add product thumbnail if exists
+              if (product.thumbnailUrl) {
+                allImages.push(product.thumbnailUrl)
+              }
+              
+              // Add product images
+              if (product.images && Array.isArray(product.images)) {
+                product.images.forEach(img => {
+                  if (img && !allImages.includes(img)) allImages.push(img)
+                })
+              }
+              
+              return allImages.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("images") || "Product Images"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {allImages.map((img, idx) => (
+                        <div key={idx} className="aspect-square rounded-md overflow-hidden border">
+                          <img
+                            src={img}
+                            alt={`${product.name} - Image ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null
+            })()}
+
             {/* Basic Information */}
             <Card>
               <CardHeader>

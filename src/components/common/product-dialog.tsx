@@ -33,6 +33,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useAttributes, useCreateAttribute } from "@/lib/hooks/use-attributes"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useBrands, useCreateBrand } from "@/lib/hooks/use-brands"
@@ -335,22 +342,30 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         })
         lastProcessedAttributesRef.current = initAttributesKey
         
-        // Load existing variants into the form (preserve existing options format)
+        // Load existing variants into the form (preserve ALL fields including id for updates)
         replace(existingVariants.map((v: any) => ({
+          id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
           variantName: v.variantName || "",
           sku: v.sku || "",
           price: v.price ?? 0, // Price is required
+          unitId: v.unitId || undefined,
           options: v.options || {},
+          thumbnailUrl: v.thumbnailUrl || undefined,
+          images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
         })))
         
         hasInitializedFromProduct.current = true
       } else {
-        // No matching attributes found, but still load variants
+        // No matching attributes found, but still load variants (preserve ALL fields including id)
         replace(existingVariants.map((v: any) => ({
+          id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
           variantName: v.variantName || "",
           sku: v.sku || "",
           price: v.price ?? 0,
+          unitId: v.unitId || undefined,
           options: v.options || {},
+          thumbnailUrl: v.thumbnailUrl || undefined,
+          images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
         })))
         hasInitializedFromProduct.current = true
       }
@@ -522,8 +537,22 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
 
   const onSubmit = (data: CreateProductInput | UpdateProductInput) => {
     // Clean up empty brandId
-    if (data.brandId === "") {
+    if (data.brandId === "" || data.brandId === null) {
       data.brandId = undefined
+    }
+
+    // Clean up empty strings - convert to undefined for optional fields
+    if (data.description === "" || data.description === null) {
+      data.description = undefined
+    }
+    if (data.barcode === "" || data.barcode === null) {
+      data.barcode = undefined
+    }
+    if (data.thumbnailUrl === "" || data.thumbnailUrl === null) {
+      data.thumbnailUrl = undefined
+    }
+    if (data.images && (data.images.length === 0 || data.images.every(img => !img || img.trim() === ""))) {
+      data.images = undefined
     }
 
     // Remove pricing fields that are managed in stock, not product
@@ -572,27 +601,48 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
           })
         }
 
-        const thumbnailUrl =
-          typeof (variant as any).thumbnailUrl === "string" && (variant as any).thumbnailUrl.trim().length > 0
-            ? (variant as any).thumbnailUrl.trim()
-            : undefined
-
-        const imagesRaw = (variant as any).images
-        const images =
-          Array.isArray(imagesRaw)
-            ? imagesRaw
-                .filter((u: any): u is string => typeof u === "string" && u.trim().length > 0)
-                .map((u: string) => u.trim())
-            : undefined
-
-        return {
+        // Build the variant object - only include fields with valid values
+        const cleanedVariant: any = {
           variantName: variant.variantName || "",
           // Don't send SKU to backend - it's managed by backend
-          price: variant.price ?? 0, // Price is required, default to 0 if not set
+          price: Math.round(variant.price ?? 0), // Price is required, must be integer, default to 0 if not set
           options: Object.keys(cleanedOptions).length > 0 ? cleanedOptions : {}, // Ensure options is always an object
-          thumbnailUrl,
-          images: images && images.length > 0 ? images : undefined,
         }
+        
+        // Include id for updates - backend uses this to identify which variants to update
+        // For existing variants during product update, include id so backend knows to update them
+        // For new variants added during edit, id will be undefined, so backend will create them
+        if ((variant as any).id && typeof (variant as any).id === "string") {
+          cleanedVariant.id = (variant as any).id
+        }
+        
+        // Only include optional fields if they have valid non-empty values
+        // thumbnailUrl must be min 1 character if present
+        const thumbnailUrl = typeof (variant as any).thumbnailUrl === "string" && (variant as any).thumbnailUrl.trim().length > 0
+          ? (variant as any).thumbnailUrl.trim()
+          : null
+        if (thumbnailUrl) {
+          cleanedVariant.thumbnailUrl = thumbnailUrl
+        }
+        
+        // images must be a non-empty array if present
+        const imagesRaw = (variant as any).images
+        const images = Array.isArray(imagesRaw) && imagesRaw.length > 0
+          ? imagesRaw
+              .filter((u: any): u is string => typeof u === "string" && u.trim().length > 0)
+              .map((u: string) => u.trim())
+          : null
+        if (images && images.length > 0) {
+          cleanedVariant.images = images
+        }
+        
+        // unitId must be a valid non-empty string if present
+        const unitId = (variant as any).unitId
+        if (unitId && typeof unitId === "string" && unitId.trim().length > 0) {
+          cleanedVariant.unitId = unitId.trim()
+        }
+        
+        return cleanedVariant
       }).filter((variant) => variant.variantName && variant.variantName.length > 0) // Remove variants with empty names
     }
 
@@ -1375,14 +1425,20 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("barcodeType") || "Barcode Type"}</FormLabel>
-                    <FormControl>
-                      <Input
-                        value="EAN_13"
-                        disabled
-                        className="bg-muted"
-                        readOnly
-                      />
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "EAN_13"}
+                      disabled
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("barcodeType") || "Select barcode type"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="EAN_13">EAN-13</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

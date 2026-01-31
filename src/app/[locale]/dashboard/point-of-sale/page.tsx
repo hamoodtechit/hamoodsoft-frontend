@@ -34,6 +34,7 @@ import { useContacts } from "@/lib/hooks/use-contacts"
 import { useProducts } from "@/lib/hooks/use-products"
 import { useCreateSale, useSales } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
+import { useAppSettings } from "@/lib/providers/settings-provider"
 import { cn } from "@/lib/utils"
 import { Product, ProductVariant, Sale, Stock } from "@/types"
 import {
@@ -116,11 +117,20 @@ export default function PointOfSalePage() {
   })
   const audioCtxRef = useRef<AudioContext | null>(null)
   
-  // Discount and Tax
+  // Discount and Tax - Get tax rate from settings
+  const { taxSettings } = useAppSettings()
+  const defaultTaxRate = taxSettings?.rate ?? 0
   const [discountType, setDiscountType] = useState<"NONE" | "PERCENTAGE" | "FIXED">("NONE")
   const [discountAmount, setDiscountAmount] = useState(0)
-  const [taxRate, setTaxRate] = useState(0)
+  const [taxRate, setTaxRate] = useState(defaultTaxRate)
   const [taxAmount, setTaxAmount] = useState(0)
+  
+  // Update tax rate when settings load
+  useEffect(() => {
+    if (taxSettings?.rate !== undefined) {
+      setTaxRate(taxSettings.rate)
+    }
+  }, [taxSettings?.rate])
 
   // Payment (partial)
   const [paidAmountInput, setPaidAmountInput] = useState<number>(0)
@@ -312,21 +322,37 @@ export default function PointOfSalePage() {
           stock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
         }
         
-        // Get price: Use stock.salePrice if available (real-world: stock has actual selling price)
-        // Otherwise use variant.price, then product.price
-        const variantPrice = stock?.salePrice ?? variant.price ?? product.price ?? 0
+        // Get price: For variants, prioritize variant.price over stock.salePrice
+        // Priority: variant.price > stock.salePrice > product.price
+        // This ensures variant-specific pricing is used first
+        const originalVariantPrice = variant.price !== null && variant.price !== undefined ? variant.price : null
+        const variantPrice = originalVariantPrice ?? stock?.salePrice ?? product.price ?? 0
         
         // Map variant to ProductVariant type
+        // Preserve the original variant object but use calculated price for display/cart
         const variantData: ProductVariant = {
           id: variant.id || '',
           productId: product.id,
           sku: sku,
-          price: variantPrice,
+          price: variantPrice, // Use calculated price (stock.salePrice > variant.price > product.price)
           unitId: variant.unitId || product.unitId,
           variantName: variant.variantName || '',
           options: variant.options || {},
           thumbnailUrl: variant.thumbnailUrl || null,
           images: variant.images || [],
+        }
+        
+        // Debug log in development to track price calculation
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔍 Variant Price Calculation:", {
+            variantId: variant.id,
+            variantName: variant.variantName,
+            originalVariantPrice: variant.price,
+            stockSalePrice: stock?.salePrice,
+            productPrice: product.price,
+            calculatedPrice: variantPrice,
+            sku: sku
+          })
         }
         
         variants.push({
@@ -462,9 +488,10 @@ export default function PointOfSalePage() {
       finalStock = stocks.find((s) => (s.sku === sku || s.productId === product.id) && s.branchId === selectedBranchId)
     }
     
-    // Get price: Use stock.salePrice if available (real-world: stock has actual selling price)
-    // Otherwise use variant.price, then product.price
-    const price = finalStock?.salePrice ?? variant?.price ?? product.price ?? 0
+    // Get price: For variants, prioritize variant.price over stock.salePrice
+    // Priority: variant.price > stock.salePrice > product.price
+    // This ensures variant-specific pricing is used first
+    const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
     
     const availableQty = finalStock?.quantity || 0
 
@@ -1149,11 +1176,25 @@ export default function PointOfSalePage() {
                       const inCart = cartProductIdSet.has(product.id)
 
                       // Get product image: prefer variant image, then product image
+                      // Get product image (prioritizes variant, then product)
                       const productImage = firstVariant?.thumbnailUrl || 
                         (firstVariant?.images && firstVariant.images[0]) ||
                         product.thumbnailUrl ||
                         (product.images && product.images[0]) ||
                         null
+                      
+                      // Count total images (product + variant images)
+                      const totalImages = (() => {
+                        let count = 0
+                        if (product.thumbnailUrl) count++
+                        if (product.images && Array.isArray(product.images)) count += product.images.length
+                        const variants = product.productVariants || product.variants || []
+                        variants.forEach((v: any) => {
+                          if (v.thumbnailUrl) count++
+                          if (v.images && Array.isArray(v.images)) count += v.images.length
+                        })
+                        return count
+                      })()
 
                       // Get display price: Use stock.salePrice if available, otherwise variant/product price
                       const displayPrice = stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0
@@ -1202,6 +1243,12 @@ export default function PointOfSalePage() {
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <Package className="h-12 w-12 text-muted-foreground/40" />
+                              </div>
+                            )}
+                            {/* Multiple images indicator */}
+                            {totalImages > 1 && (
+                              <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                                {totalImages} {totalImages === 1 ? "image" : "images"}
                               </div>
                             )}
                             {/* Overlay gradient for better text readability */}
@@ -1704,8 +1751,11 @@ export default function PointOfSalePage() {
                     (selectedProductForSku.images && selectedProductForSku.images[0]) ||
                     null
 
-                // Get variant price: Use stock.salePrice if available, otherwise variant/product price
-                const variantPrice = stock?.salePrice ?? variant?.price ?? selectedProductForSku.price ?? 0
+                  // Get variant price: For variants, prioritize variant.price over stock.salePrice
+                  // Priority: variant.price > stock.salePrice > product.price
+                  // This ensures variant-specific pricing is used first
+                  const variantPriceValue = variant?.price !== null && variant?.price !== undefined ? variant.price : null
+                  const variantPrice = variantPriceValue ?? stock?.salePrice ?? selectedProductForSku.price ?? 0
 
                   // Format variant options for display
                   const optionsText = variant?.options 

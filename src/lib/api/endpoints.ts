@@ -116,4 +116,8 @@ export const endpoints = {
     update: (id: string) => `/media/${id}`,
     delete: (id: string) => `/media/${id}`,
   },
+  settings: {
+    list: "/settings",
+    update: (id: string) => `/settings/${id}`,
+  },
 } as const

@@ -215,7 +215,8 @@
     "images": "Gallery Images",
     "addImages": "Add Images",
     "stockDescription": "Add stock information for each selected branch",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "image": "Image"
   },
   "productVariants": {
     "createVariant": "Create Variant",

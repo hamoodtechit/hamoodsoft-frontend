@@ -411,7 +411,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
   // Settings menu item
   const settingsItem: NavItem = {
     title: t("sidebar.settings"),
-    href: "/settings",
+    href: "/dashboard/settings",
     icon: Settings,
   }
 

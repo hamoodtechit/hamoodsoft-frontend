@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl"
 import { getMessages } from "next-intl/server"
 import { ThemeProvider } from "@/lib/providers/theme-provider"
 import { QueryProvider } from "@/lib/providers/query-provider"
+import { SettingsProvider } from "@/lib/providers/settings-provider"
 import { Toaster } from "sonner"
 import { config } from "@/constants/config"
 
@@ -31,8 +32,10 @@ export default async function LocaleLayout({
         disableTransitionOnChange
       >
         <QueryProvider>
-          {children}
-          <Toaster position="top-right" richColors />
+          <SettingsProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </SettingsProvider>
         </QueryProvider>
       </ThemeProvider>
     </NextIntlClientProvider>

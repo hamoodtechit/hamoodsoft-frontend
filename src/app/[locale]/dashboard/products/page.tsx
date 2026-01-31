@@ -29,6 +29,7 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteProduct, useProduct, useProducts } from "@/lib/hooks/use-products"
+import { useStocks } from "@/lib/hooks/use-stocks"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Product } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -102,8 +103,85 @@ export default function ProductsPage() {
     Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
   const currentPage = meta?.page ?? page
 
+  // Fetch stocks for quantity calculation
+  const { data: stocksData } = useStocks({ branchId: selectedBranchId || undefined })
+  const stocks = stocksData?.items ?? []
+
+  // Helper function to get product image (prioritizes product thumbnail, then variant images, then product images)
+  const getProductImage = (product: Product): string | null => {
+    // 1. Product thumbnail
+    if (product.thumbnailUrl) return product.thumbnailUrl
+    
+    // 2. First variant thumbnail or first variant image
+    const variants = product.productVariants || product.variants || []
+    if (variants.length > 0) {
+      const firstVariant = variants[0]
+      if (firstVariant.thumbnailUrl) return firstVariant.thumbnailUrl
+      if (firstVariant.images && Array.isArray(firstVariant.images) && firstVariant.images.length > 0) {
+        return firstVariant.images[0]
+      }
+    }
+    
+    // 3. Product images array
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images[0]
+    }
+    
+    return null
+  }
+
+  // Helper function to get total quantity for a product
+  const getProductQuantity = (product: Product): number => {
+    if (!product.manageStocks) return 0
+    
+    // Sum quantities from product.stocks
+    if (product.stocks && Array.isArray(product.stocks)) {
+      if (selectedBranchId) {
+        // Filter by branch if branch is selected
+        return product.stocks
+          .filter(s => s.branchId === selectedBranchId)
+          .reduce((sum, stock) => sum + (stock.quantity || 0), 0)
+      } else {
+        // Sum all branches
+        return product.stocks.reduce((sum, stock) => sum + (stock.quantity || 0), 0)
+      }
+    }
+    
+    // Fallback: try to find in stocks query result
+    if (selectedBranchId) {
+      return stocks
+        .filter(s => s.productId === product.id && s.branchId === selectedBranchId)
+        .reduce((sum, stock) => sum + (stock.quantity || 0), 0)
+    } else {
+      return stocks
+        .filter(s => s.productId === product.id)
+        .reduce((sum, stock) => sum + (stock.quantity || 0), 0)
+    }
+  }
+
   // Table columns configuration
   const tableColumns: Column<Product>[] = useMemo(() => [
+    {
+      id: "image",
+      header: t("image") || "Image",
+      cell: (row) => {
+        const imageUrl = getProductImage(row)
+        return imageUrl ? (
+          <div className="flex-shrink-0">
+            <img
+              src={imageUrl}
+              alt={row.name}
+              className="h-12 w-12 rounded-md object-cover border"
+            />
+          </div>
+        ) : (
+          <div className="h-12 w-12 rounded-md border bg-muted flex items-center justify-center">
+            <Package className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )
+      },
+      sortable: false,
+    },
     {
       id: "name",
       header: t("name"),
@@ -192,7 +270,22 @@ export default function ProductsPage() {
       cell: (row) => (row.isVariable ? tCommon("yes") : tCommon("no")),
       sortable: true,
     },
-  ], [t, tCommon])
+    {
+      id: "quantity",
+      header: t("quantity") || "Quantity",
+      cell: (row) => {
+        const qty = getProductQuantity(row)
+        return row.manageStocks ? (
+          <Badge variant={qty > 0 ? "default" : "destructive"}>
+            {qty} {row.unit?.suffix || ""}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )
+      },
+      sortable: false,
+    },
+  ], [t, tCommon, selectedBranchId, stocks])
 
   // Export columns configuration
   const exportColumns: ExportColumn<Product>[] = useMemo(() => [
@@ -621,6 +714,53 @@ export default function ProductsPage() {
             </div>
           ) : viewProduct ? (
             <div className="space-y-4">
+              {/* Product Images Gallery */}
+              {(() => {
+                const allImages: string[] = []
+                
+                // Add product thumbnail if exists
+                if (viewProduct.thumbnailUrl) {
+                  allImages.push(viewProduct.thumbnailUrl)
+                }
+                
+                // Add product images
+                if (viewProduct.images && Array.isArray(viewProduct.images)) {
+                  viewProduct.images.forEach(img => {
+                    if (img && !allImages.includes(img)) allImages.push(img)
+                  })
+                }
+                
+                // Add variant images
+                const variants = viewProduct.productVariants || viewProduct.variants || []
+                variants.forEach((variant: any) => {
+                  if (variant.thumbnailUrl && !allImages.includes(variant.thumbnailUrl)) {
+                    allImages.push(variant.thumbnailUrl)
+                  }
+                  if (variant.images && Array.isArray(variant.images)) {
+                    variant.images.forEach((img: string) => {
+                      if (img && !allImages.includes(img)) allImages.push(img)
+                    })
+                  }
+                })
+                
+                return allImages.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">{t("images") || "Images"}</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {allImages.map((img, idx) => (
+                        <div key={idx} className="flex-shrink-0">
+                          <img
+                            src={img}
+                            alt={`${viewProduct.name} - Image ${idx + 1}`}
+                            className="h-24 w-24 rounded-md object-cover border"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold">{viewProduct.name}</h3>

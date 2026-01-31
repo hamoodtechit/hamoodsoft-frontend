@@ -2,30 +2,30 @@
 
 import { Button } from "@/components/ui/button"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
@@ -35,18 +35,17 @@ import { useCreateSale, useUpdateSale } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
 import { useUnits } from "@/lib/hooks/use-units"
 import {
-    createSaleSchema,
-    updateSaleSchema,
-    type CreateSaleInput,
-    type UpdateSaleInput,
+  createSaleSchema,
+  updateSaleSchema,
+  type CreateSaleInput,
+  type UpdateSaleInput,
 } from "@/lib/validations/sales"
-import { Sale } from "@/types"
+import { Product, ProductVariant, Sale } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
-import { Product, ProductVariant } from "@/types"
 
 interface SaleDialogProps {
   sale: Sale | null
@@ -775,11 +774,12 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                           form.setValue(`items.${index}.unit` as any, product.unit?.suffix || "")
                                           
                                           // Get price from stock if available, otherwise use product price
+                                          // Priority: stock.salePrice > product.price (use ?? to handle 0 prices correctly)
                                           const stock = product.stocks?.find((s: any) => 
                                             s.branchId === (branchId || selectedBranchId)
                                           ) || stockMapBySku.get(product.id)
                                           
-                                          const price = stock?.salePrice || product.price || 0
+                                          const price = stock?.salePrice ?? product.price ?? 0
                                           form.setValue(`items.${index}.price` as any, price)
                                           
                                           // Set SKU - use first variant SKU if variable, or product barcode
@@ -856,43 +856,78 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                   <Select
                                     value={selectedVariants[index]?.id || ""}
                                     onValueChange={(variantId) => {
-                                      const variant = selectedProducts[index]?.productVariants?.find(v => v.id === variantId)
-                                      if (variant && selectedProducts[index]) {
-                                        // Check if variant is in stock
-                                        if (!isProductInStock(selectedProducts[index], variant)) {
-                                          form.setError(`items.${index}.sku` as any, {
-                                            type: "manual",
-                                            message: "This variant is out of stock"
-                                          })
-                                          return
-                                        }
-                                        
-                                        setSelectedVariants(prev => ({ ...prev, [index]: variant }))
-                                        
-                                        // Update SKU
-                                        field.onChange(variant.sku || "")
-                                        
-                                        // Update price from variant or stock
-                                        const stock = stockMapBySku.get(variant.sku) || 
-                                                     stockMapBySku.get(variant.id) ||
-                                                     selectedProducts[index]?.stocks?.find((s: any) => 
-                                                       s.branchId === (branchId || selectedBranchId) && s.sku === variant.sku
-                                                     )
-                                        
-                                        const price = stock?.salePrice || variant.price || selectedProducts[index]?.price || 0
-                                        form.setValue(`items.${index}.price` as any, price)
-                                        
-                                        // Update item name to include variant
-                                        const itemName = `${selectedProducts[index]?.name} - ${variant.variantName}`
-                                        form.setValue(`items.${index}.itemName` as any, itemName)
-                                        
-                                        // Set max quantity based on available stock
-                                        const availableStock = getAvailableStock(selectedProducts[index], variant)
-                                        if (selectedProducts[index].manageStocks && availableStock > 0) {
-                                          const currentQuantity = form.getValues(`items.${index}.quantity` as any) || 1
-                                          if (currentQuantity > availableStock) {
-                                            form.setValue(`items.${index}.quantity` as any, availableStock)
-                                          }
+                                      // Find variant from productVariants or variants array
+                                      const product = selectedProducts[index]
+                                      if (!product) return
+                                      
+                                      const variantRaw = (product.productVariants || product.variants || []).find((v: any) => v.id === variantId)
+                                      if (!variantRaw) return
+                                      
+                                      // Ensure variant has productId for type safety
+                                      const variant: ProductVariant = {
+                                        ...variantRaw,
+                                        productId: (variantRaw as any).productId || product.id,
+                                        id: variantRaw.id || variantId,
+                                        sku: variantRaw.sku || variantRaw.id || "",
+                                        price: variantRaw.price ?? 0,
+                                        variantName: variantRaw.variantName || "",
+                                        unitId: variantRaw.unitId || product.unitId || "",
+                                      }
+                                      
+                                      // Check if variant is in stock
+                                      if (!isProductInStock(product, variant)) {
+                                        form.setError(`items.${index}.sku` as any, {
+                                          type: "manual",
+                                          message: "This variant is out of stock"
+                                        })
+                                        return
+                                      }
+                                      
+                                      setSelectedVariants(prev => ({ ...prev, [index]: variant }))
+                                      
+                                      // Update SKU
+                                      field.onChange(variant.sku || "")
+                                      
+                                      // Update price from variant or stock
+                                      // For variants: Priority is variant.price > stock.salePrice > product.price
+                                      // IMPORTANT: Variant price should take priority over stock salePrice for variant-specific pricing
+                                      const stock = (variant.sku ? stockMapBySku.get(variant.sku) : undefined) || 
+                                                   (variant.id ? stockMapBySku.get(variant.id) : undefined) ||
+                                                   product.stocks?.find((s: any) => 
+                                                     s.branchId === (branchId || selectedBranchId) && s.sku === variant.sku
+                                                   )
+                                      
+                                      // For variants: Use variant.price first (it's the specific price for this variant)
+                                      // Only use stock.salePrice if variant.price is not set
+                                      // Priority: variant.price > stock.salePrice > product.price
+                                      const variantPrice = variant.price !== null && variant.price !== undefined ? variant.price : null
+                                      const price = variantPrice ?? stock?.salePrice ?? product.price ?? 0
+                                      
+                                      // Debug log in development
+                                      if (process.env.NODE_ENV === "development") {
+                                        console.log("💰 Variant Price Selection:", {
+                                          variantId: variant.id,
+                                          variantName: variant.variantName,
+                                          variantPrice: variant.price,
+                                          variantPriceType: typeof variant.price,
+                                          stockSalePrice: stock?.salePrice,
+                                          productPrice: product.price,
+                                          finalPrice: price
+                                        })
+                                      }
+                                      
+                                      form.setValue(`items.${index}.price` as any, price)
+                                      
+                                      // Update item name to include variant
+                                      const itemName = `${product.name} - ${variant.variantName}`
+                                      form.setValue(`items.${index}.itemName` as any, itemName)
+                                      
+                                      // Set max quantity based on available stock
+                                      const availableStock = getAvailableStock(product, variant)
+                                      if (product.manageStocks && availableStock > 0) {
+                                        const currentQuantity = form.getValues(`items.${index}.quantity` as any) || 1
+                                        if (currentQuantity > availableStock) {
+                                          form.setValue(`items.${index}.quantity` as any, availableStock)
                                         }
                                       }
                                     }}

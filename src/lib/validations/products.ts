@@ -1,8 +1,11 @@
 import { z } from "zod"
 
+// Base variant schema for both create and update
+// For updates, include 'id' to identify existing variants
 const productVariantSchema = z.object({
+  id: z.string().uuid().optional(), // Required for updates to identify existing variants
   variantName: z.string().min(1, "Variant name is required"),
-  sku: z.string().optional(),
+  sku: z.string().optional(), // SKU is managed by backend, optional in payload
   price: z.number({ invalid_type_error: "Price must be a number" }).min(0, "Price must be 0 or greater"),
   unitId: z.string().uuid().optional(),
   options: z.record(z.string().min(1), z.string().min(1)), // Backend expects attribute names as keys (e.g., "Color", "Size")

@@ -68,6 +68,7 @@ export default function ContactsPage() {
   }, [page, limit, search, typeFilter])
 
   const { data, isLoading } = useContacts(queryParams)
+
   const contacts = data?.items ?? []
   const meta = data?.meta
   const total = meta?.total ?? contacts.length
@@ -454,11 +455,11 @@ export default function ContactsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold">{viewContact.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <div className="text-sm text-muted-foreground mt-1">
                     <Badge className={getTypeColor(viewContact.type)}>
                       {viewContact.type === "CUSTOMER" ? t("typeCustomer") : t("typeSupplier")}
                     </Badge>
-                  </p>
+                  </div>
                 </div>
               </div>
 

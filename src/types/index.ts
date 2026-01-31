@@ -313,6 +313,15 @@ export interface Media {
   updatedAt?: string
 }
 
+export interface Setting {
+  id: string
+  businessId?: string
+  name: string
+  configs: Record<string, any> // configs can have different structures based on setting type
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface PaginatedResult<T> {
   items: T[]
   meta: {

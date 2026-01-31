@@ -9,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAppSettings } from "@/lib/providers/settings-provider"
+import { formatCurrency } from "@/lib/utils/currency"
 import { Sale } from "@/types"
 import { Download, FileText, History, Printer } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -24,6 +26,7 @@ interface InvoiceDialogProps {
 export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactions }: InvoiceDialogProps) {
   const t = useTranslations("sales")
   useTranslations("common")
+  const { generalSettings, invoiceSettings } = useAppSettings()
 
   // Get sale items (handle both items and saleItems)
   const saleItems = useMemo(() => {
@@ -97,9 +100,21 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
           {/* Invoice Header */}
           <div className="flex items-start justify-between mb-6 print:mb-8">
             <div>
+              {/* Logo */}
+              {generalSettings?.logoUrl && (
+                <div className="mb-4">
+                  <img
+                    src={generalSettings.logoUrl}
+                    alt="Logo"
+                    className="h-16 w-auto object-contain"
+                  />
+                </div>
+              )}
               <h1 className="text-3xl font-bold mb-2">Invoice</h1>
               {sale.invoiceNumber && (
-                <p className="text-muted-foreground">Invoice #: {sale.invoiceNumber}</p>
+                <p className="text-muted-foreground">
+                  {invoiceSettings?.prefix || "INV"}#: {sale.invoiceNumber}
+                </p>
               )}
               {/* Receipt-style customer info (kept minimal) */}
               {sale.contact && (
@@ -197,14 +212,16 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
                       <td className="py-3 px-4 text-center">
                         {item.quantity} {item.unit}
                       </td>
-                      <td className="py-3 px-4 text-right">{item.price.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right">
+                        {formatCurrency(item.price, { generalSettings })}
+                      </td>
                       {totals.discount > 0 && (
                         <td className="py-3 px-4 text-right">
-                          {itemDiscount > 0 ? `-${itemDiscount.toFixed(2)}` : "-"}
+                          {itemDiscount > 0 ? `-${formatCurrency(itemDiscount, { generalSettings })}` : "-"}
                         </td>
                       )}
                       <td className="py-3 px-4 text-right font-medium">
-                        {itemTotal.toFixed(2)}
+                        {formatCurrency(itemTotal, { generalSettings })}
                       </td>
                     </tr>
                   )
@@ -218,34 +235,34 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
             <div className="w-full md:w-80 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span>{totals.subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(totals.subtotal, { generalSettings })}</span>
               </div>
               {totals.discount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount:</span>
-                  <span className="text-green-600">-{totals.discount.toFixed(2)}</span>
+                  <span className="text-green-600">-{formatCurrency(totals.discount, { generalSettings })}</span>
                 </div>
               )}
               {totals.tax > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax:</span>
-                  <span>{totals.tax.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.tax, { generalSettings })}</span>
                 </div>
               )}
               <div className="border-t my-2" />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span>{totals.total.toFixed(2)}</span>
+                <span>{formatCurrency(totals.total, { generalSettings })}</span>
               </div>
               {sale.paymentStatus !== "PAID" && (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Paid:</span>
-                    <span className="text-green-600">{totals.paid.toFixed(2)}</span>
+                    <span className="text-green-600">{formatCurrency(totals.paid, { generalSettings })}</span>
                   </div>
                   <div className="flex justify-between text-sm font-semibold text-red-600">
                     <span>Due:</span>
-                    <span>{totals.due.toFixed(2)}</span>
+                    <span>{formatCurrency(totals.due, { generalSettings })}</span>
                   </div>
                 </>
               )}
@@ -254,7 +271,7 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
 
           {/* Footer */}
           <div className="mt-8 pt-6 border-t text-center text-sm text-muted-foreground print:mt-12">
-            <p>Thank you for your business!</p>
+            <p>{invoiceSettings?.footer || "Thank you for your business!"}</p>
             {sale.createdAt && (
               <p className="mt-2">
                 Invoice generated on {new Date(sale.createdAt).toLocaleString()}

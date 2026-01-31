@@ -353,7 +353,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   // Settings menu item
   const settingsItem: NavItem = {
     title: "Settings",
-    href: "/settings",
+    href: "/dashboard/settings",
     icon: Settings,
   }
 
