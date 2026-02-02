@@ -12,6 +12,16 @@ export const saleItemSchema = z.object({
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
 })
 
+export const paymentSchema = z.object({
+  accountId: z.string().min(1, "Account is required"),
+  amount: z.number().min(0, "Amount must be greater than or equal to 0"),
+  branchId: z.string().optional(),
+  contactId: z.string().optional(),
+  notes: z.string().optional(),
+  occurredAt: z.string().optional(),
+  type: z.enum(["SALE_PAYMENT", "PURCHASE_PAYMENT"]).default("SALE_PAYMENT"),
+})
+
 export const createSaleSchema = z.object({
   branchId: z.string().min(1, "Branch is required"),
   contactId: z.string().min(1, "Contact is required"),
@@ -22,6 +32,7 @@ export const createSaleSchema = z.object({
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
   discountType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional().default("NONE"),
   discountAmount: z.number().min(0, "Discount amount must be greater than or equal to 0").optional().default(0),
+  payments: z.array(paymentSchema).optional(),
 })
 
 export const updateSaleSchema = z.object({

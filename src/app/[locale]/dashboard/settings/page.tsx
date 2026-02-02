@@ -1,6 +1,8 @@
 "use client"
 
+import { MediaDialog } from "@/components/common/media-dialog"
 import { PageLayout } from "@/components/common/page-layout"
+import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -21,8 +23,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -30,18 +30,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { MediaDialog } from "@/components/common/media-dialog"
-import { SkeletonList } from "@/components/skeletons/skeleton-list"
-import { useAppSettings } from "@/lib/providers/settings-provider"
+import { Textarea } from "@/components/ui/textarea"
 import { useUpdateSetting } from "@/lib/hooks/use-settings"
+import { useAppSettings } from "@/lib/providers/settings-provider"
 import { UpdateSettingInput } from "@/lib/validations/settings"
-import { Media, Setting } from "@/types"
+import { Setting } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Edit, Image as ImageIcon, Settings, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
 
 export default function BusinessSettingsPage() {
   const t = useTranslations("settings")

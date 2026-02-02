@@ -47,19 +47,9 @@ export default function ResetPasswordPage() {
     },
   })
 
-  // Get token from sessionStorage (more secure than URL) or URL query parameter (fallback)
+  // Get token from URL query parameter (from email link: /reset-password?token=...)
   useEffect(() => {
-    let token: string | null = null
-    
-    // First try to get from sessionStorage (more secure)
-    if (typeof window !== "undefined") {
-      token = sessionStorage.getItem("passwordResetToken")
-    }
-    
-    // Fallback to URL query parameter for backward compatibility
-    if (!token) {
-      token = searchParams.get("token")
-    }
+    const token = searchParams.get("token")
     
     if (token) {
       form.setValue("token", token)
@@ -67,21 +57,16 @@ export default function ResetPasswordPage() {
   }, [searchParams, form])
 
   const onSubmit = (data: ResetPasswordInput) => {
-    // Clear token from sessionStorage after use
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("passwordResetToken")
-    }
-    resetPasswordMutation.mutate(data)
+    // Send token and newPassword to API
+    resetPasswordMutation.mutate({
+      token: data.token,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    })
   }
 
-  // Check for token in sessionStorage or URL
-  const token = (() => {
-    if (typeof window !== "undefined") {
-      const sessionToken = sessionStorage.getItem("passwordResetToken")
-      if (sessionToken) return sessionToken
-    }
-    return searchParams.get("token")
-  })()
+  // Get token from URL query parameter
+  const token = searchParams.get("token")
 
   if (!token) {
     return (

@@ -41,6 +41,9 @@ export default function LoginPage() {
     },
   })
 
+  // Don't redirect from login page - let dashboard layout handle it
+  // This prevents redirect loops between login and dashboard
+
   const onSubmit = (data: LoginInput) => {
     loginMutation.mutate(data)
   }

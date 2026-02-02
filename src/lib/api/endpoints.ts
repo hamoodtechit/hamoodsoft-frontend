@@ -120,4 +120,17 @@ export const endpoints = {
     list: "/settings",
     update: (id: string) => `/settings/${id}`,
   },
+  accounts: {
+    create: "/accounts",
+    list: "/accounts",
+    getById: (id: string) => `/accounts/${id}`,
+    update: (id: string) => `/accounts/${id}`,
+    ledger: (id: string) => `/accounts/${id}/ledger`,
+  },
+  payments: {
+    create: "/payments",
+    list: "/payments",
+    getById: (id: string) => `/payments/${id}`,
+    delete: (id: string) => `/payments/${id}`,
+  },
 } as const

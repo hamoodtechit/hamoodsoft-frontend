@@ -3,6 +3,8 @@
 import { useSettings } from "@/lib/hooks/use-settings"
 import { Setting } from "@/types"
 import { createContext, useContext, useMemo, ReactNode } from "react"
+import { useAuthStore } from "@/store"
+import { usePathname } from "next/navigation"
 
 interface SettingsContextValue {
   settings: Setting[]
@@ -34,7 +36,19 @@ interface SettingsContextValue {
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { data, isLoading } = useSettings()
+  const pathname = usePathname()
+  const { isAuthenticated, token, user } = useAuthStore()
+  
+  // Only fetch settings if user is authenticated and not on login/register pages
+  const isAuthPage = pathname?.includes("/login") || 
+                     pathname?.includes("/register") || 
+                     pathname?.includes("/forgot-password") || 
+                     pathname?.includes("/reset-password")
+  
+  // Ensure boolean conversion - use !! to convert to strict boolean
+  const shouldFetchSettings = !isAuthPage && !!(isAuthenticated || (token && user?.id))
+  
+  const { data, isLoading } = useSettings(shouldFetchSettings)
   const settings = data?.items ?? []
 
   const value = useMemo(() => {

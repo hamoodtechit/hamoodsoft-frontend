@@ -38,17 +38,33 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
   const totals = useMemo(() => {
     if (!sale) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }
     
-    const subtotal = saleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    const discount = sale.discountAmount || 0
-    const afterDiscount = Math.max(0, subtotal - discount)
-    // Total from backend
-    const total = sale.totalPrice || sale.totalAmount || subtotal
-    // Only derive "tax" if we have an item subtotal; otherwise it's misleading
-    const tax = subtotal > 0 ? Math.max(0, total - afterDiscount) : 0
+    // Calculate item totals with item-level discounts
+    const itemsSubtotal = saleItems.reduce((sum, item) => {
+      const itemSubtotal = item.price * item.quantity
+      const itemDiscount =
+        item.discountType === "PERCENTAGE"
+          ? (itemSubtotal * (item.discountAmount || 0)) / 100
+          : item.discountType === "FIXED"
+          ? item.discountAmount || 0
+          : 0
+      const itemTotal = itemSubtotal - itemDiscount
+      return sum + itemTotal
+    }, 0)
+    
+    // Apply sale-level discount
+    const saleDiscount = sale.discountAmount || 0
+    const afterDiscount = Math.max(0, itemsSubtotal - saleDiscount)
+    
+    // Total from backend (includes tax)
+    const total = sale.totalPrice || sale.totalAmount || itemsSubtotal
+    
+    // Calculate tax: total - afterDiscount (since total includes tax)
+    const tax = Math.max(0, total - afterDiscount)
+    
     const paid = sale.paidAmount || 0
     const due = Math.max(0, total - paid)
 
-    return { subtotal, discount, tax, total, paid, due }
+    return { subtotal: itemsSubtotal, discount: saleDiscount, tax, total, paid, due }
   }, [sale, saleItems])
 
   const handlePrint = () => {

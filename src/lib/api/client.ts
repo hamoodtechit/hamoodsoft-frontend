@@ -70,12 +70,17 @@ apiClient.interceptors.response.use(
             // Refresh failed or already retried - clear auth and redirect
             if (typeof window !== "undefined") {
               const currentPath = window.location.pathname
+              const isAuthPage = 
+                currentPath.includes("/login") ||
+                currentPath.includes("/register") ||
+                currentPath.includes("/forgot-password") ||
+                currentPath.includes("/reset-password")
               const isOnboardingRoute = 
                 currentPath.includes("/register-business") ||
-                currentPath.includes("/select-modules") ||
-                currentPath.includes("/dashboard")
+                currentPath.includes("/select-modules")
               
-              if (!isOnboardingRoute) {
+              // Don't redirect if already on auth page (prevents infinite loops)
+              if (!isAuthPage && !isOnboardingRoute) {
                 localStorage.removeItem("auth-storage")
                 window.location.href = "/login"
               }

@@ -415,6 +415,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
   // Calculate item total price (price * quantity - discount)
   const calculateItemTotal = (item: any) => {
+    // Handle undefined/null items (especially in edit mode)
+    if (!item || typeof item !== 'object') {
+      return 0
+    }
+    
     const subtotal = (item.price || 0) * (item.quantity || 0)
     const discountType = item.discountType || "NONE"
     const discountAmount = item.discountAmount || 0
@@ -1102,7 +1107,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             <div className="space-y-2">
                               <Label className="text-sm font-medium">{t("totalPrice") || "Total"}</Label>
                               <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                                {calculateItemTotal(form.watch(`items.${index}` as any)).toFixed(2)}
+                                {calculateItemTotal(form.watch(`items.${index}` as any) || {}).toFixed(2)}
                               </div>
                             </div>
                           </div>

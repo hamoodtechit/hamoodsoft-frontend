@@ -1,8 +1,10 @@
 "use client"
 
+import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
 import { ProductDialog } from "@/components/common/product-dialog"
+import { SaleDialog } from "@/components/common/sale-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { salesApi } from "@/lib/api/sales"
+import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
@@ -32,7 +35,7 @@ import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useCategories } from "@/lib/hooks/use-categories"
 import { useContacts } from "@/lib/hooks/use-contacts"
 import { useProducts } from "@/lib/hooks/use-products"
-import { useCreateSale, useSales } from "@/lib/hooks/use-sales"
+import { useCreateSale, useDeleteSale, useSales, useUpdateSale } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { cn } from "@/lib/utils"
@@ -42,12 +45,14 @@ import {
   Check,
   CreditCard,
   DollarSign,
+  Edit,
   FileText,
   History,
   Minus,
   Package,
   Pause,
   Plus,
+  Printer,
   Receipt,
   Save,
   Search,
@@ -108,6 +113,11 @@ export default function PointOfSalePage() {
   const [showRecentTransactions, setShowRecentTransactions] = useState(false)
   const [showInvoice, setShowInvoice] = useState(false)
   const [completedSale, setCompletedSale] = useState<Sale | null>(null)
+  const [transactionFilter, setTransactionFilter] = useState<"FINAL" | "QUOTATION" | "DRAFT">("FINAL")
+  const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null)
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null)
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   // UX
   const [lastSelectedProductId, setLastSelectedProductId] = useState<string | null>(null)
@@ -134,6 +144,18 @@ export default function PointOfSalePage() {
 
   // Payment (partial)
   const [paidAmountInput, setPaidAmountInput] = useState<number>(0)
+  
+  // Flexible payment splitter for MIXED payments
+  interface PaymentSplit {
+    id: string
+    accountId: string
+    amount: number
+  }
+  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([])
+  
+  // Account selection for single payment methods
+  const [cashAccountId, setCashAccountId] = useState<string>("")
+  const [bankAccountId, setBankAccountId] = useState<string>("")
 
   // Calculator state
   const [calculatorValue, setCalculatorValue] = useState("0")
@@ -162,15 +184,41 @@ export default function PointOfSalePage() {
   const brands = brandsData?.items || []
   const { data: branches = [] } = useBranches()
 
-  // Recent transactions
+  // Recent transactions - filter by status
   const { data: recentSalesData } = useSales({
     branchId: selectedBranchId || undefined,
-    limit: 10,
+    limit: 50,
     page: 1,
+    status: transactionFilter === "FINAL" ? "SOLD" : transactionFilter === "QUOTATION" ? "PENDING" : "DRAFT",
   })
   const recentSales = recentSalesData?.items || []
 
   const createSaleMutation = useCreateSale()
+  const updateSaleMutation = useUpdateSale()
+  const deleteSaleMutation = useDeleteSale()
+  
+  // Get accounts for payment creation
+  const { data: accountsData } = useAccounts({ limit: 100 })
+  const accounts = (accountsData?.items ?? []).filter((acc) => acc.isActive)
+  const cashAccounts = accounts.filter((acc) => acc.type === "CASH")
+  const bankAccounts = accounts.filter((acc) => acc.type === "BANK")
+  
+  // Set default accounts when available
+  useEffect(() => {
+    if (accounts.length > 0) {
+      // For CASH payment method, prefer CASH type account, but fallback to any account
+      if (paymentMethod === "CASH" && !cashAccountId) {
+        const cashAccount = cashAccounts.length > 0 ? cashAccounts[0] : accounts[0]
+        setCashAccountId(cashAccount.id)
+      }
+      // For CARD payment method, prefer BANK type account, but fallback to any account
+      if (paymentMethod === "CARD" && !bankAccountId) {
+        const bankAccount = bankAccounts.length > 0 ? bankAccounts[0] : accounts[0]
+        setBankAccountId(bankAccount.id)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts.length, paymentMethod])
 
   // Persist sound toggle
   useEffect(() => {
@@ -430,22 +478,36 @@ export default function PointOfSalePage() {
   useEffect(() => {
     if (saleType === "DRAFT") {
       setPaidAmountInput(0)
+      setPaymentSplits([])
       return
     }
     if (paymentMethod === "CREDIT") {
       setPaidAmountInput(0)
+      setPaymentSplits([])
       return
     }
     // default to full payment for cash/card
     if (paymentMethod === "CASH" || paymentMethod === "CARD") {
       setPaidAmountInput(cartTotals.total)
+      setPaymentSplits([])
       return
     }
     // for mixed, keep existing but clamp
     if (paymentMethod === "MIXED") {
       setPaidAmountInput((v) => Math.min(Math.max(0, v || 0), cartTotals.total))
+      // Auto-add one split if none exist and accounts are available
+      if (paymentSplits.length === 0 && accounts.length > 0) {
+        setPaymentSplits([
+          {
+            id: `split-${Date.now()}`,
+            accountId: accounts[0].id,
+            amount: 0,
+          },
+        ])
+      }
     }
-  }, [cartTotals.total, paymentMethod, saleType])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartTotals.total, paymentMethod, saleType, accounts.length])
 
   // Handle product click
   const handleProductClick = (product: Product) => {
@@ -822,6 +884,48 @@ export default function PointOfSalePage() {
         return itemData
       })
 
+      // Prepare payments array if paidAmount > 0 and sale is SOLD
+      const payments: any[] = []
+      if (paidAmount > 0 && status === "SOLD") {
+        if (paymentMethod === "CASH" && cashAccountId) {
+          payments.push({
+            accountId: cashAccountId,
+            amount: paidAmount,
+            branchId: selectedBranchId,
+            contactId: selectedContactId || undefined,
+            notes: `Payment for sale`,
+            occurredAt: new Date().toISOString(),
+            type: "SALE_PAYMENT",
+          })
+        } else if (paymentMethod === "CARD" && bankAccountId) {
+          payments.push({
+            accountId: bankAccountId,
+            amount: paidAmount,
+            branchId: selectedBranchId,
+            contactId: selectedContactId || undefined,
+            notes: `Payment for sale`,
+            occurredAt: new Date().toISOString(),
+            type: "SALE_PAYMENT",
+          })
+        } else if (paymentMethod === "MIXED") {
+          // For MIXED: use flexible payment splits
+          paymentSplits.forEach((split) => {
+            if (split.accountId && split.amount > 0) {
+              const account = accounts.find((acc) => acc.id === split.accountId)
+              payments.push({
+                accountId: split.accountId,
+                amount: split.amount,
+                branchId: selectedBranchId,
+                contactId: selectedContactId || undefined,
+                notes: `Payment for sale${account ? ` (${account.name})` : ""}`,
+                occurredAt: new Date().toISOString(),
+                type: "SALE_PAYMENT",
+              })
+            }
+          })
+        }
+      }
+
       const saleData = {
         branchId: selectedBranchId!,
         contactId: selectedContactId || "temp-contact", // Temporary contact for drafts
@@ -832,6 +936,7 @@ export default function PointOfSalePage() {
         totalPrice: cartTotals.total,
         discountType,
         discountAmount: cartTotals.saleDiscount,
+        ...(payments.length > 0 && { payments }),
       }
 
       console.log("=".repeat(80))
@@ -1623,9 +1728,46 @@ export default function PointOfSalePage() {
                     </Button>
                   </div>
 
+                  {/* Account Selection */}
+                  {paymentMethod === "CASH" && accounts.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <Label className="text-xs">Account</Label>
+                      <Select value={cashAccountId} onValueChange={setCashAccountId}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} ({account.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {paymentMethod === "CARD" && accounts.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <Label className="text-xs">Account</Label>
+                      <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} ({account.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Partial payment input */}
                   {paymentMethod === "MIXED" && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-3">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Paid Amount</span>
                         <span>
@@ -1635,7 +1777,10 @@ export default function PointOfSalePage() {
                       <Input
                         type="number"
                         value={paidAmountInput}
-                        onChange={(e) => setPaidAmountInput(Number(e.target.value))}
+                        onChange={(e) => {
+                          const amount = Number(e.target.value)
+                          setPaidAmountInput(amount)
+                        }}
                         className="h-9"
                         min={0}
                         max={cartTotals.total}
@@ -1669,6 +1814,121 @@ export default function PointOfSalePage() {
                         >
                           Full
                         </Button>
+                      </div>
+                      
+                      {/* Flexible Payment Splitter */}
+                      <div className="space-y-2 border-t pt-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Payment Split</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setPaymentSplits([
+                                ...paymentSplits,
+                                {
+                                  id: `split-${Date.now()}-${Math.random()}`,
+                                  accountId: "",
+                                  amount: 0,
+                                },
+                              ])
+                            }}
+                            className="h-7 text-xs"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Account
+                          </Button>
+                        </div>
+                        
+                        {paymentSplits.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            No payment splits. Click "Add Account" to split payment.
+                          </p>
+                        )}
+                        
+                        {paymentSplits.map((split, index) => {
+                          const totalAllocated = paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)
+                          const remaining = paidAmountInput - totalAllocated
+                          const account = accounts.find((acc) => acc.id === split.accountId)
+                          
+                          return (
+                            <div key={split.id} className="flex gap-2 items-start">
+                              <div className="flex-1 space-y-1">
+                                <Select
+                                  value={split.accountId}
+                                  onValueChange={(value) => {
+                                    const updated = [...paymentSplits]
+                                    updated[index].accountId = value
+                                    setPaymentSplits(updated)
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="Select account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {accounts.map((account) => (
+                                      <SelectItem key={account.id} value={account.id}>
+                                        {account.name} ({account.type})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="number"
+                                  value={split.amount || ""}
+                                  onChange={(e) => {
+                                    const updated = [...paymentSplits]
+                                    const amount = Math.max(0, Math.min(Number(e.target.value), paidAmountInput))
+                                    updated[index].amount = amount
+                                    setPaymentSplits(updated)
+                                  }}
+                                  className="h-9 text-xs"
+                                  placeholder="Amount"
+                                  min={0}
+                                  max={paidAmountInput}
+                                  step="0.01"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setPaymentSplits(paymentSplits.filter((_, i) => i !== index))
+                                }}
+                                className="h-9 w-9 p-0"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          )
+                        })}
+                        
+                        {paymentSplits.length > 0 && (
+                          <div className="pt-2 border-t space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Total Allocated:</span>
+                              <span className="font-medium">
+                                {paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Remaining:</span>
+                              <span
+                                className={
+                                  paidAmountInput - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0) < 0
+                                    ? "text-destructive font-medium"
+                                    : "font-medium"
+                                }
+                              >
+                                {(
+                                  paidAmountInput - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)
+                                ).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1913,48 +2173,186 @@ export default function PointOfSalePage() {
 
       {/* Recent Transactions Dialog */}
       <Dialog open={showRecentTransactions} onOpenChange={setShowRecentTransactions}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Recent Transactions</DialogTitle>
-            <DialogDescription>View your recent sales</DialogDescription>
+        <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
+            <DialogTitle className="text-xl font-semibold">Recent Transactions</DialogTitle>
+            <DialogDescription>View and manage your recent sales</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {recentSales.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No recent transactions</div>
-            ) : (
-              recentSales.map((sale) => (
-                <Card key={sale.id}>
-                  <CardContent className="p-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium">{sale.contact?.name || sale.contactId}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {sale.items?.length || 0} items • {new Date(sale.createdAt || "").toLocaleString()}
+          
+          {/* Tabs */}
+          <div className="flex items-center gap-2 border-b pb-2 px-6 flex-shrink-0">
+            <Button
+              variant={transactionFilter === "FINAL" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTransactionFilter("FINAL")}
+              className="text-xs"
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Final
+            </Button>
+            <Button
+              variant={transactionFilter === "QUOTATION" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTransactionFilter("QUOTATION")}
+              className="text-xs"
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Quotation
+            </Button>
+            <Button
+              variant={transactionFilter === "DRAFT" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTransactionFilter("DRAFT")}
+              className="text-xs"
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Draft
+            </Button>
+          </div>
+
+          {/* Transactions List */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full px-6 pb-6">
+            <div className="space-y-3 py-2">
+              {recentSales.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No {transactionFilter.toLowerCase()} transactions found
+                </div>
+              ) : (
+                recentSales.map((sale) => {
+                  // Use invoiceNumber from API, fallback to invoiceSequence format
+                  const invoiceNumber = sale.invoiceNumber || (sale.invoiceSequence ? `INV${String(sale.invoiceSequence).padStart(6, "0")}` : sale.id.slice(0, 8).toUpperCase())
+                  const contactName = sale.contact?.name || "Walk-In Customer"
+                  const itemsCount = (sale.items?.length || sale.saleItems?.length || 0)
+                  const totalAmount = sale.totalPrice || sale.totalAmount || 0
+
+                  return (
+                    <Card key={sale.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-base">{invoiceNumber}</span>
+                              <Badge
+                                variant={
+                                  sale.status === "SOLD"
+                                    ? "default"
+                                    : sale.status === "PENDING"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {sale.status}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground mb-2">
+                              {contactName}
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span>{itemsCount} items</span>
+                              <span>•</span>
+                              <span>{new Date(sale.createdAt || "").toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <div className="text-right">
+                              <div className="font-bold text-lg">{totalAmount.toFixed(2)}</div>
+                              <Badge
+                                variant={
+                                  sale.paymentStatus === "PAID"
+                                    ? "default"
+                                    : sale.paymentStatus === "DUE"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                                className="text-xs mt-1"
+                              >
+                                {sale.paymentStatus}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSaleToEdit(sale)
+                                  setIsSaleDialogOpen(true)
+                                }}
+                                className="h-8 px-2 text-xs"
+                                title="Edit"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setCompletedSale(sale)
+                                  setShowInvoice(true)
+                                  setShowRecentTransactions(false)
+                                }}
+                                className="h-8 px-2 text-xs bg-green-50 hover:bg-green-100 border-green-200"
+                                title="Print"
+                              >
+                                <Printer className="h-3 w-3 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSaleToDelete(sale)
+                                  setIsDeleteDialogOpen(true)
+                                }}
+                                className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">{(sale.totalPrice || sale.totalAmount || 0).toFixed(2)}</div>
-                        <Badge
-                          variant={
-                            sale.paymentStatus === "PAID"
-                              ? "default"
-                              : sale.paymentStatus === "DUE"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {sale.paymentStatus}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              )}
+            </div>
+            </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Sale Edit Dialog */}
+      <SaleDialog
+        sale={saleToEdit}
+        open={isSaleDialogOpen}
+        onOpenChange={(open) => {
+          setIsSaleDialogOpen(open)
+          if (!open) {
+            setSaleToEdit(null)
+          }
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => {
+          if (saleToDelete) {
+            deleteSaleMutation.mutate(saleToDelete.id, {
+              onSuccess: () => {
+                setIsDeleteDialogOpen(false)
+                setSaleToDelete(null)
+                toast.success("Transaction deleted successfully")
+              },
+            })
+          }
+        }}
+        title="Delete Transaction"
+        description={`Are you sure you want to delete transaction ${saleToDelete?.invoiceNumber || saleToDelete?.id}? This action cannot be undone.`}
+      />
 
       {/* Product Dialog */}
       <ProductDialog

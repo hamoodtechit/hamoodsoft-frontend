@@ -5,7 +5,7 @@ import { MobileSidebar } from "@/components/layout/mobile-sidebar"
 import { Sidebar } from "@/components/layout/sidebar"
 import { getNextOnboardingStep } from "@/lib/hooks/use-onboarding"
 import { useAuthStore, useUIStore } from "@/store"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function DashboardLayout({
@@ -13,6 +13,13 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+  
+  // Early return if not on dashboard page
+  if (!pathname || !pathname.includes("/dashboard")) {
+    return <>{children}</>
+  }
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const { sidebarOpen } = useUIStore()
@@ -21,10 +28,9 @@ export default function DashboardLayout({
   const router = useRouter()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
 
-  // Wait for Zustand to rehydrate from localStorage
+  // Wait for Zustand to rehydrate
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Zustand persist rehydrates synchronously, but we need to wait for the next render
       const timer = setTimeout(() => {
         setIsHydrated(true)
       }, 0)
@@ -34,14 +40,33 @@ export default function DashboardLayout({
     }
   }, [])
 
-  // After hydration, check auth and redirect if needed
+  // Check auth and redirect if needed
   useEffect(() => {
-    if (isHydrated) {
-      // Check both isAuthenticated and token/user to be safe
-      const hasAuth = isAuthenticated || (token && user && user.id)
-      if (!hasAuth) {
-        router.push(`/${locale}/login`)
+    if (!isHydrated) return
+    
+    // Check localStorage directly first (most reliable)
+    let hasAuth = false
+    if (typeof window !== "undefined") {
+      try {
+        const authStorage = localStorage.getItem("auth-storage")
+        if (authStorage) {
+          const parsed = JSON.parse(authStorage)
+          const storedToken = parsed?.state?.token
+          const storedUser = parsed?.state?.user
+          hasAuth = !!(storedToken && storedUser && storedUser.id)
+        }
+      } catch (e) {
+        // Ignore parsing errors
       }
+    }
+    
+    // Fallback to Zustand state
+    if (!hasAuth) {
+      hasAuth = !!(isAuthenticated || (token && user && user.id))
+    }
+    
+    if (!hasAuth) {
+      router.replace(`/${locale}/login`)
     }
   }, [isHydrated, isAuthenticated, token, user, locale, router])
 
@@ -96,7 +121,23 @@ export default function DashboardLayout({
   }
 
   // Check if authenticated (using both isAuthenticated and token/user)
-  const hasAuth = isAuthenticated || (token && user && user.id)
+  // Also check localStorage directly as fallback
+  let hasAuth: boolean = !!(isAuthenticated || (token && user && user.id))
+  if (!hasAuth && typeof window !== "undefined") {
+    try {
+      const authStorage = localStorage.getItem("auth-storage")
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage)
+        const storedToken = parsed?.state?.token
+        const storedUser = parsed?.state?.user
+        hasAuth = !!(storedToken && storedUser && storedUser.id)
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+  }
+  
+  // Don't render if not authenticated - redirect will happen in useEffect
   if (!hasAuth) {
     return null
   }

@@ -322,6 +322,75 @@ export interface Setting {
   updatedAt?: string
 }
 
+export type AccountType = "CASH" | "BANK" | "WALLET" | "ASSET" | "LIABILITY" | "EQUITY" | "INCOME" | "EXPENSE"
+
+export interface Account {
+  id: string
+  businessId?: string
+  name: string
+  type: AccountType
+  description?: string | null
+  openingBalance: number
+  currentBalance?: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AccountLedgerEntry {
+  id: string
+  accountId?: string
+  transactionType?: "DEBIT" | "CREDIT"
+  amount: number
+  balance?: number
+  balanceAfter?: number // API uses balanceAfter
+  referenceType?: string | null
+  referenceId?: string | null
+  description?: string | null
+  createdAt?: string
+  date?: string // API uses date instead of createdAt
+  type?: "IN" | "OUT" // API uses IN/OUT instead of DEBIT/CREDIT
+  category?: string | null // API uses category instead of description
+  debit?: number // API has separate debit field
+  credit?: number // API has separate credit field
+  branchId?: string | null
+  contactId?: string | null
+}
+
+export interface AccountLedgerResponse {
+  items: AccountLedgerEntry[]
+  total: number
+  openingBalance: number
+  totals: {
+    debit: number
+    credit: number
+  }
+  closingBalance: number
+}
+
+export type PaymentType = "SALE_PAYMENT" | "PURCHASE_PAYMENT" | "DEPOSIT"
+
+export interface Payment {
+  id: string
+  businessId?: string
+  branchId?: string
+  type: PaymentType
+  accountId: string
+  amount: number
+  saleId?: string | null
+  purchaseId?: string | null
+  contactId?: string | null
+  occurredAt: string
+  notes?: string | null
+  account?: Account
+  sale?: Sale
+  purchase?: Purchase
+  contact?: Contact
+  branch?: Branch
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface PaginatedResult<T> {
   items: T[]
   meta: {

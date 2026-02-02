@@ -6,10 +6,12 @@ import { Setting } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useSettings() {
+export function useSettings(enabled: boolean = true) {
   return useQuery({
     queryKey: ["settings"],
     queryFn: () => settingsApi.getSettings(),
+    enabled, // Only fetch if enabled
+    retry: false, // Don't retry on 401 errors
   })
 }
 

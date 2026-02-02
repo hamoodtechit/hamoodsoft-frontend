@@ -5,6 +5,7 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { ExportButton } from "@/components/common/export-button"
 import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
+import { PaymentDialog } from "@/components/common/payment-dialog"
 import { SaleDialog } from "@/components/common/sale-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
@@ -32,7 +33,7 @@ import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
 import { useProducts } from "@/lib/hooks/use-products"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Sale, Product } from "@/types"
-import { Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
+import { CreditCard, Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -359,6 +360,8 @@ export default function SalesPage() {
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
+  const [paymentSale, setPaymentSale] = useState<Sale | null>(null)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
 
   const { data: viewSale, isLoading: isViewSaleLoading } = useSale(viewSaleId || undefined)
 
@@ -404,6 +407,11 @@ export default function SalesPage() {
   const handleInvoice = (sale: Sale) => {
     setInvoiceSale(sale)
     setIsInvoiceOpen(true)
+  }
+
+  const handleAddPayment = (sale: Sale) => {
+    setPaymentSale(sale)
+    setIsPaymentDialogOpen(true)
   }
 
   const confirmDelete = () => {
@@ -532,6 +540,12 @@ export default function SalesPage() {
                         <FileText className="mr-2 h-4 w-4" />
                         View Invoice
                       </DropdownMenuItem>
+                      {(row.paymentStatus === "DUE" || row.paymentStatus === "PARTIAL") && (
+                        <DropdownMenuItem onClick={() => handleAddPayment(row)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Add Payment
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => handleEdit(row)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         {tCommon("edit")}
@@ -614,6 +628,12 @@ export default function SalesPage() {
                               <FileText className="mr-2 h-4 w-4" />
                               View Invoice
                             </DropdownMenuItem>
+                            {(s.paymentStatus === "DUE" || s.paymentStatus === "PARTIAL") && (
+                              <DropdownMenuItem onClick={() => handleAddPayment(s)}>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Add Payment
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => handleEdit(s)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               {tCommon("edit")}
@@ -867,6 +887,26 @@ export default function SalesPage() {
         sale={invoiceSale}
         open={isInvoiceOpen}
         onOpenChange={setIsInvoiceOpen}
+      />
+
+      <PaymentDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={(open) => {
+          setIsPaymentDialogOpen(open)
+          if (!open) {
+            setPaymentSale(null)
+          }
+        }}
+        defaultType="SALE_PAYMENT"
+        defaultSaleId={paymentSale?.id}
+        defaultContactId={paymentSale?.contactId}
+        defaultBranchId={paymentSale?.branchId}
+        defaultAccountId={undefined}
+        defaultAmount={
+          paymentSale
+            ? (paymentSale.totalAmount || paymentSale.totalPrice || 0) - (paymentSale.paidAmount || 0)
+            : undefined
+        }
       />
     </PageLayout>
   )
