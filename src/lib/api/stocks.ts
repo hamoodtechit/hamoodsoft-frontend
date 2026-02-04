@@ -48,8 +48,14 @@ function normalizeList(data: StocksListResponse): PaginatedResult<Stock> {
 }
 
 function normalizeHistoryList(data: PaginatedResult<StockHistory> | StockHistory[]): PaginatedResult<StockHistory> {
-  if (!Array.isArray(data) && "items" in data) return data as PaginatedResult<StockHistory>
-  const items = Array.isArray(data) ? data : []
+  if (!Array.isArray(data) && "items" in data) {
+    const paginated = data as PaginatedResult<StockHistory>
+    return {
+      ...paginated,
+      items: paginated.items.map(normalizeStockHistory),
+    }
+  }
+  const items = Array.isArray(data) ? data.map(normalizeStockHistory) : []
   return {
     items,
     meta: {
@@ -58,6 +64,14 @@ function normalizeHistoryList(data: PaginatedResult<StockHistory> | StockHistory
       total: items.length,
       totalPages: 1,
     },
+  }
+}
+
+function normalizeStockHistory(history: any): StockHistory {
+  return {
+    ...history,
+    quantity: history.quantityChange ?? history.quantity ?? 0,
+    quantityChange: history.quantityChange ?? history.quantity ?? 0,
   }
 }
 

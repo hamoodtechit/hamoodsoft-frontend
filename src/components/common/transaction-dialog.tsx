@@ -1,5 +1,6 @@
 "use client"
 
+import { CategorySelect } from "@/components/common/category-select"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,7 +30,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useContacts } from "@/lib/hooks/use-contacts"
-import { useIncomeExpenseCategories } from "@/lib/hooks/use-income-expense-categories"
 import { useCreateExpenseTransaction, useCreateIncomeTransaction } from "@/lib/hooks/use-transactions"
 import {
   createExpenseTransactionSchema,
@@ -67,12 +67,6 @@ export function TransactionDialog({
   const accounts = accountsData?.items ?? []
   const { data: contactsData } = useContacts({ limit: 1000 })
   const contacts = contactsData?.items ?? []
-  const { data: categoriesData } = useIncomeExpenseCategories({ 
-    limit: 1000,
-    type,
-    isActive: true 
-  })
-  const categories = categoriesData?.items ?? []
  
   const { selectedBranchId } = useBranchSelection()
 
@@ -212,26 +206,15 @@ export function TransactionDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("category")} ({tCommon("optional")})</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value === "none" ? undefined : value)
-                    }}
-                    value={field.value || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("categoryPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">{tCommon("none")} ({tCommon("optional")})</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <CategorySelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      type={type}
+                      disabled={isLoading}
+                      placeholder={t("categoryPlaceholder")}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

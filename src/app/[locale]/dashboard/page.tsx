@@ -17,6 +17,7 @@ import {
   Shield,
   ShoppingCart,
   Store,
+  TrendingDown,
   TrendingUp,
   Users,
   Wallet
@@ -51,7 +52,7 @@ export default function DashboardPage() {
   const initialItemsToShow: Record<string, number> = {
     main: 4,
     inventory: 6,
-    accounting: 2,
+    accounting: 999, // Show all accounting items (no "See More" button)
     business: 3,
     modules: 2,
   }
@@ -168,6 +169,26 @@ export default function DashboardPage() {
       icon: Wallet,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+      enabled: enabledModules.includes("accounting"),
+      category: "accounting",
+    },
+    {
+      id: "income",
+      title: t("sidebar.income") || "Income",
+      href: "/dashboard/income",
+      icon: TrendingUp,
+      color: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-950/20",
+      enabled: enabledModules.includes("accounting"),
+      category: "accounting",
+    },
+    {
+      id: "expense",
+      title: t("sidebar.expense") || "Expense",
+      href: "/dashboard/expense",
+      icon: TrendingDown,
+      color: "text-red-600",
+      bgColor: "bg-red-50 dark:bg-red-950/20",
       enabled: enabledModules.includes("accounting"),
       category: "accounting",
     },

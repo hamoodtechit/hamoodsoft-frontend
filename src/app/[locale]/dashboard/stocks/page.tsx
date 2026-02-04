@@ -83,6 +83,7 @@ export default function StocksPage() {
   const { data: historyData, isLoading: historyLoading } = useStockHistory(
     historyStock?.branchId ? { branchId: historyStock.branchId } : undefined
   )
+  
   const history = historyData?.items || []
 
   // Filter stocks by search
@@ -465,35 +466,46 @@ export default function StocksPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getStockHistoryForProduct(historyStock.productId).map((h: StockHistory) => (
-                    <Card key={h.id} className="border">
-                      <CardContent className="py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              {h.transactionType === "IN" ? (
-                                <ArrowUp className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <ArrowDown className="h-4 w-4 text-red-600" />
+                  {getStockHistoryForProduct(historyStock.productId).map((h: StockHistory) => {
+                    const quantityChange = h.quantityChange ?? h.quantity
+                    const stockQuantity = h.stock?.quantity
+                    return (
+                      <Card key={h.id} className="border">
+                        <CardContent className="py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {h.transactionType === "IN" ? (
+                                  <ArrowUp className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <ArrowDown className="h-4 w-4 text-red-600" />
+                                )}
+                                <Badge
+                                  variant={h.transactionType === "IN" ? "default" : "destructive"}
+                                >
+                                  {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
+                                </Badge>
+                                <span className="font-medium">
+                                  {t("quantity")}: {quantityChange}
+                                </span>
+                                {stockQuantity !== undefined && stockQuantity !== null && (
+                                  <span className="text-sm text-muted-foreground">
+                                    ({t("currentStock") || "Current Stock"}: {stockQuantity})
+                                  </span>
+                                )}
+                              </div>
+                              {h.reason && (
+                                <p className="text-sm text-muted-foreground mt-1">{h.reason}</p>
                               )}
-                              <Badge
-                                variant={h.transactionType === "IN" ? "default" : "destructive"}
-                              >
-                                {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
-                              </Badge>
-                              <span className="font-medium">{t("quantity")}: {h.quantity}</span>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(h.createdAt || "").toLocaleString()}
+                              </p>
                             </div>
-                            {h.reason && (
-                              <p className="text-sm text-muted-foreground mt-1">{h.reason}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(h.createdAt || "").toLocaleString()}
-                            </p>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               )}
             </div>

@@ -9,26 +9,26 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
 } from "@/components/ui/sheet"
 import { useAccount, useAccountLedger, useAccounts, useUpdateAccount } from "@/lib/hooks/use-accounts"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -38,22 +38,17 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Account, AccountLedgerEntry, Transaction } from "@/types"
 import {
-  BookOpen,
-  Eye,
-  MoreVertical,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
+    BookOpen,
+    Eye,
+    MoreVertical,
+    Pencil,
+    Plus,
+    Search,
+    Trash2
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-
-type TabType = "accounts" | "income" | "expense"
 
 export default function AccountingPage() {
   const params = useParams()
@@ -64,8 +59,6 @@ export default function AccountingPage() {
   const t = useTranslations("accounts")
   const tCommon = useTranslations("common")
   const { generalSettings } = useAppSettings()
-
-  const [activeTab, setActiveTab] = useState<TabType>("accounts")
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<"CASH" | "BANK" | "WALLET" | "ASSET" | "LIABILITY" | "EQUITY" | "INCOME" | "EXPENSE" | "">("")
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -111,41 +104,11 @@ export default function AccountingPage() {
   )
   const accountTransactions = accountTransactionsData?.items ?? []
 
-  // Transactions for Income/Expense tabs - fetch all and filter client-side
-  const { data: allTransactionsData, isLoading: isLoadingAllTransactions } = useTransactions(
-    activeTab === "income" || activeTab === "expense" ? { limit: 1000 } : undefined
-  )
-  const allTransactions = allTransactionsData?.items ?? []
-
-  // Find transaction from list data
+  // Find transaction from account transactions
   const transactionDetails = useMemo(() => {
     if (!viewTransactionId) return null
-    return allTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
-  }, [viewTransactionId, allTransactions])
-
-  // Filter transactions by type on client side
-  const incomeTransactions = useMemo(() => {
-    if (activeTab !== "income") return []
-    return allTransactions.filter((t: Transaction) => {
-      // Check both normalized type and raw type from API
-      const normalizedType = t.type
-      const rawType = (t as any).type
-      return normalizedType === "INCOME" || rawType === "INCOME" || rawType === "IN"
-    })
-  }, [allTransactions, activeTab])
-
-  const expenseTransactions = useMemo(() => {
-    if (activeTab !== "expense") return []
-    return allTransactions.filter((t: Transaction) => {
-      // Check both normalized type and raw type from API
-      const normalizedType = t.type
-      const rawType = (t as any).type
-      return normalizedType === "EXPENSE" || rawType === "EXPENSE" || rawType === "EX"
-    })
-  }, [allTransactions, activeTab])
-
-  const isLoadingIncomeTransactions = isLoadingAllTransactions && activeTab === "income"
-  const isLoadingExpenseTransactions = isLoadingAllTransactions && activeTab === "expense"
+    return accountTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
+  }, [viewTransactionId, accountTransactions])
 
   
 
@@ -324,36 +287,7 @@ export default function AccountingPage() {
       maxWidth="full"
     >
       <div className="space-y-6">
-        {/* Tabs */}
-        <div className="flex gap-2 border-b">
-          <Button
-            variant={activeTab === "accounts" ? "default" : "ghost"}
-            onClick={() => setActiveTab("accounts")}
-            className="rounded-b-none"
-          >
-            <Wallet className="mr-2 h-4 w-4" />
-            {t("accounts")}
-          </Button>
-          <Button
-            variant={activeTab === "income" ? "default" : "ghost"}
-            onClick={() => setActiveTab("income")}
-            className="rounded-b-none"
-          >
-            <TrendingUp className="mr-2 h-4 w-4" />
-            Income
-          </Button>
-          <Button
-            variant={activeTab === "expense" ? "default" : "ghost"}
-            onClick={() => setActiveTab("expense")}
-            className="rounded-b-none"
-          >
-            <TrendingDown className="mr-2 h-4 w-4" />
-            Expense
-          </Button>
-        </div>
-
-        {/* Accounts Tab */}
-        {activeTab === "accounts" && (
+        {/* Accounts */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -416,187 +350,6 @@ export default function AccountingPage() {
             </div>
           </CardContent>
         </Card>
-        )}
-
-        {/* Income Tab */}
-        {activeTab === "income" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Income Transactions</CardTitle>
-              <CardDescription>View all income transactions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingIncomeTransactions ? (
-                <SkeletonList count={5} />
-              ) : incomeTransactions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No income transactions found
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {incomeTransactions.map((transaction: Transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="rounded-lg border p-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setViewTransactionId(transaction.id)
-                        setIsTransactionDetailsOpen(true)
-                      }}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="default">Income</Badge>
-                          {(transaction as any).incomeExpenseCategory?.name && (
-                            <Badge variant="outline" className="text-xs">
-                              {(transaction as any).incomeExpenseCategory.name}
-                            </Badge>
-                          )}
-                          {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
-                            <Badge variant="outline" className="text-xs">
-                              {(transaction as any).category}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          {transaction.account?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Account: <span className="font-medium">{transaction.account.name}</span>
-                            </p>
-                          )}
-                          {transaction.contact?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Contact: <span className="font-medium">{transaction.contact.name}</span>
-                            </p>
-                          )}
-                          {transaction.branch?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Branch: <span className="font-medium">{transaction.branch.name}</span>
-                            </p>
-                          )}
-                          {transaction.note && (
-                            <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {transaction.occurredAt
-                            ? new Date(transaction.occurredAt).toLocaleString()
-                            : "-"}
-                        </p>
-                      </div>
-                      <div className="text-right flex items-center gap-3">
-                        <p className="font-semibold text-green-600">
-                          +{formatCurrency(transaction.amount, { generalSettings })}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setViewTransactionId(transaction.id)
-                            setIsTransactionDetailsOpen(true)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Expense Tab */}
-        {activeTab === "expense" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense Transactions</CardTitle>
-              <CardDescription>View all expense transactions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingExpenseTransactions ? (
-                <SkeletonList count={5} />
-              ) : expenseTransactions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No expense transactions found
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {expenseTransactions.map((transaction: Transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="rounded-lg border p-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setViewTransactionId(transaction.id)
-                        setIsTransactionDetailsOpen(true)
-                      }}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="destructive">Expense</Badge>
-                          {(transaction as any).incomeExpenseCategory?.name && (
-                            <Badge variant="outline" className="text-xs">
-                              {(transaction as any).incomeExpenseCategory.name}
-                            </Badge>
-                          )}
-                          {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
-                            <Badge variant="outline" className="text-xs">
-                              {(transaction as any).category}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          {transaction.account?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Account: <span className="font-medium">{transaction.account.name}</span>
-                            </p>
-                          )}
-                          {transaction.contact?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Contact: <span className="font-medium">{transaction.contact.name}</span>
-                            </p>
-                          )}
-                          {transaction.branch?.name && (
-                            <p className="text-sm text-muted-foreground">
-                              Branch: <span className="font-medium">{transaction.branch.name}</span>
-                            </p>
-                          )}
-                          {transaction.note && (
-                            <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {transaction.occurredAt
-                            ? new Date(transaction.occurredAt).toLocaleString()
-                            : "-"}
-                        </p>
-                      </div>
-                      <div className="text-right flex items-center gap-3">
-                        <p className="font-semibold text-red-600">
-                          -{formatCurrency(transaction.amount, { generalSettings })}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setViewTransactionId(transaction.id)
-                            setIsTransactionDetailsOpen(true)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Account Ledger Dialog */}
         <Dialog open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>

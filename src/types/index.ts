@@ -62,13 +62,40 @@ export interface Unit {
   updatedAt?: string
 }
 
+export interface Permission {
+  id: string
+  key: string
+  action: string
+  module: string
+  application: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface RolePermission {
+  id: string
+  roleId: string
+  permissionId: string
+  permission: Permission
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface Role {
   id: string
   businessId: string
   name: string
-  permissions?: string[]
+  description?: string | null
+  allowedBranchIds?: string[]
+  permissions?: string[] // Normalized from rolePermissions for frontend use
+  rolePermissions?: RolePermission[] // Raw API response
   createdAt?: string
   updatedAt?: string
+}
+
+export interface ModulePermissionGroup {
+  module: string
+  permissions: string[]
 }
 
 export interface ProductVariantInput {
@@ -175,6 +202,7 @@ export interface StockHistory {
   unitId: string
   transactionType: "IN" | "OUT"
   quantity: number
+  quantityChange?: number
   reason?: string | null
   branch?: Branch
   product?: Product

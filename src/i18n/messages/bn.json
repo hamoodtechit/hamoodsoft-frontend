@@ -263,6 +263,7 @@
     "transactionType": "লেনদেনের ধরন",
     "stockIn": "স্টক ইন",
     "stockOut": "স্টক আউট",
+    "currentStock": "বর্তমান স্টক",
     "reason": "কারণ",
     "reasonPlaceholder": "সমন্বয়ের কারণ লিখুন",
     "searchPlaceholder": "স্টক খুঁজুন...",

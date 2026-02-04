@@ -319,6 +319,7 @@
     "salePricePlaceholder": "Enter sale price",
     "transactionType": "Transaction Type",
     "stockIn": "Stock In",
+    "currentStock": "Current Stock",
     "stockOut": "Stock Out",
     "reason": "Reason",
     "reasonPlaceholder": "Enter reason for adjustment",
@@ -724,6 +725,8 @@
     "purchase": "Purchase",
     "accounting": "Accounting",
     "accounts": "Accounts",
+    "income": "Income",
+    "expense": "Expense",
     "transactions": "Transactions",
     "pointOfSale": "Point of Sale",
     "crm": "CRM",
@@ -879,9 +882,14 @@
     "typeIncome": "Income",
     "typeExpense": "Expense",
     "noTransactions": "No transactions found",
+    "noTransactionsDescription": "Get started by creating your first transaction",
     "transactionDetails": "Transaction Details",
     "viewTransactionDetails": "View transaction information",
-    "noTransactionDetails": "No transaction details found"
+    "noTransactionDetails": "No transaction details found",
+    "searchCategory": "Search category...",
+    "noCategoryFound": "No category found.",
+    "createCategoryInline": "Create",
+    "createCategoryDialog": "Create with details"
   },
   "incomeExpenseCategories": {
     "title": "Income & Expense Categories",
