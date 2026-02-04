@@ -475,8 +475,8 @@ export default function BusinessSettingsPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="pos-80mm">POS 80mm</SelectItem>
-                            <SelectItem value="a4">A4</SelectItem>
-                            <SelectItem value="letter">Letter</SelectItem>
+                            <SelectItem value="pos-a4">A4</SelectItem>
+                            <SelectItem value="pos-58mm">58mm</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

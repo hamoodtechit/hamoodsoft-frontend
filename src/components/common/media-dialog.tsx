@@ -3,32 +3,32 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { useDeleteMedia, useMedia, useUploadMedia } from "@/lib/hooks/use-media"
 import { Media } from "@/types"
 import {
-    Check,
-    Download,
-    Image as ImageIcon,
-    Loader2,
-    Search,
-    Trash2,
-    Upload
+  Check,
+  Download,
+  Image as ImageIcon,
+  Loader2,
+  Search,
+  Trash2,
+  Upload
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -220,7 +220,7 @@ export function MediaDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Search and Filter Bar */}
           <div className="px-6 py-4 border-b flex-shrink-0 flex items-center gap-4">
             <div className="relative flex-1">
@@ -246,7 +246,7 @@ export function MediaDialog({
 
           {/* Upload Area */}
           <div
-            className={`mx-6 mt-4 mb-2 flex-shrink-0 border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`mx-6 mt-4 mb-2 flex-shrink-0 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
               isDragging
                 ? "border-primary bg-primary/5"
                 : "border-muted-foreground/25 hover:border-muted-foreground/50"
@@ -256,9 +256,9 @@ export function MediaDialog({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm font-medium mb-2">{t("dragDrop")}</p>
-            <p className="text-xs text-muted-foreground mb-4">
+            <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+            <p className="text-sm font-medium mb-1">{t("dragDrop")}</p>
+            <p className="text-xs text-muted-foreground mb-3">
               {t("or")} <span className="text-primary">{t("browse")}</span>
             </p>
             <input
@@ -278,23 +278,24 @@ export function MediaDialog({
           </div>
 
           {/* Media Grid */}
-          <ScrollArea className="flex-1 px-6">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : mediaItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{t("noMedia")}</h3>
-                <p className="text-muted-foreground mb-4">{t("noMediaDescription")}</p>
-                <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  {t("upload")}
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full px-6">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : mediaItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{t("noMedia")}</h3>
+                  <p className="text-muted-foreground mb-4">{t("noMediaDescription")}</p>
+                  <Button onClick={() => fileInputRef.current?.click()} variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {t("upload")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-10 gap-1.5 pb-4">
                 {mediaItems.map((media) => {
                   const isSelected = selectedMedia.has(media.id)
                   return (
@@ -305,9 +306,9 @@ export function MediaDialog({
                       }`}
                       onClick={() => toggleSelection(media.id)}
                     >
-                      <CardContent className="p-2">
+                      <CardContent className="p-0.5">
                         {media.type === "image" ? (
-                          <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
+                          <div className="relative aspect-square rounded overflow-hidden bg-muted">
                             <img
                               src={media.secureUrl || media.url}
                               alt={media.name}
@@ -315,44 +316,44 @@ export function MediaDialog({
                             />
                             {isSelected && (
                               <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                <div className="bg-primary text-primary-foreground rounded-full p-1">
-                                  <Check className="h-4 w-4" />
+                                <div className="bg-primary text-primary-foreground rounded-full p-0.5">
+                                  <Check className="h-2.5 w-2.5" />
                                 </div>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
+                          <div className="aspect-square rounded bg-muted flex items-center justify-center">
                             <div className="text-center">
-                              <Download className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-xs text-muted-foreground truncate px-2">
+                              <Download className="h-5 w-5 mx-auto mb-0.5 text-muted-foreground" />
+                              <p className="text-[9px] text-muted-foreground truncate px-0.5">
                                 {media.format.toUpperCase()}
                               </p>
                             </div>
                             {isSelected && (
                               <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                <div className="bg-primary text-primary-foreground rounded-full p-1">
-                                  <Check className="h-4 w-4" />
+                                <div className="bg-primary text-primary-foreground rounded-full p-0.5">
+                                  <Check className="h-2.5 w-2.5" />
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
-                        <div className="mt-2 px-1">
-                          <p className="text-xs font-medium truncate">{media.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="mt-1 px-0.5">
+                          <p className="text-[9px] font-medium truncate">{media.name}</p>
+                          <p className="text-[9px] text-muted-foreground">
                             {formatFileSize(media.bytes)}
                             {media.width && media.height && ` • ${media.width}×${media.height}`}
                           </p>
                         </div>
-                        <div className="absolute top-2 right-2 flex gap-1">
+                        <div className="absolute top-0.5 right-0.5 flex gap-0.5">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 bg-background/80 hover:bg-background"
+                            className="h-4 w-4 bg-background/80 hover:bg-background"
                             onClick={(e) => handleDelete(media.id, e)}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-2 w-2" />
                           </Button>
                         </div>
                       </CardContent>
@@ -361,7 +362,8 @@ export function MediaDialog({
                 })}
               </div>
             )}
-          </ScrollArea>
+            </ScrollArea>
+          </div>
         </div>
 
         <DialogFooter className="px-6 py-4 border-t flex-shrink-0">

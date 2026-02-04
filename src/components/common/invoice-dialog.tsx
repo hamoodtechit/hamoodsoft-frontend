@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +11,7 @@ import {
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Sale } from "@/types"
-import { Download, FileText, History, Printer } from "lucide-react"
+import { Download, History, Printer } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 
@@ -67,11 +66,30 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
     return { subtotal: itemsSubtotal, discount: saleDiscount, tax, total, paid, due }
   }, [sale, saleItems])
 
+  // Get invoice layout from settings
+  const invoiceLayout = invoiceSettings?.layout || "pos-80mm"
+  
+  // Determine width based on layout
+  const getInvoiceWidth = () => {
+    switch (invoiceLayout) {
+      case "pos-58mm":
+        return "58mm"
+      case "pos-80mm":
+        return "80mm"
+      case "pos-a4":
+        return "210mm"
+      default:
+        return "80mm"
+    }
+  }
+
   const handlePrint = () => {
     window.print()
   }
 
   const handleDownload = () => {
+    const invoiceWidth = getInvoiceWidth()
+    
     // Create a printable HTML content
     const printContent = document.getElementById("invoice-content")?.innerHTML || ""
     const printWindow = window.open("", "_blank")
@@ -82,12 +100,18 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
           <head>
             <title>Invoice ${sale?.invoiceNumber || sale?.id}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
+              @page { size: ${invoiceLayout === "pos-a4" ? "A4" : "auto"}; margin: 0; }
+              body { 
+                font-family: Arial, sans-serif; 
+                padding: ${invoiceLayout === "pos-a4" ? "20px" : "10px"}; 
+                width: ${invoiceWidth};
+                margin: 0 auto;
+              }
               .invoice-header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-              .invoice-title { font-size: 24px; font-weight: bold; }
+              .invoice-title { font-size: ${invoiceLayout === "pos-a4" ? "24px" : "18px"}; font-weight: bold; }
               .invoice-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .invoice-table th, .invoice-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: ${invoiceLayout === "pos-a4" ? "14px" : "12px"}; }
+              .invoice-table th, .invoice-table td { padding: ${invoiceLayout === "pos-a4" ? "10px" : "6px"}; text-align: left; border-bottom: 1px solid #ddd; }
               .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
               .invoice-totals { margin-top: 20px; text-align: right; }
               .invoice-footer { margin-top: 40px; text-align: center; color: #666; }
@@ -104,29 +128,52 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
   }
 
   if (!sale) return null
+  
+  // Determine max width based on layout
+  const getMaxWidthClass = () => {
+    switch (invoiceLayout) {
+      case "pos-58mm":
+        return "max-w-[58mm] print:max-w-[58mm]"
+      case "pos-80mm":
+        return "max-w-[80mm] print:max-w-[80mm]"
+      case "pos-a4":
+        return "max-w-[210mm] print:max-w-[210mm]"
+      default:
+        return "max-w-[80mm] print:max-w-[80mm]"
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto print:max-w-none print:max-h-none">
+      <DialogContent className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto print:max-h-none mx-auto`}>
         {/* Accessibility: DialogContent requires DialogTitle */}
         <DialogHeader className="sr-only">
           <DialogTitle>Invoice</DialogTitle>
         </DialogHeader>
-        <div id="invoice-content" className="p-6 print:p-0">
+        <div 
+          id="invoice-content" 
+          className={`p-6 print:p-0 ${
+            invoiceLayout === "pos-a4" 
+              ? "" 
+              : invoiceLayout === "pos-80mm"
+              ? "text-sm"
+              : "text-xs"
+          }`}
+        >
           {/* Invoice Header */}
-          <div className="flex items-start justify-between mb-6 print:mb-8">
+          <div className={`flex items-start justify-between ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}>
             <div>
               {/* Logo */}
               {generalSettings?.logoUrl && (
-                <div className="mb-4">
+                <div className={invoiceLayout === "pos-a4" ? "mb-4" : "mb-2"}>
                   <img
                     src={generalSettings.logoUrl}
                     alt="Logo"
-                    className="h-16 w-auto object-contain"
+                    className={`${invoiceLayout === "pos-a4" ? "h-16" : invoiceLayout === "pos-80mm" ? "h-12" : "h-10"} w-auto object-contain`}
                   />
                 </div>
               )}
-              <h1 className="text-3xl font-bold mb-2">Invoice</h1>
+              <h1 className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}>Invoice</h1>
               {sale.invoiceNumber && (
                 <p className="text-muted-foreground">
                   {invoiceSettings?.prefix || "INV"}#: {sale.invoiceNumber}
