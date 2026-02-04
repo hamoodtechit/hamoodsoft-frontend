@@ -77,7 +77,6 @@ export function TransactionDialog({
     if (isIncome) {
       return {
         accountId: defaultAccountId || "",
-        contactId: defaultContactId,
         categoryId: defaultCategoryId,
         amount: 0,
         occurredAt: new Date().toISOString(),
@@ -169,36 +168,38 @@ export function TransactionDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="contactId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("contact")} ({tCommon("optional")})</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value === "none" ? undefined : value)
-                    }}
-                    value={field.value || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("contactPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">{tCommon("none")} ({tCommon("optional")})</SelectItem>
-                      {contacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.name} ({contact.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isIncome && (
+              <FormField
+                control={form.control}
+                name="contactId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("contact")} ({tCommon("optional")})</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value === "none" ? undefined : value)
+                      }}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("contactPlaceholder")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">{tCommon("none")} ({tCommon("optional")})</SelectItem>
+                        {contacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.name} ({contact.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

@@ -2,12 +2,14 @@ import { z } from "zod"
 
 export const createIncomeExpenseCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
   type: z.enum(["INCOME", "EXPENSE"]),
   isActive: z.boolean().default(true),
 })
 
 export const updateIncomeExpenseCategorySchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
+  description: z.string().optional(),
   isActive: z.boolean().optional(),
 })
 

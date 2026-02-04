@@ -3,7 +3,6 @@ import { z } from "zod"
 export const createIncomeTransactionSchema = z.object({
   accountId: z.string().min(1, "Account is required"),
   branchId: z.string().optional(),
-  contactId: z.string().optional(),
   categoryId: z.string().optional(),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   occurredAt: z.string().optional(),

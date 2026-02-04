@@ -58,10 +58,11 @@ export function CategorySelect({
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleCreateCategory = async (name: string) => {
+  const handleCreateCategory = async (name: string, description?: string) => {
     try {
       const newCategory = await createMutation.mutateAsync({
         name,
+        description: description || "",
         type,
         isActive: true,
       })
@@ -76,25 +77,26 @@ export function CategorySelect({
 
   const handleQuickCreate = async () => {
     if (searchQuery.trim()) {
-      await handleCreateCategory(searchQuery.trim())
+      await handleCreateCategory(searchQuery.trim(), "")
     }
   }
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-            disabled={disabled}
-          >
-            {selectedCategory ? selectedCategory.name : placeholder || t("categoryPlaceholder")}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
+      <div className="flex gap-2">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="flex-1 justify-between"
+              disabled={disabled}
+            >
+              {selectedCategory ? selectedCategory.name : placeholder || t("categoryPlaceholder")}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
           <Command>
             <CommandInput
@@ -185,6 +187,22 @@ export function CategorySelect({
           </Command>
         </PopoverContent>
       </Popover>
+      
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={() => {
+          setIsCreateDialogOpen(true)
+          setOpen(false)
+        }}
+        disabled={disabled}
+        className="shrink-0"
+        title={t("createCategory") || "Create Category"}
+      >
+        <Plus className="h-4 w-4" />
+      </Button>
+      </div>
 
       <IncomeExpenseCategoryDialog
         category={null}
@@ -193,10 +211,11 @@ export function CategorySelect({
           setIsCreateDialogOpen(open)
           if (!open) {
             await refetch() // Refresh categories when dialog closes
-            setOpen(true) // Reopen the select popover
+            // Don't reopen popover automatically - let user decide
           }
         }}
         defaultType={type}
+        defaultName={searchQuery.trim() || undefined}
       />
     </>
   )

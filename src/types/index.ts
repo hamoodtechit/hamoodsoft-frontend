@@ -451,6 +451,7 @@ export interface IncomeExpenseCategory {
   id: string
   businessId?: string
   name: string
+  description?: string | null
   type: "INCOME" | "EXPENSE"
   isActive: boolean
   createdAt?: string

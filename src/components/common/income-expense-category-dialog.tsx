@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ interface IncomeExpenseCategoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultType?: "INCOME" | "EXPENSE"
+  defaultName?: string
 }
 
 export function IncomeExpenseCategoryDialog({
@@ -54,6 +56,7 @@ export function IncomeExpenseCategoryDialog({
   open,
   onOpenChange,
   defaultType,
+  defaultName,
 }: IncomeExpenseCategoryDialogProps) {
   const t = useTranslations("incomeExpenseCategories")
   const tCommon = useTranslations("common")
@@ -67,15 +70,17 @@ export function IncomeExpenseCategoryDialog({
     if (category) {
       return {
         name: category.name,
+        description: category.description || "",
         isActive: category.isActive,
       } as UpdateIncomeExpenseCategoryInput
     }
     return {
-      name: "",
+      name: defaultName || "",
+      description: "",
       type: defaultType || "INCOME",
       isActive: true,
     } as CreateIncomeExpenseCategoryInput
-  }, [category, defaultType])
+  }, [category, defaultType, defaultName])
 
   const form = useForm<CreateIncomeExpenseCategoryInput | UpdateIncomeExpenseCategoryInput>({
     resolver: zodResolver(isEdit ? updateIncomeExpenseCategorySchema : createIncomeExpenseCategorySchema),
@@ -116,7 +121,21 @@ export function IncomeExpenseCategoryDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {!isEdit && (
+            {!isEdit && defaultType && (
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="hidden" {...field} value={defaultType} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {!isEdit && !defaultType && (
               <FormField
                 control={form.control}
                 name="type"
@@ -152,6 +171,24 @@ export function IncomeExpenseCategoryDialog({
                   <FormLabel>{t("name")}</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder={t("namePlaceholder")} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("description") || "Description"} ({tCommon("optional")})</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder={t("descriptionPlaceholder") || "Enter category description"}
+                      rows={3}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
