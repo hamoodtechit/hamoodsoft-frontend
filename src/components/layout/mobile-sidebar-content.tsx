@@ -18,11 +18,13 @@ import {
     LayoutDashboard,
     Package,
     Plus,
+    Receipt,
     Ruler,
     Settings,
     Shield,
     ShoppingCart,
     Users,
+    Wallet,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
@@ -98,6 +100,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   const queryClient = useQueryClient()
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     inventory: true,
+    accounting: true,
     myBusiness: false,
   })
 
@@ -182,8 +185,30 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       })
     }
 
+    // Accounting with submenu
+    if (enabledModules.includes('accounting')) {
+      const accountingSubmenu: NavItem[] = [
+        {
+          title: t("sidebar.accounts"),
+          href: "/dashboard/accounting",
+          icon: Wallet,
+        },
+        {
+          title: t("sidebar.transactions"),
+          href: "/dashboard/transactions",
+          icon: Receipt,
+        },
+      ]
+      managementItems.push({
+        title: t("sidebar.accounting"),
+        href: "#",
+        icon: BookOpen,
+        submenu: accountingSubmenu,
+      })
+    }
+
     // Other management modules
-    const otherModules = ['sales', 'purchases', 'accounting', 'point-of-sale', 'crm']
+    const otherModules = ['sales', 'purchases', 'point-of-sale', 'crm']
     otherModules.forEach((moduleId) => {
       if (enabledModules.includes(moduleId)) {
         managementItems.push(moduleSidebarMap[moduleId](t))

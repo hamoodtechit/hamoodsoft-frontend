@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
 import { useAuthStore, useUIStore } from "@/store"
-import { Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
+import { Languages, Moon, Search, Sun, User } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -24,11 +24,7 @@ import { useParams, usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { NotificationPanel } from "./notification-panel"
 
-interface DashboardHeaderProps {
-  onMenuClick?: () => void
-}
-
-export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader() {
   const t = useTranslations("auth")
   const tHeader = useTranslations("header")
   const tProfile = useTranslations("profile")
@@ -40,7 +36,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
   const { user } = useAuth()
   const { isAuthenticated } = useAuthStore()
-  const { sidebarOpen, toggleSidebar, setLanguage } = useUIStore()
+  const { setLanguage } = useUIStore()
   const { setTheme, theme } = useTheme()
   const logoutMutation = useLogout()
   const [searchOpen, setSearchOpen] = useState(false)
@@ -60,31 +56,6 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-3 px-4 lg:gap-4 lg:px-6">
-        {/* Left Side: Menu Toggle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden -ml-1"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
-
-          {/* Desktop Sidebar Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden lg:flex"
-            onClick={toggleSidebar}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle sidebar</span>
-          </Button>
-        </div>
-
         {/* Center: Search */}
         <div className="flex-1 max-w-md mx-2 sm:mx-4 min-w-0">
           <Button

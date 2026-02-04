@@ -391,6 +391,38 @@ export interface Payment {
   updatedAt?: string
 }
 
+export type TransactionType = "INCOME" | "EXPENSE"
+
+export interface Transaction {
+  id: string
+  businessId?: string
+  branchId: string
+  accountId: string
+  contactId?: string | null
+  categoryId?: string | null
+  type: TransactionType
+  amount: number
+  paidAmount?: number // Only for expenses
+  occurredAt: string
+  note?: string | null
+  account?: Account
+  contact?: Contact
+  category?: IncomeExpenseCategory
+  branch?: Branch
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface IncomeExpenseCategory {
+  id: string
+  businessId?: string
+  name: string
+  type: "INCOME" | "EXPENSE"
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface PaginatedResult<T> {
   items: T[]
   meta: {

@@ -133,4 +133,17 @@ export const endpoints = {
     getById: (id: string) => `/payments/${id}`,
     delete: (id: string) => `/payments/${id}`,
   },
+  transactions: {
+    list: "/transactions",
+    getById: (id: string) => `/transactions/${id}`,
+    createIncome: "/transactions/income",
+    createExpense: "/transactions/expense",
+  },
+  incomeExpenseCategories: {
+    list: "/income-expense-categories",
+    create: "/income-expense-categories",
+    getById: (id: string) => `/income-expense-categories/${id}`,
+    update: (id: string) => `/income-expense-categories/${id}`,
+    delete: (id: string) => `/income-expense-categories/${id}`,
+  },
 } as const

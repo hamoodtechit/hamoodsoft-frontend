@@ -114,59 +114,11 @@ export default function AccountingPage() {
   const { data: paymentDetails, isLoading: isLoadingPaymentDetails } = usePayment(
     viewPaymentId || undefined
   )
+  
 
-  // Console logs for debugging
-  useEffect(() => {
-    if (ledgerData) {
-      console.log("=".repeat(80))
-      console.log("📊 ACCOUNT LEDGER RESPONSE")
-      console.log("=".repeat(80))
-      console.log("Account ID:", viewAccountId)
-      console.log("Full Ledger Data:", JSON.stringify(ledgerData, null, 2))
-      console.log("Opening Balance:", ledgerData.openingBalance)
-      console.log("Closing Balance:", ledgerData.closingBalance)
-      console.log("Total Debit:", ledgerData.totals.debit)
-      console.log("Total Credit:", ledgerData.totals.credit)
-      console.log("Entries Count:", ledgerData.items.length)
-      console.log("=".repeat(80))
-    }
-  }, [ledgerData, viewAccountId])
+  
 
-  useEffect(() => {
-    if (accountDetails) {
-      console.log("=".repeat(80))
-      console.log("💳 ACCOUNT DETAILS RESPONSE")
-      console.log("=".repeat(80))
-      console.log("Account ID:", viewAccountDetailsId)
-      console.log("Full Account Data:", JSON.stringify(accountDetails, null, 2))
-      console.log("Account Name:", accountDetails.name)
-      console.log("Account Type:", accountDetails.type)
-      console.log("Current Balance:", accountDetails.currentBalance)
-      console.log("Opening Balance:", accountDetails.openingBalance)
-      console.log("Is Active:", accountDetails.isActive)
-      console.log("=".repeat(80))
-    }
-  }, [accountDetails, viewAccountDetailsId])
-
-  useEffect(() => {
-    if (paymentDetails) {
-      console.log("=".repeat(80))
-      console.log("💰 PAYMENT DETAILS RESPONSE")
-      console.log("=".repeat(80))
-      console.log("Payment ID:", viewPaymentId)
-      console.log("Full Payment Data:", JSON.stringify(paymentDetails, null, 2))
-      console.log("Payment Type:", paymentDetails.type)
-      console.log("Amount:", paymentDetails.amount)
-      console.log("Account:", paymentDetails.account?.name)
-      console.log("Sale ID:", paymentDetails.saleId)
-      console.log("Purchase ID:", paymentDetails.purchaseId)
-      console.log("Contact:", paymentDetails.contact?.name)
-      console.log("Branch:", paymentDetails.branch?.name)
-      console.log("Occurred At:", paymentDetails.occurredAt)
-      console.log("Notes:", paymentDetails.notes)
-      console.log("=".repeat(80))
-    }
-  }, [paymentDetails, viewPaymentId])
+  
 
   const updateAccountMutation = useUpdateAccount()
   const deletePaymentMutation = useDeletePayment()

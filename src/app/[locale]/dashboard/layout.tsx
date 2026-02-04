@@ -1,12 +1,11 @@
 "use client"
 
 import { DashboardHeader } from "@/components/layout/dashboard-header"
-import { MobileSidebar } from "@/components/layout/mobile-sidebar"
-import { Sidebar } from "@/components/layout/sidebar"
 import { getNextOnboardingStep } from "@/lib/hooks/use-onboarding"
-import { useAuthStore, useUIStore } from "@/store"
+import { useAuthStore } from "@/store"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 
 export default function DashboardLayout({
   children,
@@ -20,9 +19,7 @@ export default function DashboardLayout({
     return <>{children}</>
   }
   
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
-  const { sidebarOpen } = useUIStore()
   const { isAuthenticated, user, token } = useAuthStore()
   const params = useParams()
   const router = useRouter()
@@ -96,17 +93,6 @@ export default function DashboardLayout({
     }
   }, [isHydrated, isAuthenticated, token, user, locale, router])
 
-  // Close mobile menu when window is resized to large screen
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024 && mobileMenuOpen) {
-        setMobileMenuOpen(false)
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [mobileMenuOpen])
 
   // Show loading state while waiting for hydration
   if (!isHydrated) {
@@ -158,11 +144,9 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar isOpen={sidebarOpen} />
-      <MobileSidebar open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
       <div className="flex flex-1 flex-col overflow-hidden transition-all duration-300">
-        <DashboardHeader onMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <DashboardHeader />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
       </div>
