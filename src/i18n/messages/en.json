@@ -51,7 +51,8 @@
     "creating": "Creating...",
     "updating": "Updating...",
     "branch": "Branch",
-    "status": "Status"
+    "status": "Status",
+    "items": "items"
   },
   "auth": {
     "login": "Login",
@@ -453,7 +454,10 @@
     "companyPhone": "Company Phone",
     "companyAddress": "Company Address",
     "balance": "Balance",
-    "creditLimit": "Credit Limit"
+    "creditLimit": "Credit Limit",
+    "payments": "Payments",
+    "paymentTypeSale": "Sale Payment",
+    "paymentTypePurchase": "Purchase Payment"
   },
   "contacts": {
     "title": "Contacts",
@@ -818,7 +822,9 @@
     "deleteAccountDescription": "Are you sure you want to deactivate {name}? This will mark the account as inactive.",
     "accountDetails": "Account Details",
     "viewAccountDetails": "View account information",
-    "noAccountDetails": "No account details found"
+    "noAccountDetails": "No account details found",
+    "transactions": "Transactions",
+    "noTransactions": "No transactions found"
   },
   "payments": {
     "payments": "Payments",

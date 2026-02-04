@@ -12,7 +12,6 @@ import {
   FileText,
   FolderTree,
   Package,
-  Receipt,
   Ruler,
   Settings,
   Shield,
@@ -172,16 +171,6 @@ export default function DashboardPage() {
       enabled: enabledModules.includes("accounting"),
       category: "accounting",
     },
-    {
-      id: "transactions",
-      title: t("sidebar.transactions"),
-      href: "/dashboard/transactions",
-      icon: Receipt,
-      color: "text-violet-600",
-      bgColor: "bg-violet-50 dark:bg-violet-950/20",
-      enabled: enabledModules.includes("accounting"),
-      category: "accounting",
-    },
     // Business management
     {
       id: "branches",
@@ -297,7 +286,7 @@ export default function DashboardPage() {
             </button>
           )}
         </div>
-        <div className={cn("grid gap-4", gridCols)}>
+        <div className={cn("grid gap-2 sm:gap-2.5 md:gap-3", gridCols)}>
           {itemsToShow.map((item) => {
             const Icon = item.icon
             return (
@@ -305,7 +294,7 @@ export default function DashboardPage() {
                 key={item.id}
                 onClick={() => handleItemClick(item.href)}
                 className={cn(
-                  "group relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-transparent p-6 transition-all duration-200",
+                  "group relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border-2 border-transparent px-1.5 py-2 sm:px-2 sm:py-3 md:px-3 md:py-4 transition-all duration-200",
                   "hover:scale-105 hover:shadow-lg",
                   "focus:outline-none focus:ring-2 focus:ring-offset-2",
                   item.bgColor,
@@ -314,14 +303,14 @@ export default function DashboardPage() {
               >
                 <div
                   className={cn(
-                    "flex h-16 w-16 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110",
+                    "flex h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110",
                     item.bgColor,
                     "border-2 border-current/20"
                   )}
                 >
-                  <Icon className={cn("h-8 w-8", item.color)} />
+                  <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7", item.color)} />
                 </div>
-                <span className="text-sm font-medium text-foreground">{item.title}</span>
+                <span className="text-xs font-medium text-foreground text-center px-1 leading-tight">{item.title}</span>
               </button>
             )
           })}

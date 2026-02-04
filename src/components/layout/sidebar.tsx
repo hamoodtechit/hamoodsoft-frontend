@@ -188,25 +188,12 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
       })
     }
 
-    // Accounting with submenu
+    // Accounting
     if (enabledModules.includes('accounting')) {
-      const accountingSubmenu: NavItem[] = [
-        {
-          title: t("sidebar.accounts"),
-          href: "/dashboard/accounting",
-          icon: Wallet,
-        },
-        {
-          title: t("sidebar.transactions"),
-          href: "/dashboard/transactions",
-          icon: Receipt,
-        },
-      ]
       managementItems.push({
-        title: t("sidebar.accounting"),
-        href: "#",
-        icon: BookOpen,
-        submenu: accountingSubmenu,
+        title: t("sidebar.accounts"),
+        href: "/dashboard/accounting",
+        icon: Wallet,
       })
     }
 

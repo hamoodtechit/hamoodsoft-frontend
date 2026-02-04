@@ -31,8 +31,10 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useProducts } from "@/lib/hooks/use-products"
 import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
+import { useAppSettings } from "@/lib/providers/settings-provider"
+import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Product, Sale } from "@/types"
+import { Payment, Product, Sale } from "@/types"
 import { CreditCard, Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -48,6 +50,7 @@ export default function SalesPage() {
 
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
+  const { generalSettings } = useAppSettings()
   const deleteMutation = useDeleteSale()
 
   const [search, setSearch] = useState("")
@@ -358,6 +361,7 @@ export default function SalesPage() {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null)
   const [viewSaleId, setViewSaleId] = useState<string | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [showPaymentsSection, setShowPaymentsSection] = useState(false)
   const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [paymentSale, setPaymentSale] = useState<Sale | null>(null)
@@ -396,8 +400,29 @@ export default function SalesPage() {
 
   const handleView = (sale: Sale) => {
     setViewSaleId(sale.id)
+    setShowPaymentsSection(false)
     setIsViewOpen(true)
   }
+
+  const handleViewPayments = (sale: Sale) => {
+    setViewSaleId(sale.id)
+    setIsViewOpen(true)
+    setShowPaymentsSection(true)
+  }
+
+  // Scroll to payments section when showPaymentsSection is true
+  useEffect(() => {
+    if (showPaymentsSection && viewSale && isViewOpen) {
+      const timer = setTimeout(() => {
+        const paymentsSection = document.getElementById('payments-section')
+        if (paymentsSection) {
+          paymentsSection.scrollIntoView({ behavior: "smooth", block: "start" })
+          setShowPaymentsSection(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [showPaymentsSection, viewSale, isViewOpen])
 
   const handleDelete = (sale: Sale) => {
     setSaleToDelete(sale)
@@ -536,6 +561,12 @@ export default function SalesPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {t("viewDetails")}
                       </DropdownMenuItem>
+                      {row.payments && row.payments.length > 0 && (
+                        <DropdownMenuItem onClick={() => handleViewPayments(row)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          View Payments
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => handleInvoice(row)}>
                         <FileText className="mr-2 h-4 w-4" />
                         View Invoice
@@ -624,6 +655,12 @@ export default function SalesPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               {t("viewDetails")}
                             </DropdownMenuItem>
+                            {s.payments && s.payments.length > 0 && (
+                              <DropdownMenuItem onClick={() => handleViewPayments(s)}>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                View Payments
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => handleInvoice(s)}>
                               <FileText className="mr-2 h-4 w-4" />
                               View Invoice
@@ -858,6 +895,52 @@ export default function SalesPage() {
                   </div>
                 )}
               </div>
+
+              {/* Payments Section */}
+              {viewSale.payments && viewSale.payments.length > 0 && (
+                <div id="payments-section" className="space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{t("payments") || "Payments"}</h4>
+                    <span className="text-sm text-muted-foreground">
+                      {viewSale.payments.length} {tCommon("items") || "items"}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {viewSale.payments.map((payment: Payment) => (
+                      <div
+                        key={payment.id}
+                        className="rounded-lg border p-3 flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default">
+                              {payment.type === "SALE_PAYMENT" ? t("paymentTypeSale") || "Sale Payment" : t("paymentTypePurchase") || "Purchase Payment"}
+                            </Badge>
+                            {payment.accountId && (
+                              <span className="text-sm text-muted-foreground">
+                                Account: {payment.accountId.slice(0, 8)}...
+                              </span>
+                            )}
+                          </div>
+                          {payment.notes && (
+                            <p className="text-sm text-muted-foreground mt-1">{payment.notes}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {payment.occurredAt
+                              ? new Date(payment.occurredAt).toLocaleDateString()
+                              : "-"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">
+                            {formatCurrency(payment.amount, { generalSettings })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground border-t pt-4">
                 <div>

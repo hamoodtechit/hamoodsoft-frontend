@@ -44,7 +44,12 @@ function normalizeTransaction(transaction: any): Transaction {
     ...transaction,
     type: normalizedType,
     categoryId: transaction.incomeExpenseCategoryId || transaction.categoryId || null,
-  }
+    // Preserve all API response fields - incomeExpenseCategory is the object, category is a string
+    incomeExpenseCategory: transaction.incomeExpenseCategory || null,
+    account: transaction.account || null,
+    branch: transaction.branch || null,
+    contact: transaction.contact || null,
+  } as Transaction
 }
 
 function normalizeTransactionsList(data: PaginatedResult<Transaction> | TransactionsResponseShape | Transaction[]): PaginatedResult<Transaction> {

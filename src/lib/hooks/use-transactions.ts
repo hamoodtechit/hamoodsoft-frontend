@@ -23,6 +23,7 @@ export function useTransactions(params?: TransactionsListParams) {
   return useQuery({
     queryKey,
     queryFn: () => transactionsApi.getTransactions(params),
+    enabled: params !== undefined, // Only run when params are provided
     refetchOnWindowFocus: true,
     staleTime: 0,
   })

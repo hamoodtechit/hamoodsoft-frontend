@@ -262,8 +262,11 @@ export interface Sale {
   totalPrice?: number
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount?: number
+  taxRate?: number
+  taxAmount?: number
   items?: SaleItem[] // For backward compatibility
   saleItems?: SaleItem[] // API response uses saleItems
+  payments?: Payment[] // Payments associated with this sale
   invoiceNumber?: string
   invoiceSequence?: number
   branch?: Branch
@@ -400,14 +403,17 @@ export interface Transaction {
   accountId: string
   contactId?: string | null
   categoryId?: string | null
+  incomeExpenseCategoryId?: string | null
   type: TransactionType
   amount: number
   paidAmount?: number // Only for expenses
   occurredAt: string
   note?: string | null
+  referenceId?: string | null
   account?: Account
   contact?: Contact
   category?: IncomeExpenseCategory
+  incomeExpenseCategory?: IncomeExpenseCategory // API returns this field
   branch?: Branch
   createdAt?: string
   updatedAt?: string

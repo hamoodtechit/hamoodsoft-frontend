@@ -33,10 +33,10 @@ import {
 import { useAccount, useAccountLedger, useAccounts, useUpdateAccount } from "@/lib/hooks/use-accounts"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { useDeletePayment, usePayment, usePayments } from "@/lib/hooks/use-payments"
+import { useTransactions } from "@/lib/hooks/use-transactions"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
-import { Account, AccountLedgerEntry, Payment } from "@/types"
+import { Account, AccountLedgerEntry, Transaction } from "@/types"
 import {
   BookOpen,
   Eye,
@@ -45,13 +45,15 @@ import {
   Plus,
   Search,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Wallet,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
-type TabType = "accounts" | "payments"
+type TabType = "accounts" | "income" | "expense"
 
 export default function AccountingPage() {
   const params = useParams()
@@ -61,7 +63,6 @@ export default function AccountingPage() {
   const currentBusiness = useCurrentBusiness()
   const t = useTranslations("accounts")
   const tCommon = useTranslations("common")
-  const tPayments = useTranslations("payments")
   const { generalSettings } = useAppSettings()
 
   const [activeTab, setActiveTab] = useState<TabType>("accounts")
@@ -71,13 +72,12 @@ export default function AccountingPage() {
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
-  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null)
   const [viewAccountId, setViewAccountId] = useState<string | null>(null)
   const [isLedgerOpen, setIsLedgerOpen] = useState(false)
   const [viewAccountDetailsId, setViewAccountDetailsId] = useState<string | null>(null)
   const [isAccountDetailsOpen, setIsAccountDetailsOpen] = useState(false)
-  const [viewPaymentId, setViewPaymentId] = useState<string | null>(null)
-  const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false)
+  const [viewTransactionId, setViewTransactionId] = useState<string | null>(null)
+  const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false)
 
   // Check if user has access to accounting module
   useEffect(() => {
@@ -94,11 +94,6 @@ export default function AccountingPage() {
   })
   const accounts = accountsData?.items ?? []
 
-  // Payments
-  const { data: paymentsData, isLoading: isLoadingPayments } = usePayments({
-    limit: 100,
-  })
-  const payments = paymentsData?.items ?? []
 
   // Account Ledger
   const { data: ledgerData, isLoading: isLoadingLedger } = useAccountLedger(
@@ -110,10 +105,48 @@ export default function AccountingPage() {
     viewAccountDetailsId || undefined
   )
 
-  // Payment Details
-  const { data: paymentDetails, isLoading: isLoadingPaymentDetails } = usePayment(
-    viewPaymentId || undefined
+  // Transactions for the account
+  const { data: accountTransactionsData, isLoading: isLoadingAccountTransactions } = useTransactions(
+    viewAccountDetailsId ? { accountId: viewAccountDetailsId, limit: 50 } : undefined
   )
+  const accountTransactions = accountTransactionsData?.items ?? []
+
+  // Transactions for Income/Expense tabs - fetch all and filter client-side
+  const { data: allTransactionsData, isLoading: isLoadingAllTransactions } = useTransactions(
+    activeTab === "income" || activeTab === "expense" ? { limit: 1000 } : undefined
+  )
+  const allTransactions = allTransactionsData?.items ?? []
+
+  // Find transaction from list data
+  const transactionDetails = useMemo(() => {
+    if (!viewTransactionId) return null
+    return allTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
+  }, [viewTransactionId, allTransactions])
+
+  // Filter transactions by type on client side
+  const incomeTransactions = useMemo(() => {
+    if (activeTab !== "income") return []
+    return allTransactions.filter((t: Transaction) => {
+      // Check both normalized type and raw type from API
+      const normalizedType = t.type
+      const rawType = (t as any).type
+      return normalizedType === "INCOME" || rawType === "INCOME" || rawType === "IN"
+    })
+  }, [allTransactions, activeTab])
+
+  const expenseTransactions = useMemo(() => {
+    if (activeTab !== "expense") return []
+    return allTransactions.filter((t: Transaction) => {
+      // Check both normalized type and raw type from API
+      const normalizedType = t.type
+      const rawType = (t as any).type
+      return normalizedType === "EXPENSE" || rawType === "EXPENSE" || rawType === "EX"
+    })
+  }, [allTransactions, activeTab])
+
+  const isLoadingIncomeTransactions = isLoadingAllTransactions && activeTab === "income"
+  const isLoadingExpenseTransactions = isLoadingAllTransactions && activeTab === "expense"
+
   
 
   
@@ -121,7 +154,6 @@ export default function AccountingPage() {
   
 
   const updateAccountMutation = useUpdateAccount()
-  const deletePaymentMutation = useDeletePayment()
 
   if (!currentBusiness?.modules?.includes("accounting")) {
     return (
@@ -162,15 +194,6 @@ export default function AccountingPage() {
     setIsAccountDetailsOpen(true)
   }
 
-  const handleViewPaymentDetails = (payment: Payment) => {
-    setViewPaymentId(payment.id)
-    setIsPaymentDetailsOpen(true)
-  }
-
-  const handleDeletePayment = (payment: Payment) => {
-    setPaymentToDelete(payment)
-    setIsDeleteDialogOpen(true)
-  }
 
   const confirmDelete = async () => {
     if (accountToDelete) {
@@ -180,9 +203,6 @@ export default function AccountingPage() {
         data: { isActive: false },
       })
       setAccountToDelete(null)
-    } else if (paymentToDelete) {
-      await deletePaymentMutation.mutateAsync(paymentToDelete.id)
-      setPaymentToDelete(null)
     }
     setIsDeleteDialogOpen(false)
   }
@@ -288,85 +308,6 @@ export default function AccountingPage() {
     [t, tCommon, generalSettings]
   )
 
-  // Payment table columns
-  const paymentColumns: Column<Payment>[] = useMemo(
-    () => [
-      {
-        id: "type",
-        header: tPayments("type"),
-        cell: (row) => {
-          const typeColors = {
-            SALE_PAYMENT: "bg-green-500/10 text-green-600 dark:text-green-400",
-            PURCHASE_PAYMENT: "bg-red-500/10 text-red-600 dark:text-red-400",
-            DEPOSIT: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-          }
-          const typeLabels = {
-            SALE_PAYMENT: tPayments("typeSalePayment"),
-            PURCHASE_PAYMENT: tPayments("typePurchasePayment"),
-            DEPOSIT: tPayments("typeDeposit"),
-          }
-          return (
-            <Badge className={typeColors[row.type] || ""}>
-              {typeLabels[row.type] || row.type}
-            </Badge>
-          )
-        },
-        sortable: true,
-      },
-      {
-        id: "account",
-        header: tPayments("account"),
-        cell: (row) => row.account?.name || "-",
-        sortable: false,
-      },
-      {
-        id: "amount",
-        header: tPayments("amount"),
-        cell: (row) => (
-          <span className="font-medium">
-            {formatCurrency(row.amount, { generalSettings })}
-          </span>
-        ),
-        sortable: true,
-      },
-      {
-        id: "occurredAt",
-        header: tPayments("occurredAt"),
-        cell: (row) =>
-          row.occurredAt ? new Date(row.occurredAt).toLocaleDateString() : "-",
-        sortable: true,
-      },
-      {
-        id: "actions",
-        header: tCommon("actions"),
-        cell: (row) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">{tCommon("openMenu")}</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleViewPaymentDetails(row)}>
-                <Eye className="mr-2 h-4 w-4" />
-                {tCommon("view")} {tCommon("details")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeletePayment(row)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {tCommon("delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-        enableHiding: false,
-      },
-    ],
-    [tPayments, tCommon, generalSettings]
-  )
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((account) => {
@@ -394,107 +335,264 @@ export default function AccountingPage() {
             {t("accounts")}
           </Button>
           <Button
-            variant={activeTab === "payments" ? "default" : "ghost"}
-            onClick={() => setActiveTab("payments")}
+            variant={activeTab === "income" ? "default" : "ghost"}
+            onClick={() => setActiveTab("income")}
             className="rounded-b-none"
           >
-            <BookOpen className="mr-2 h-4 w-4" />
-            {tPayments("payments")}
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Income
+          </Button>
+          <Button
+            variant={activeTab === "expense" ? "default" : "ghost"}
+            onClick={() => setActiveTab("expense")}
+            className="rounded-b-none"
+          >
+            <TrendingDown className="mr-2 h-4 w-4" />
+            Expense
           </Button>
         </div>
 
         {/* Accounts Tab */}
         {activeTab === "accounts" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{t("accounts")}</CardTitle>
+                <CardDescription>{t("accountsDescription")}</CardDescription>
+              </div>
+              <Button onClick={handleCreateAccount}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createAccount")}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder={t("searchAccounts")}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as any)}
+                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">{t("allTypes")}</option>
+                  <option value="CASH">{t("typeCash")}</option>
+                  <option value="BANK">{t("typeBank")}</option>
+                  <option value="WALLET">{t("typeWallet")}</option>
+                  <option value="ASSET">{t("typeAsset")}</option>
+                  <option value="LIABILITY">{t("typeLiability")}</option>
+                  <option value="EQUITY">{t("typeEquity")}</option>
+                  <option value="INCOME">{t("typeIncome")}</option>
+                  <option value="EXPENSE">{t("typeExpense")}</option>
+                </select>
+              </div>
+
+              {isLoadingAccounts ? (
+                <SkeletonList count={5} />
+              ) : filteredAccounts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {t("noAccounts")}
+                </div>
+              ) : (
+                <DataTable
+                  columns={accountColumns}
+                  data={filteredAccounts}
+                  getRowId={(row) => row.id}
+                  enableRowSelection={false}
+                  emptyMessage={t("noAccounts")}
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Income Tab */}
+        {activeTab === "income" && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{t("accounts")}</CardTitle>
-                  <CardDescription>{t("accountsDescription")}</CardDescription>
-                </div>
-                <Button onClick={handleCreateAccount}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("createAccount")}
-                </Button>
-              </div>
+              <CardTitle>Income Transactions</CardTitle>
+              <CardDescription>View all income transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder={t("searchAccounts")}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as any)}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">{t("allTypes")}</option>
-                    <option value="CASH">{t("typeCash")}</option>
-                    <option value="BANK">{t("typeBank")}</option>
-                    <option value="WALLET">{t("typeWallet")}</option>
-                    <option value="ASSET">{t("typeAsset")}</option>
-                    <option value="LIABILITY">{t("typeLiability")}</option>
-                    <option value="EQUITY">{t("typeEquity")}</option>
-                    <option value="INCOME">{t("typeIncome")}</option>
-                    <option value="EXPENSE">{t("typeExpense")}</option>
-                  </select>
+              {isLoadingIncomeTransactions ? (
+                <SkeletonList count={5} />
+              ) : incomeTransactions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No income transactions found
                 </div>
-
-                {isLoadingAccounts ? (
-                  <SkeletonList count={5} />
-                ) : filteredAccounts.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {t("noAccounts")}
-                  </div>
-                ) : (
-                  <DataTable
-                    columns={accountColumns}
-                    data={filteredAccounts}
-                    getRowId={(row) => row.id}
-                    enableRowSelection={false}
-                    emptyMessage={t("noAccounts")}
-                  />
-                )}
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  {incomeTransactions.map((transaction: Transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="rounded-lg border p-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setViewTransactionId(transaction.id)
+                        setIsTransactionDetailsOpen(true)
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="default">Income</Badge>
+                          {(transaction as any).incomeExpenseCategory?.name && (
+                            <Badge variant="outline" className="text-xs">
+                              {(transaction as any).incomeExpenseCategory.name}
+                            </Badge>
+                          )}
+                          {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
+                            <Badge variant="outline" className="text-xs">
+                              {(transaction as any).category}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          {transaction.account?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Account: <span className="font-medium">{transaction.account.name}</span>
+                            </p>
+                          )}
+                          {transaction.contact?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Contact: <span className="font-medium">{transaction.contact.name}</span>
+                            </p>
+                          )}
+                          {transaction.branch?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Branch: <span className="font-medium">{transaction.branch.name}</span>
+                            </p>
+                          )}
+                          {transaction.note && (
+                            <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {transaction.occurredAt
+                            ? new Date(transaction.occurredAt).toLocaleString()
+                            : "-"}
+                        </p>
+                      </div>
+                      <div className="text-right flex items-center gap-3">
+                        <p className="font-semibold text-green-600">
+                          +{formatCurrency(transaction.amount, { generalSettings })}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setViewTransactionId(transaction.id)
+                            setIsTransactionDetailsOpen(true)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Payments Tab */}
-        {activeTab === "payments" && (
+        {/* Expense Tab */}
+        {activeTab === "expense" && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{tPayments("payments")}</CardTitle>
-                  <CardDescription>{tPayments("paymentsDescription")}</CardDescription>
-                </div>
-              </div>
+              <CardTitle>Expense Transactions</CardTitle>
+              <CardDescription>View all expense transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingPayments ? (
+              {isLoadingExpenseTransactions ? (
                 <SkeletonList count={5} />
-              ) : payments.length === 0 ? (
+              ) : expenseTransactions.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {tPayments("noPayments")}
+                  No expense transactions found
                 </div>
               ) : (
-                <DataTable
-                  columns={paymentColumns}
-                  data={payments}
-                  getRowId={(row) => row.id}
-                  enableRowSelection={false}
-                  emptyMessage={tPayments("noPayments")}
-                />
+                <div className="space-y-2">
+                  {expenseTransactions.map((transaction: Transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="rounded-lg border p-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setViewTransactionId(transaction.id)
+                        setIsTransactionDetailsOpen(true)
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="destructive">Expense</Badge>
+                          {(transaction as any).incomeExpenseCategory?.name && (
+                            <Badge variant="outline" className="text-xs">
+                              {(transaction as any).incomeExpenseCategory.name}
+                            </Badge>
+                          )}
+                          {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
+                            <Badge variant="outline" className="text-xs">
+                              {(transaction as any).category}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          {transaction.account?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Account: <span className="font-medium">{transaction.account.name}</span>
+                            </p>
+                          )}
+                          {transaction.contact?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Contact: <span className="font-medium">{transaction.contact.name}</span>
+                            </p>
+                          )}
+                          {transaction.branch?.name && (
+                            <p className="text-sm text-muted-foreground">
+                              Branch: <span className="font-medium">{transaction.branch.name}</span>
+                            </p>
+                          )}
+                          {transaction.note && (
+                            <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {transaction.occurredAt
+                            ? new Date(transaction.occurredAt).toLocaleString()
+                            : "-"}
+                        </p>
+                      </div>
+                      <div className="text-right flex items-center gap-3">
+                        <p className="font-semibold text-red-600">
+                          -{formatCurrency(transaction.amount, { generalSettings })}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setViewTransactionId(transaction.id)
+                            setIsTransactionDetailsOpen(true)
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -665,6 +763,70 @@ export default function AccountingPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Transactions Section */}
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{t("transactions") || "Transactions"}</h4>
+                    <span className="text-sm text-muted-foreground">
+                      {accountTransactions.length} {tCommon("items") || "items"}
+                    </span>
+                  </div>
+                  {isLoadingAccountTransactions ? (
+                    <div className="py-4 text-center text-muted-foreground">{tCommon("loading")}</div>
+                  ) : accountTransactions.length > 0 ? (
+                    <div className="space-y-2">
+                      {accountTransactions.map((transaction: Transaction) => (
+                        <div
+                          key={transaction.id}
+                          className="rounded-lg border p-3 flex items-center justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={transaction.type === "INCOME" ? "default" : "destructive"}
+                              >
+                                {transaction.type === "INCOME" ? t("typeIncome") || "Income" : t("typeExpense") || "Expense"}
+                              </Badge>
+                              {(transaction as any).incomeExpenseCategory?.name && (
+                                <span className="text-sm text-muted-foreground">
+                                  {(transaction as any).incomeExpenseCategory.name}
+                                </span>
+                              )}
+                              {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
+                                <span className="text-sm text-muted-foreground">
+                                  {(transaction as any).category}
+                                </span>
+                              )}
+                            </div>
+                            {transaction.note && (
+                              <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {transaction.occurredAt
+                                ? new Date(transaction.occurredAt).toLocaleDateString()
+                                : "-"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p
+                              className={`font-semibold ${
+                                transaction.type === "INCOME" ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {transaction.type === "INCOME" ? "+" : "-"}
+                              {formatCurrency(transaction.amount, { generalSettings })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+                      {t("noTransactions") || "No transactions found"}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">
@@ -674,116 +836,361 @@ export default function AccountingPage() {
           </SheetContent>
         </Sheet>
 
-        {/* Payment Details Sheet */}
-        <Sheet open={isPaymentDetailsOpen} onOpenChange={setIsPaymentDetailsOpen}>
+        {/* Transaction Details Sheet */}
+        <Sheet open={isTransactionDetailsOpen} onOpenChange={setIsTransactionDetailsOpen}>
           <SheetContent
             side="bottom"
             className="w-full max-w-3xl mx-auto rounded-t-2xl sm:rounded-2xl sm:max-h-[90vh] overflow-y-auto"
           >
             <SheetHeader>
-              <SheetTitle>{tPayments("paymentDetails") || "Payment Details"}</SheetTitle>
+              <SheetTitle>Transaction Details</SheetTitle>
               <SheetDescription>
-                {tPayments("viewPaymentDetails") || "View payment transaction information"}
+                View complete transaction information
               </SheetDescription>
             </SheetHeader>
-            {isLoadingPaymentDetails ? (
-              <div className="py-8 text-center text-muted-foreground">{tCommon("loading")}</div>
-            ) : paymentDetails ? (
-              <div className="space-y-6 mt-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">{tPayments("type")}</div>
-                    <div className="text-lg font-semibold">
-                      <Badge>
-                        {paymentDetails.type === "SALE_PAYMENT" && tPayments("typeSalePayment")}
-                        {paymentDetails.type === "PURCHASE_PAYMENT" &&
-                          tPayments("typePurchasePayment")}
-                        {paymentDetails.type === "DEPOSIT" && tPayments("typeDeposit")}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">{tPayments("amount")}</div>
-                    <div className="text-lg font-semibold">
-                      {formatCurrency(paymentDetails.amount, { generalSettings })}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">{tPayments("account")}</div>
-                    <div className="text-base">{paymentDetails.account?.name || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">{tPayments("occurredAt")}</div>
-                    <div className="text-base">
-                      {paymentDetails.occurredAt
-                        ? new Date(paymentDetails.occurredAt).toLocaleString()
-                        : "-"}
-                    </div>
-                  </div>
-                  {paymentDetails.saleId && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {tPayments("saleId") || "Sale ID"}
-                      </div>
-                      <div className="text-base">{paymentDetails.saleId}</div>
-                      {paymentDetails.sale && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Invoice: {paymentDetails.sale.invoiceNumber || paymentDetails.sale.id}
+            {transactionDetails ? (
+              <div className="space-y-4 mt-6">
+                  {/* Basic Information */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Basic Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Type</div>
+                          <div className="text-lg font-semibold">
+                            <Badge variant={(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "default" : "destructive"}>
+                              {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "Income" : "Expense"}
+                            </Badge>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                  {paymentDetails.purchaseId && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {tPayments("purchaseId") || "Purchase ID"}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Amount</div>
+                          <div className={`text-lg font-semibold ${(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "text-green-600" : "text-red-600"}`}>
+                            {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "+" : "-"}
+                            {formatCurrency(transactionDetails.amount, { generalSettings })}
+                          </div>
+                        </div>
+                        {transactionDetails.paidAmount !== undefined && transactionDetails.type === "EXPENSE" && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Paid Amount</div>
+                            <div className="text-lg font-semibold">
+                              {formatCurrency(transactionDetails.paidAmount, { generalSettings })}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Occurred At</div>
+                          <div className="text-base font-semibold">
+                            {transactionDetails.occurredAt
+                              ? new Date(transactionDetails.occurredAt).toLocaleString()
+                              : "-"}
+                          </div>
+                        </div>
+                        {transactionDetails.note && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">Note</div>
+                            <div className="text-base mt-1">{transactionDetails.note}</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-base">{paymentDetails.purchaseId}</div>
-                    </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Category Information */}
+                  {((transactionDetails as any).incomeExpenseCategory || (transactionDetails as any).category) && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Category Information</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(transactionDetails as any).incomeExpenseCategory ? (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm text-muted-foreground">Category Name</div>
+                              <div className="text-base font-semibold">
+                                {(transactionDetails as any).incomeExpenseCategory.name}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Category Type</div>
+                              <div className="text-base font-semibold">
+                                {(transactionDetails as any).incomeExpenseCategory.type}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Status</div>
+                              <div className="text-base font-semibold">
+                                <Badge variant={(transactionDetails as any).incomeExpenseCategory.isActive ? "default" : "secondary"}>
+                                  {(transactionDetails as any).incomeExpenseCategory.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </div>
+                            </div>
+                            {(transactionDetails as any).incomeExpenseCategory.createdAt && (
+                              <div>
+                                <div className="text-sm text-muted-foreground">Created At</div>
+                                <div className="text-sm">
+                                  {new Date((transactionDetails as any).incomeExpenseCategory.createdAt).toLocaleString()}
+                                </div>
+                              </div>
+                            )}
+                            {(transactionDetails as any).incomeExpenseCategory.updatedAt && (
+                              <div>
+                                <div className="text-sm text-muted-foreground">Updated At</div>
+                                <div className="text-sm">
+                                  {new Date((transactionDetails as any).incomeExpenseCategory.updatedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Category</div>
+                            <div className="text-base font-semibold">
+                              {(transactionDetails as any).category}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   )}
-                  {paymentDetails.contact && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {tPayments("contact") || "Contact"}
+
+                  {/* Account Information */}
+                  {transactionDetails.account && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Account Information</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Account Name</div>
+                            <div className="text-base font-semibold">{transactionDetails.account.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Account Type</div>
+                            <div className="text-base font-semibold">{transactionDetails.account.type}</div>
+                          </div>
+                          {transactionDetails.account.description && (
+                            <div className="col-span-2">
+                              <div className="text-sm text-muted-foreground">Description</div>
+                              <div className="text-base">{transactionDetails.account.description}</div>
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm text-muted-foreground">Current Balance</div>
+                            <div className="text-base font-semibold">
+                              {formatCurrency(transactionDetails.account.currentBalance || 0, { generalSettings })}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Opening Balance</div>
+                            <div className="text-base font-semibold">
+                              {formatCurrency(transactionDetails.account.openingBalance || 0, { generalSettings })}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Status</div>
+                            <div className="text-base font-semibold">
+                              <Badge variant={transactionDetails.account.isActive ? "default" : "secondary"}>
+                                {transactionDetails.account.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                          {transactionDetails.account.createdAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Created At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.account.createdAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                          {transactionDetails.account.updatedAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Updated At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.account.updatedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Branch Information */}
+                  {transactionDetails.branch && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Branch Information</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Branch Name</div>
+                            <div className="text-base font-semibold">{transactionDetails.branch.name}</div>
+                          </div>
+                          {transactionDetails.branch.address && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Address</div>
+                              <div className="text-base">{transactionDetails.branch.address}</div>
+                            </div>
+                          )}
+                          {transactionDetails.branch.phone && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Phone</div>
+                              <div className="text-base">{transactionDetails.branch.phone}</div>
+                            </div>
+                          )}
+                          {transactionDetails.branch.createdAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Created At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.branch.createdAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                          {transactionDetails.branch.updatedAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Updated At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.branch.updatedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Contact Information */}
+                  {transactionDetails.contact && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Contact Information</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Contact Name</div>
+                            <div className="text-base font-semibold">{transactionDetails.contact.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Contact Type</div>
+                            <div className="text-base font-semibold">{transactionDetails.contact.type}</div>
+                          </div>
+                          {transactionDetails.contact.email && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Email</div>
+                              <div className="text-base">{transactionDetails.contact.email}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.phone && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Phone</div>
+                              <div className="text-base">{transactionDetails.contact.phone}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.address && (
+                            <div className="col-span-2">
+                              <div className="text-sm text-muted-foreground">Address</div>
+                              <div className="text-base">{transactionDetails.contact.address}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.balance !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Balance</div>
+                              <div className="text-base font-semibold">
+                                {formatCurrency(transactionDetails.contact.balance, { generalSettings })}
+                              </div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.creditLimit !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Credit Limit</div>
+                              <div className="text-base font-semibold">
+                                {formatCurrency(transactionDetails.contact.creditLimit, { generalSettings })}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm text-muted-foreground">Is Individual</div>
+                            <div className="text-base font-semibold">
+                              <Badge variant={transactionDetails.contact.isIndividual ? "default" : "secondary"}>
+                                {transactionDetails.contact.isIndividual ? "Yes" : "No"}
+                              </Badge>
+                            </div>
+                          </div>
+                          {transactionDetails.contact.companyName && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Company Name</div>
+                              <div className="text-base">{transactionDetails.contact.companyName}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.companyAddress && (
+                            <div className="col-span-2">
+                              <div className="text-sm text-muted-foreground">Company Address</div>
+                              <div className="text-base">{transactionDetails.contact.companyAddress}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.companyPhone && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Company Phone</div>
+                              <div className="text-base">{transactionDetails.contact.companyPhone}</div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.createdAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Created At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.contact.createdAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                          {transactionDetails.contact.updatedAt && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Updated At</div>
+                              <div className="text-sm">
+                                {new Date(transactionDetails.contact.updatedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Timestamps */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Timestamps</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        {transactionDetails.createdAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
+                            <div className="text-base font-semibold">
+                              {new Date(transactionDetails.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                        {transactionDetails.updatedAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">{tCommon("updatedAt")}</div>
+                            <div className="text-base font-semibold">
+                              {new Date(transactionDetails.updatedAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-base">{paymentDetails.contact.name}</div>
-                    </div>
-                  )}
-                  {paymentDetails.branch && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        {tPayments("branch") || "Branch"}
-                      </div>
-                      <div className="text-base">{paymentDetails.branch.name}</div>
-                    </div>
-                  )}
-                  {paymentDetails.notes && (
-                    <div className="col-span-2">
-                      <div className="text-sm text-muted-foreground">{tPayments("notes")}</div>
-                      <div className="text-base">{paymentDetails.notes}</div>
-                    </div>
-                  )}
-                  {paymentDetails.createdAt && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
-                      <div className="text-base">
-                        {new Date(paymentDetails.createdAt).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                  {paymentDetails.updatedAt && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">{tCommon("updatedAt")}</div>
-                      <div className="text-base">
-                        {new Date(paymentDetails.updatedAt).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
                 </div>
-              </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">
-                {tPayments("noPaymentDetails") || "No payment details found"}
+                No transaction details found
               </div>
             )}
           </SheetContent>
@@ -802,19 +1209,11 @@ export default function AccountingPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
-        title={
-          accountToDelete
-            ? t("deleteAccountTitle")
-            : paymentToDelete
-              ? tPayments("deletePaymentTitle")
-              : tCommon("confirmDelete")
-        }
+        title={accountToDelete ? t("deleteAccountTitle") : tCommon("confirmDelete")}
         description={
           accountToDelete
             ? t("deleteAccountDescription", { name: accountToDelete.name })
-            : paymentToDelete
-              ? tPayments("deletePaymentDescription")
-              : tCommon("confirmDeleteDescription")
+            : tCommon("confirmDeleteDescription")
         }
       />
     </PageLayout>
