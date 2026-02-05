@@ -889,7 +889,8 @@
     "searchCategory": "Search category...",
     "noCategoryFound": "No category found.",
     "createCategoryInline": "Create",
-    "createCategoryDialog": "Create with details"
+    "createCategoryDialog": "Create with details",
+    "createCategory": "Create Category"
   },
   "incomeExpenseCategories": {
     "title": "Income & Expense Categories",
@@ -907,6 +908,8 @@
     "isActive": "Active",
     "noCategories": "No categories found",
     "deleteCategoryTitle": "Delete Category",
-    "deleteCategoryDescription": "Are you sure you want to delete this category? This action cannot be undone."
+    "deleteCategoryDescription": "Are you sure you want to delete this category? This action cannot be undone.",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter category description"
   }
 }

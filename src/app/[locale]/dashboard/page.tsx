@@ -1,7 +1,25 @@
 "use client"
 
+import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-card"
+import { FloatingActionButton } from "@/components/common/floating-action-button"
+import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { cn } from "@/lib/utils"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable"
 import {
   ArrowRight,
   BarChart3,
@@ -12,6 +30,7 @@ import {
   FileText,
   FolderTree,
   Package,
+  Plus,
   Ruler,
   Settings,
   Shield,
@@ -20,11 +39,11 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
-  Wallet
+  Wallet,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 interface DashboardItem {
   id: string
@@ -35,7 +54,10 @@ interface DashboardItem {
   bgColor: string
   enabled: boolean
   category?: string
+  order?: number
 }
+
+const STORAGE_KEY = "dashboard-item-order"
 
 export default function DashboardPage() {
   const t = useTranslations()
@@ -44,10 +66,20 @@ export default function DashboardPage() {
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
   const currentBusiness = useCurrentBusiness()
   const enabledModules = currentBusiness?.modules || []
+  const [isLoading, setIsLoading] = useState(true)
   
   // State for "See More" functionality
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   
+  // Load saved order from localStorage
+  const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : {}
+    }
+    return {}
+  })
+
   // Items to show initially per category
   const initialItemsToShow: Record<string, number> = {
     main: 4,
@@ -249,18 +281,87 @@ export default function DashboardPage() {
   // Filter enabled items
   const enabledItems = allItems.filter((item) => item.enabled)
 
-  // Group items by category
-  const groupedItems = enabledItems.reduce(
-    (acc, item) => {
+  // Apply saved order to items
+  const orderedItems = useMemo(() => {
+    return enabledItems.map((item) => {
       const category = item.category || "other"
-      if (!acc[category]) {
-        acc[category] = []
+      const categoryOrder = savedOrder[category] || []
+      const orderIndex = categoryOrder.indexOf(item.id)
+      return {
+        ...item,
+        order: orderIndex >= 0 ? orderIndex : Infinity,
       }
-      acc[category].push(item)
-      return acc
-    },
-    {} as Record<string, DashboardItem[]>
+    })
+  }, [enabledItems, savedOrder])
+
+  // Group items by category and sort by order
+  const groupedItems = useMemo(() => {
+    const grouped = orderedItems.reduce(
+      (acc, item) => {
+        const category = item.category || "other"
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(item)
+        return acc
+      },
+      {} as Record<string, DashboardItem[]>
+    )
+
+    // Sort each category by order
+    Object.keys(grouped).forEach((category) => {
+      grouped[category].sort((a, b) => {
+        const orderA = a.order ?? Infinity
+        const orderB = b.order ?? Infinity
+        return orderA - orderB
+      })
+    })
+
+    return grouped
+  }, [orderedItems])
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   )
+
+  const handleDragEnd = (event: DragEndEvent, category: string) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const items = groupedItems[category] || []
+    const oldIndex = items.findIndex((item) => item.id === active.id)
+    const newIndex = items.findIndex((item) => item.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newItems = arrayMove(items, oldIndex, newIndex)
+    const newOrder = newItems.map((item) => item.id)
+
+    // Update saved order
+    const updatedOrder = {
+      ...savedOrder,
+      [category]: newOrder,
+    }
+    setSavedOrder(updatedOrder)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrder))
+  }
 
   const handleItemClick = (href: string) => {
     router.push(`/${locale}${href}`)
@@ -273,16 +374,58 @@ export default function DashboardPage() {
     }))
   }
 
+  // Quick actions for FAB
+  const quickActions = useMemo(() => {
+    const actions = []
+    
+    if (enabledModules.includes("inventory")) {
+      actions.push({
+        id: "create-product",
+        label: t("sidebar.products"),
+        icon: Package,
+        onClick: () => handleItemClick("/dashboard/products"),
+      })
+    }
+    
+    if (enabledModules.includes("accounting")) {
+      actions.push({
+        id: "create-income",
+        label: t("sidebar.income") || "Income",
+        icon: TrendingUp,
+        onClick: () => handleItemClick("/dashboard/income"),
+      })
+      actions.push({
+        id: "create-expense",
+        label: t("sidebar.expense") || "Expense",
+        icon: TrendingDown,
+        onClick: () => handleItemClick("/dashboard/expense"),
+      })
+    }
+    
+    actions.push({
+      id: "create-contact",
+      label: t("sidebar.contacts"),
+      icon: Users,
+      onClick: () => handleItemClick("/dashboard/contacts"),
+    })
+
+    return actions
+  }, [enabledModules, t])
+
   const renderCategoryGrid = (
     items: DashboardItem[],
     category: string,
     title: string,
-    gridCols: string = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+    gridCols: string = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
   ) => {
     const isExpanded = expandedCategories[category] || false
     const initialCount = initialItemsToShow[category] || items.length
     const itemsToShow = isExpanded ? items : items.slice(0, initialCount)
     const hasMore = items.length > initialCount
+
+    if (itemsToShow.length === 0) return null
+
+    const itemIds = itemsToShow.map((item) => item.id)
 
     return (
       <div className="space-y-4">
@@ -291,7 +434,7 @@ export default function DashboardPage() {
           {hasMore && (
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1 text-sm text-primary hover:underline"
+              className="flex items-center gap-1 text-sm text-primary hover:underline transition-colors"
             >
               {isExpanded ? (
                 <>
@@ -307,45 +450,45 @@ export default function DashboardPage() {
             </button>
           )}
         </div>
-        <div className={cn("grid gap-2 sm:gap-2.5 md:gap-3", gridCols)}>
-          {itemsToShow.map((item) => {
-            const Icon = item.icon
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleItemClick(item.href)}
-                className={cn(
-                  "group relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border-2 border-transparent px-1.5 py-2 sm:px-2 sm:py-3 md:px-3 md:py-4 transition-all duration-200",
-                  "hover:scale-105 hover:shadow-lg",
-                  "focus:outline-none focus:ring-2 focus:ring-offset-2",
-                  item.bgColor,
-                  "hover:border-current/20"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110",
-                    item.bgColor,
-                    "border-2 border-current/20"
-                  )}
-                >
-                  <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7", item.color)} />
-                </div>
-                <span className="text-xs font-medium text-foreground text-center px-1 leading-tight">{item.title}</span>
-              </button>
-            )
-          })}
-        </div>
+        {isLoading ? (
+          <DashboardSkeletonGrid count={itemsToShow.length} />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => handleDragEnd(event, category)}
+          >
+            <SortableContext items={itemIds} strategy={rectSortingStrategy}>
+              <div className={cn("grid gap-2 sm:gap-2.5 md:gap-3", gridCols)}>
+                {itemsToShow.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <DraggableDashboardCard
+                      key={item.id}
+                      id={item.id}
+                      title={item.title}
+                      href={item.href}
+                      icon={Icon}
+                      color={item.color}
+                      bgColor={item.bgColor}
+                      onClick={() => handleItemClick(item.href)}
+                    />
+                  )
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">{t("sidebar.dashboard")}</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("sidebar.dashboard")}</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           {currentBusiness?.name
             ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
             : "Welcome back! Here's what's happening with your business today."}
@@ -359,7 +502,7 @@ export default function DashboardPage() {
 
       {/* Inventory Grid */}
       {groupedItems.inventory && groupedItems.inventory.length > 0 &&
-        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"), "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6")
+        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"), "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6")
       }
 
       {/* Accounting Grid */}
@@ -378,8 +521,8 @@ export default function DashboardPage() {
       }
 
       {/* Empty State */}
-      {enabledItems.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+      {!isLoading && enabledItems.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 sm:p-12 text-center">
           <Package className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-semibold">No modules enabled</h3>
           <p className="mb-4 text-sm text-muted-foreground">
@@ -387,13 +530,16 @@ export default function DashboardPage() {
           </p>
           <button
             onClick={() => handleItemClick("/dashboard/settings")}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Go to Settings
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       )}
+
+      {/* Floating Action Button */}
+      {quickActions.length > 0 && <FloatingActionButton actions={quickActions} />}
     </div>
   )
 }
