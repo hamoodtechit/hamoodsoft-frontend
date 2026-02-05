@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Download, FileSpreadsheet, FileText } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { memo } from "react"
 import { toast } from "sonner"
 import { exportToExcel, exportToCSV, ExportColumn } from "@/lib/utils/export"
 
@@ -19,7 +20,7 @@ interface ExportButtonProps<T extends Record<string, any>> {
   disabled?: boolean
 }
 
-export function ExportButton<T extends Record<string, any>>({
+export const ExportButton = memo(function ExportButton<T extends Record<string, any>>({
   data,
   columns,
   filename,
@@ -67,4 +68,4 @@ export function ExportButton<T extends Record<string, any>>({
       </DropdownMenuContent>
     </DropdownMenu>
   )
-}
+}) as <T extends Record<string, any>>(props: ExportButtonProps<T>) => JSX.Element

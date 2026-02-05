@@ -1,7 +1,6 @@
 "use client"
 
 import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-card"
-import { FloatingActionButton } from "@/components/common/floating-action-button"
 import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { cn } from "@/lib/utils"
@@ -374,43 +373,6 @@ export default function DashboardPage() {
     }))
   }
 
-  // Quick actions for FAB
-  const quickActions = useMemo(() => {
-    const actions = []
-    
-    if (enabledModules.includes("inventory")) {
-      actions.push({
-        id: "create-product",
-        label: t("sidebar.products"),
-        icon: Package,
-        onClick: () => handleItemClick("/dashboard/products"),
-      })
-    }
-    
-    if (enabledModules.includes("accounting")) {
-      actions.push({
-        id: "create-income",
-        label: t("sidebar.income") || "Income",
-        icon: TrendingUp,
-        onClick: () => handleItemClick("/dashboard/income"),
-      })
-      actions.push({
-        id: "create-expense",
-        label: t("sidebar.expense") || "Expense",
-        icon: TrendingDown,
-        onClick: () => handleItemClick("/dashboard/expense"),
-      })
-    }
-    
-    actions.push({
-      id: "create-contact",
-      label: t("sidebar.contacts"),
-      icon: Users,
-      onClick: () => handleItemClick("/dashboard/contacts"),
-    })
-
-    return actions
-  }, [enabledModules, t])
 
   const renderCategoryGrid = (
     items: DashboardItem[],
@@ -484,7 +446,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("sidebar.dashboard")}</h1>
@@ -538,8 +500,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Floating Action Button */}
-      {quickActions.length > 0 && <FloatingActionButton actions={quickActions} />}
     </div>
   )
 }

@@ -17,6 +17,10 @@ import {
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useTransactions } from "@/lib/hooks/use-transactions"
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useHasModuleAccess } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Transaction } from "@/types"
 import { Eye, Plus, TrendingDown } from "lucide-react"
@@ -37,12 +41,16 @@ export default function ExpensePage() {
   const [viewTransactionId, setViewTransactionId] = useState<string | null>(null)
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false)
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
+  const canCreate = useHasPermission(PERMISSIONS.TRANSACTIONS_CREATE)
+
   // Check if user has access to accounting module
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("accounting")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
   // Fetch all transactions and filter for expense
   const { data: transactionsData, isLoading } = useTransactions({ limit: 1000 })
@@ -63,7 +71,16 @@ export default function ExpensePage() {
     return allTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
   }, [viewTransactionId, allTransactions])
 
-  if (!currentBusiness?.modules?.includes("accounting")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title="Expense" description="Manage expense transactions" maxWidth="full">
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title="Access Denied" description="You don't have access to this module">
         <Card>
@@ -93,10 +110,12 @@ export default function ExpensePage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createExpense") || "Create Expense"}
-            </Button>
+            <PermissionGuard permission={PERMISSIONS.TRANSACTIONS_CREATE}>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createExpense") || "Create Expense"}
+              </Button>
+            </PermissionGuard>
           </div>
         </CardHeader>
 

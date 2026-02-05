@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { LayoutGrid, Table } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { memo } from "react"
 
 export type ViewMode = "cards" | "table"
 
@@ -11,7 +12,7 @@ interface ViewToggleProps {
   onViewChange: (view: ViewMode) => void
 }
 
-export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
+export const ViewToggle = memo(function ViewToggle({ view, onViewChange }: ViewToggleProps) {
   const t = useTranslations("common")
 
   return (
@@ -36,4 +37,4 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
       </Button>
     </div>
   )
-}
+})

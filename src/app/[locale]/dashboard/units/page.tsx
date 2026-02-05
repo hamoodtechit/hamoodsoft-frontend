@@ -20,6 +20,10 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteUnit, useUnits } from "@/lib/hooks/use-units"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Unit } from "@/types"
 import { MoreVertical, Pencil, Plus, Ruler, Search, Trash2 } from "lucide-react"
@@ -70,14 +74,29 @@ export default function UnitsPage() {
     )
   }, [units, search])
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+  const canCreate = useHasPermission(PERMISSIONS.UNITS_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.UNITS_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.UNITS_DELETE)
+
   // Check if user has access to inventory module
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("inventory")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
-  if (!currentBusiness?.modules?.includes("inventory")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")}>
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>

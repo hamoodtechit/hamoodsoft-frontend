@@ -1,6 +1,7 @@
 "use client"
 
 import { DashboardHeader } from "@/components/layout/dashboard-header"
+import { PermissionsProvider } from "@/lib/providers/permissions-provider"
 import { getNextOnboardingStep } from "@/lib/hooks/use-onboarding"
 import { useAuthStore } from "@/store"
 import { useParams, usePathname, useRouter } from "next/navigation"
@@ -143,13 +144,15 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="flex flex-1 flex-col overflow-hidden transition-all duration-300">
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
-        </main>
+    <PermissionsProvider>
+      <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden transition-all duration-300">
+          <DashboardHeader />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </PermissionsProvider>
   )
 }

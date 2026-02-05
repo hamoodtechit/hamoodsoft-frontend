@@ -21,10 +21,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { permissionGroups } from "@/constants/permissions"
+import { useBranches } from "@/lib/hooks/use-branches"
 import { useCreateRole, useUpdateRole } from "@/lib/hooks/use-roles"
 import {
   createRoleSchema,
   type CreateRoleInput,
+  normalizePermission,
   type UpdateRoleInput,
   updateRoleSchema,
 } from "@/lib/validations/roles"
@@ -45,6 +47,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
   const tCommon = useTranslations("common")
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
+  const { data: branches = [] } = useBranches()
 
   const isEdit = !!role
   const form = useForm<CreateRoleInput | UpdateRoleInput>({
@@ -52,30 +55,51 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
     defaultValues: {
       name: "",
       permissions: [],
+      allowedBranchIds: [],
     },
   })
+
+  // Permission pattern for validation
+  const permissionPattern = /^[a-z_]+:[a-z_]+$/
 
   // Update form when role changes
   useEffect(() => {
     if (role) {
+      // Normalize permissions when loading role for editing
+      const normalizedPermissions = (role.permissions || [])
+        .map(normalizePermission)
+        .filter((p) => permissionPattern.test(p))
+        .filter((p, index, arr) => arr.indexOf(p) === index) // Remove duplicates
+      
       form.reset({
         name: role.name || "",
-        permissions: role.permissions || [],
+        permissions: normalizedPermissions,
+        allowedBranchIds: role.allowedBranchIds || [],
       })
     } else {
       form.reset({
         name: "",
         permissions: [],
+        allowedBranchIds: [],
       })
     }
   }, [role, form])
 
   const onSubmit = (data: CreateRoleInput | UpdateRoleInput) => {
+    // Permissions are already normalized by zod schema transform
+    // But we ensure they're clean here as well
+    const normalizedData = {
+      ...data,
+      permissions: (data.permissions || [])
+        .filter((p) => typeof p === "string" && p.length > 0)
+        .filter((p, index, arr) => arr.indexOf(p) === index), // Remove duplicates
+    }
+    
     if (isEdit && role) {
       updateRoleMutation.mutate(
         {
           id: role.id,
-          data: data as UpdateRoleInput,
+          data: normalizedData as UpdateRoleInput,
         },
         {
           onSuccess: () => {
@@ -85,7 +109,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
         }
       )
     } else {
-      createRoleMutation.mutate(data as CreateRoleInput, {
+      createRoleMutation.mutate(normalizedData as CreateRoleInput, {
         onSuccess: () => {
           onOpenChange(false)
           form.reset()
@@ -97,6 +121,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
   const isLoading = createRoleMutation.isPending || updateRoleMutation.isPending
 
   const selectedPermissions = form.watch("permissions") || []
+  const selectedBranchIds = form.watch("allowedBranchIds") || []
 
   const togglePermission = (permission: string) => {
     const current = selectedPermissions
@@ -106,9 +131,17 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
     form.setValue("permissions", newPermissions as any)
   }
 
+  const toggleBranch = (branchId: string) => {
+    const current = selectedBranchIds
+    const newBranchIds = current.includes(branchId)
+      ? current.filter((id) => id !== branchId)
+      : [...current, branchId]
+    form.setValue("allowedBranchIds", newBranchIds)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -140,6 +173,50 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
                     />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Allowed Branches */}
+            <FormField
+              control={form.control}
+              name="allowedBranchIds"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Allowed Branches (Optional)</FormLabel>
+                  <FormControl>
+                    <div className="rounded-md border p-3">
+                      {branches.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-2">No branches available</p>
+                      ) : (
+                        <div className="space-y-2 max-h-[120px] overflow-y-auto pr-2">
+                          {branches.map((branch) => (
+                            <div
+                              key={branch.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={`branch-${branch.id}`}
+                                checked={selectedBranchIds.includes(branch.id)}
+                                onCheckedChange={() => toggleBranch(branch.id)}
+                                disabled={isLoading}
+                              />
+                              <label
+                                htmlFor={`branch-${branch.id}`}
+                                className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {branch.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave empty to allow access to all branches. Select specific branches to restrict access.
+                  </p>
                 </FormItem>
               )}
             />

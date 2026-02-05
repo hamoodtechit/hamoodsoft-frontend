@@ -31,6 +31,10 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useProducts } from "@/lib/hooks/use-products"
 import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
@@ -369,14 +373,29 @@ export default function SalesPage() {
 
   const { data: viewSale, isLoading: isViewSaleLoading } = useSale(viewSaleId || undefined)
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.SALES)
+  const canCreate = useHasPermission(PERMISSIONS.SALES_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.SALES_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.SALES_DELETE)
+
   // Secure by module access (sales)
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("sales")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
-  if (!currentBusiness?.modules?.includes("sales")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")} maxWidth="full">
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>
@@ -522,10 +541,12 @@ export default function SalesPage() {
                 filename="sales"
                 disabled={isLoading || sales.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createSale")}
-              </Button>
+              <PermissionGuard permission={PERMISSIONS.SALES_CREATE}>
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createSale")}
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>
@@ -538,10 +559,12 @@ export default function SalesPage() {
               <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">{t("noSales")}</h3>
               <p className="text-muted-foreground mb-4">{t("noSalesDescription")}</p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createSale")}
-              </Button>
+              <PermissionGuard permission={PERMISSIONS.SALES_CREATE}>
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createSale")}
+                </Button>
+              </PermissionGuard>
             </div>
           ) : viewMode === "table" ? (
             <div className="rounded-md border">

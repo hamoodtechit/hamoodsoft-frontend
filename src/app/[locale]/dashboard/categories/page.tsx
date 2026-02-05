@@ -21,6 +21,12 @@ import {
   useCategories,
   useDeleteCategory,
 } from "@/lib/hooks/use-categories"
+import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
+import { useParams, useRouter } from "next/navigation"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Category } from "@/types"
 import { FolderTree, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -30,9 +36,48 @@ import { useEffect, useMemo, useState } from "react"
 export default function CategoriesPage() {
   const t = useTranslations("categories")
   const tCommon = useTranslations("common")
+  const tModules = useTranslations("modulesPages.inventory")
+  const params = useParams()
+  const router = useRouter()
+  const locale = params.locale as string
   const { selectedBranchId } = useBranchSelection()
+  const currentBusiness = useCurrentBusiness()
   const { data: categories = [], isLoading } = useCategories(selectedBranchId || undefined)
   const deleteCategoryMutation = useDeleteCategory()
+  
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+  const canCreate = useHasPermission(PERMISSIONS.CATEGORIES_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.CATEGORIES_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.CATEGORIES_DELETE)
+  
+  // Secure by module access (inventory)
+  useEffect(() => {
+    if (!isCheckingAccess && !hasAccess) {
+      router.push(`/${locale}/dashboard`)
+    }
+  }, [hasAccess, isCheckingAccess, locale, router])
+  
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")}>
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+  
+  if (!hasAccess) {
+    return (
+      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
+          </CardContent>
+        </Card>
+      </PageLayout>
+    )
+  }
 
   // Debug: Log categories data
   useEffect(() => {

@@ -1,12 +1,22 @@
-import { AssignUserToRoleInput, CreateRoleInput, UpdateRoleInput } from "@/lib/validations/roles"
+import { AssignUserToRoleInput, CreateRoleInput, UpdateRoleInput, normalizePermission } from "@/lib/validations/roles"
 import { ApiResponse, Role } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
 
+// Permission pattern: lowercase letters and underscores only
+const permissionPattern = /^[a-z_]+:[a-z_]+$/
+
 // Normalize role data from API response (with rolePermissions) to frontend format
 const normalizeRole = (role: any): Role => {
-  // Extract permission keys from rolePermissions array
-  const permissions = role.rolePermissions?.map((rp: any) => rp.permission?.key).filter(Boolean) || []
+  // Extract permission keys from rolePermissions array and normalize them
+  const rawPermissions = role.rolePermissions?.map((rp: any) => rp.permission?.key).filter(Boolean) || []
+  
+  // Normalize all permissions to snake_case format
+  const permissions = rawPermissions
+    .map(normalizePermission)
+    .filter((p: string) => permissionPattern.test(p))
+    // Remove duplicates
+    .filter((p: string, index: number, arr: string[]) => arr.indexOf(p) === index)
   
   return {
     id: role.id,
@@ -28,9 +38,18 @@ const normalizeRoles = (roles: any[]): Role[] => {
 
 export const rolesApi = {
   createRole: async (data: CreateRoleInput): Promise<Role> => {
+    // Normalize permissions before sending to API
+    const normalizedData = {
+      ...data,
+      permissions: data.permissions
+        .map(normalizePermission)
+        .filter((p) => permissionPattern.test(p))
+        .filter((p, index, arr) => arr.indexOf(p) === index), // Remove duplicates
+    }
+    
     const response = await apiClient.post<ApiResponse<Role>>(
       endpoints.roles.create,
-      data
+      normalizedData
     )
     return normalizeRole(response.data.data)
   },
@@ -50,9 +69,20 @@ export const rolesApi = {
   },
 
   updateRole: async (id: string, data: UpdateRoleInput): Promise<Role> => {
+    // Normalize permissions before sending to API
+    const normalizedData = {
+      ...data,
+      ...(data.permissions && {
+        permissions: data.permissions
+          .map(normalizePermission)
+          .filter((p) => permissionPattern.test(p))
+          .filter((p, index, arr) => arr.indexOf(p) === index), // Remove duplicates
+      }),
+    }
+    
     const response = await apiClient.patch<ApiResponse<Role>>(
       endpoints.roles.update(id),
-      data
+      normalizedData
     )
     return normalizeRole(response.data.data)
   },

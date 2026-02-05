@@ -35,6 +35,10 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useTransactions } from "@/lib/hooks/use-transactions"
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Account, AccountLedgerEntry, Transaction } from "@/types"
 import {
@@ -72,12 +76,18 @@ export default function AccountingPage() {
   const [viewTransactionId, setViewTransactionId] = useState<string | null>(null)
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false)
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
+  const canCreateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_CREATE)
+  const canUpdateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_UPDATE)
+  const canDeleteAccount = useHasPermission(PERMISSIONS.ACCOUNTS_DELETE)
+
   // Check if user has access to accounting module
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("accounting")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
   // Accounts
   const { data: accountsData, isLoading: isLoadingAccounts } = useAccounts({
@@ -118,7 +128,22 @@ export default function AccountingPage() {
 
   const updateAccountMutation = useUpdateAccount()
 
-  if (!currentBusiness?.modules?.includes("accounting")) {
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
+  const canCreateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_CREATE)
+  const canUpdateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_UPDATE)
+  const canDeleteAccount = useHasPermission(PERMISSIONS.ACCOUNTS_DELETE)
+
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title="Accounting" description="Manage accounts and transactions">
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title="Access Denied" description="You don't have access to this module">
         <Card>

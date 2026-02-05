@@ -10,6 +10,10 @@ export function useRoles() {
   return useQuery({
     queryKey: ["roles"],
     queryFn: () => rolesApi.getRoles(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if we have cached data
   })
 }
 

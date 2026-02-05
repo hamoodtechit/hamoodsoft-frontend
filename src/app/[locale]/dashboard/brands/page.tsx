@@ -20,6 +20,10 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useBrands, useCreateBrand, useDeleteBrand, useUpdateBrand } from "@/lib/hooks/use-brands"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Brand } from "@/types"
 import { Building2, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -71,14 +75,29 @@ export default function BrandsPage() {
     )
   }, [brands, search])
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+  const canCreate = useHasPermission(PERMISSIONS.BRANDS_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.BRANDS_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.BRANDS_DELETE)
+
   // Check if user has access to inventory module
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("inventory")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
-  if (!currentBusiness?.modules?.includes("inventory")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")}>
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>
@@ -232,10 +251,12 @@ export default function BrandsPage() {
                 filename="brands"
                 disabled={isLoading || filteredBrands.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createBrand")}
-              </Button>
+              <PermissionGuard permission={PERMISSIONS.BRANDS_CREATE}>
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createBrand")}
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>

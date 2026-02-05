@@ -30,6 +30,10 @@ import { useBranches } from "@/lib/hooks/use-branches"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteProduct, useProduct, useProducts } from "@/lib/hooks/use-products"
 import { useStocks } from "@/lib/hooks/use-stocks"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { PermissionGuard } from "@/components/common/permission-guard"
+import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Product } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -50,6 +54,12 @@ export default function ProductsPage() {
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
   const deleteMutation = useDeleteProduct()
+  
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+  const canCreate = useHasPermission(PERMISSIONS.PRODUCTS_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.PRODUCTS_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.PRODUCTS_DELETE)
 
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
@@ -371,12 +381,21 @@ export default function ProductsPage() {
 
   // Secure by module access (inventory)
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("inventory")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
-  if (!currentBusiness?.modules?.includes("inventory")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")} maxWidth="full">
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>
@@ -464,10 +483,12 @@ export default function ProductsPage() {
                 filename="products"
                 disabled={isLoading || products.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createProduct")}
-              </Button>
+              <PermissionGuard permission={PERMISSIONS.PRODUCTS_CREATE}>
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createProduct")}
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>
@@ -480,10 +501,12 @@ export default function ProductsPage() {
               <Package className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">{t("noProducts")}</h3>
               <p className="text-muted-foreground mb-4">{t("noProductsDescription")}</p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createProduct")}
-              </Button>
+              <PermissionGuard permission={PERMISSIONS.PRODUCTS_CREATE}>
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createProduct")}
+                </Button>
+              </PermissionGuard>
             </div>
           ) : viewMode === "table" ? (
             <div className="rounded-md border">
@@ -503,17 +526,21 @@ export default function ProductsPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {t("viewDetails")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(row)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {tCommon("edit")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(row)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {tCommon("delete")}
-                      </DropdownMenuItem>
+                      {canUpdate && (
+                        <DropdownMenuItem onClick={() => handleEdit(row)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {tCommon("edit")}
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(row)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {tCommon("delete")}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -615,17 +642,21 @@ export default function ProductsPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               {t("viewDetails")}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(p)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(p)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => handleEdit(p)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {tCommon("edit")}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(p)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

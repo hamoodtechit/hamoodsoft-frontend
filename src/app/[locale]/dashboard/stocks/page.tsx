@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/sheet"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useHasModuleAccess } from "@/lib/hooks/use-permissions"
+import { MODULES } from "@/lib/utils/permissions"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { useProducts } from "@/lib/hooks/use-products"
 import {
   useStockHistory,
@@ -236,14 +239,26 @@ export default function StocksPage() {
     },
   ], [productMap, products])
 
+  // Permission checks
+  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+
   // Secure by module access (inventory)
   useEffect(() => {
-    if (currentBusiness && !currentBusiness.modules?.includes("inventory")) {
+    if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
-  }, [currentBusiness, locale, router])
+  }, [hasAccess, isCheckingAccess, locale, router])
 
-  if (!currentBusiness?.modules?.includes("inventory")) {
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")}>
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
         <Card>
