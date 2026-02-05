@@ -82,13 +82,6 @@ export default function AccountingPage() {
   const canUpdateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_UPDATE)
   const canDeleteAccount = useHasPermission(PERMISSIONS.ACCOUNTS_DELETE)
 
-  // Check if user has access to accounting module
-  useEffect(() => {
-    if (!isCheckingAccess && !hasAccess) {
-      router.push(`/${locale}/dashboard`)
-    }
-  }, [hasAccess, isCheckingAccess, locale, router])
-
   // Accounts
   const { data: accountsData, isLoading: isLoadingAccounts } = useAccounts({
     limit: 1000,
@@ -127,12 +120,6 @@ export default function AccountingPage() {
   
 
   const updateAccountMutation = useUpdateAccount()
-
-  // Permission checks
-  const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
-  const canCreateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_CREATE)
-  const canUpdateAccount = useHasPermission(PERMISSIONS.ACCOUNTS_UPDATE)
-  const canDeleteAccount = useHasPermission(PERMISSIONS.ACCOUNTS_DELETE)
 
   // Show loading while checking permissions
   if (isCheckingAccess) {
