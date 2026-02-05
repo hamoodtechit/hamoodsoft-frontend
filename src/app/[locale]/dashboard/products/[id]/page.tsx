@@ -23,7 +23,7 @@ export default function ProductDetailsPage() {
   const productId = params.id as string
 
   const { data: product, isLoading } = useProduct(productId)
-  console.log(product)
+
   const { data: branches } = useBranches()
   const [activeTab, setActiveTab] = useState<TabType>("overview")
 

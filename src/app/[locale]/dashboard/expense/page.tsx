@@ -17,7 +17,7 @@ import {
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useTransactions } from "@/lib/hooks/use-transactions"
 import { useAppSettings } from "@/lib/providers/settings-provider"
-import { useHasModuleAccess } from "@/lib/hooks/use-permissions"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
 import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
