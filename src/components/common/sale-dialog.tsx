@@ -2,31 +2,32 @@
 
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select"
+import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useContacts } from "@/lib/hooks/use-contacts"
@@ -35,14 +36,14 @@ import { useCreateSale, useUpdateSale } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
 import { useUnits } from "@/lib/hooks/use-units"
 import {
-  createSaleSchema,
-  updateSaleSchema,
-  type CreateSaleInput,
-  type UpdateSaleInput,
+    createSaleSchema,
+    updateSaleSchema,
+    type CreateSaleInput,
+    type UpdateSaleInput,
 } from "@/lib/validations/sales"
 import { Product, ProductVariant, Sale } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
+import { CreditCard, DollarSign, FileText, Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -61,6 +62,8 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const { data: units = [] } = useUnits(selectedBranchId || undefined)
   const { data: contactsData } = useContacts({ type: "CUSTOMER" })
   const contacts = contactsData?.items || []
+  const { data: accountsData } = useAccounts({ limit: 1000 })
+  const accounts = accountsData?.items?.filter(acc => acc.isActive) || []
   const createMutation = useCreateSale()
   const updateMutation = useUpdateSale()
 
@@ -257,6 +260,20 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const [selectedProducts, setSelectedProducts] = useState<Record<number, Product | null>>({})
   const [selectedVariants, setSelectedVariants] = useState<Record<number, ProductVariant | null>>({})
   const [productSearchQueries, setProductSearchQueries] = useState<Record<number, string>>({})
+  
+  // Payment method and account selection
+  type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED"
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH")
+  const [cashAccountId, setCashAccountId] = useState<string>("")
+  const [bankAccountId, setBankAccountId] = useState<string>("")
+  
+  // Payment splits for MIXED payment method
+  interface PaymentSplit {
+    id: string
+    accountId: string
+    amount: number
+  }
+  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([])
 
   // Watch paidAmount to calculate total in create mode
   const paidAmount = useWatch({
@@ -290,6 +307,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         setSelectedProducts({})
         setSelectedVariants({})
         setProductSearchQueries({})
+        // Reset payment method and accounts
+        setPaymentMethod("CASH")
+        setCashAccountId("")
+        setBankAccountId("")
+        setPaymentSplits([])
       }
     }
   }, [open, defaultValues, form, isEdit, selectedBranchId])
@@ -337,7 +359,43 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       return
     }
 
-    createMutation.mutate(data as CreateSaleInput, {
+    // Build payments array based on payment method
+    const payments: Array<{ accountId: string; amount: number; type: "SALE_PAYMENT" }> = []
+    const totalAmount = total || 0
+    const paidAmount = form.watch("paidAmount" as any) || 0
+    
+    if (paymentMethod === "CASH" && cashAccountId) {
+      payments.push({
+        accountId: cashAccountId,
+        amount: paidAmount || totalAmount,
+        type: "SALE_PAYMENT",
+      })
+    } else if (paymentMethod === "CARD" && bankAccountId) {
+      payments.push({
+        accountId: bankAccountId,
+        amount: paidAmount || totalAmount,
+        type: "SALE_PAYMENT",
+      })
+    } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
+      // Use payment splits
+      paymentSplits.forEach(split => {
+        if (split.accountId && split.amount > 0) {
+          payments.push({
+            accountId: split.accountId,
+            amount: split.amount,
+            type: "SALE_PAYMENT",
+          })
+        }
+      })
+    }
+    // CREDIT payment method doesn't add any payment (paymentStatus will be DUE)
+
+    const saleData: CreateSaleInput = {
+      ...(data as CreateSaleInput),
+      payments: payments.length > 0 ? payments : undefined,
+    }
+
+    createMutation.mutate(saleData, {
       onSuccess: () => {
         onOpenChange(false)
         form.reset(defaultValues)
@@ -1217,12 +1275,211 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                       )}
 
                       {total !== null && (
-                        <div className="flex justify-end pt-4 border-t">
-                          <div className="text-right">
-                            <Label className="text-sm text-muted-foreground">{t("total")}</Label>
-                            <p className="text-2xl font-bold">{total.toFixed(2)}</p>
+                        <>
+                          {/* Payment Method Selection */}
+                          <div className="space-y-4 pt-4 border-t">
+                            <Label className="text-base font-medium">{t("paymentMethod") || "Payment Method"}</Label>
+                            <div className="flex gap-2 flex-wrap">
+                              <Button
+                                type="button"
+                                variant={paymentMethod === "CASH" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setPaymentMethod("CASH")}
+                                className="text-xs"
+                              >
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                Cash
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={paymentMethod === "CARD" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setPaymentMethod("CARD")}
+                                className="text-xs"
+                              >
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Card
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={paymentMethod === "CREDIT" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setPaymentMethod("CREDIT")}
+                                className="text-xs"
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                Credit
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={paymentMethod === "MIXED" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setPaymentMethod("MIXED")}
+                                className="text-xs"
+                              >
+                                Mixed
+                              </Button>
+                            </div>
+
+                            {/* Account Selection for CASH */}
+                            {paymentMethod === "CASH" && accounts.length > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-sm">{t("account") || "Account"}</Label>
+                                <Select value={cashAccountId} onValueChange={setCashAccountId}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={t("selectAccount") || "Select account"} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {accounts.map((account) => (
+                                      <SelectItem key={account.id} value={account.id}>
+                                        {account.name} ({account.type})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {/* Account Selection for CARD */}
+                            {paymentMethod === "CARD" && accounts.length > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-sm">{t("account") || "Account"}</Label>
+                                <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={t("selectAccount") || "Select account"} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {accounts.map((account) => (
+                                      <SelectItem key={account.id} value={account.id}>
+                                        {account.name} ({account.type})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {/* Payment Splits for MIXED */}
+                            {paymentMethod === "MIXED" && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-sm">{t("paymentSplit") || "Payment Split"}</Label>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setPaymentSplits([
+                                        ...paymentSplits,
+                                        {
+                                          id: `split-${Date.now()}-${Math.random()}`,
+                                          accountId: "",
+                                          amount: 0,
+                                        },
+                                      ])
+                                    }}
+                                    className="h-7 text-xs"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    {t("addAccount") || "Add Account"}
+                                  </Button>
+                                </div>
+
+                                {paymentSplits.length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                    {t("noPaymentSplits") || "No payment splits. Click 'Add Account' to split payment."}
+                                  </p>
+                                )}
+
+                                {paymentSplits.map((split, index) => {
+                                  const totalAllocated = paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)
+                                  const remaining = total - totalAllocated
+                                  return (
+                                    <div key={split.id} className="flex gap-2 items-start">
+                                      <div className="flex-1 space-y-1">
+                                        <Select
+                                          value={split.accountId}
+                                          onValueChange={(value) => {
+                                            const updated = [...paymentSplits]
+                                            updated[index].accountId = value
+                                            setPaymentSplits(updated)
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-9 text-xs">
+                                            <SelectValue placeholder={t("selectAccount") || "Select account"} />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {accounts.map((account) => (
+                                              <SelectItem key={account.id} value={account.id}>
+                                                {account.name} ({account.type})
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Input
+                                          type="number"
+                                          value={split.amount || ""}
+                                          onChange={(e) => {
+                                            const updated = [...paymentSplits]
+                                            const amount = Math.max(0, Math.min(Number(e.target.value), total))
+                                            updated[index].amount = amount
+                                            setPaymentSplits(updated)
+                                          }}
+                                          className="h-9 text-xs"
+                                          placeholder="Amount"
+                                          min={0}
+                                          max={total}
+                                          step="0.01"
+                                        />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setPaymentSplits(paymentSplits.filter((_, i) => i !== index))
+                                        }}
+                                        className="h-9 w-9 p-0"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  )
+                                })}
+
+                                {paymentSplits.length > 0 && (
+                                  <div className="pt-2 border-t space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">{t("totalAllocated") || "Total Allocated"}:</span>
+                                      <span className="font-medium">
+                                        {paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0).toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">{t("remaining") || "Remaining"}:</span>
+                                      <span
+                                        className={
+                                          total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0) < 0
+                                            ? "text-destructive font-medium"
+                                            : "font-medium"
+                                        }
+                                      >
+                                        {(total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        </div>
+
+                          <div className="flex justify-end pt-4 border-t">
+                            <div className="text-right">
+                              <Label className="text-sm text-muted-foreground">{t("total")}</Label>
+                              <p className="text-2xl font-bold">{total.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   </>
