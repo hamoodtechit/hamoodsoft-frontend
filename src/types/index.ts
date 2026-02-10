@@ -233,6 +233,10 @@ export interface PurchaseItem {
   unit: string
   price: number
   quantity: number
+  sku?: string
+  discountType?: "NONE" | "PERCENTAGE" | "FIXED"
+  discountAmount?: number
+  totalPrice?: number
 }
 
 export type PurchaseStatus = "PENDING" | "COMPLETED" | "CANCELLED"
@@ -247,7 +251,15 @@ export interface Purchase {
   dueAmount: number
   totalPrice: number // API returns totalPrice, not totalAmount
   totalAmount?: number // Keep for backward compatibility
-  items: PurchaseItem[]
+  discountType?: "NONE" | "PERCENTAGE" | "FIXED"
+  discountAmount?: number
+  taxType?: "NONE" | "PERCENTAGE" | "FIXED"
+  taxRate?: number
+  taxAmount?: number
+  items?: PurchaseItem[] // For backward compatibility
+  purchaseItems?: PurchaseItem[] // API response use purchaseItems
+  payments?: Payment[]
+  paymentStatus?: "PAID" | "DUE" | "PARTIAL"
   branch?: Branch
   contact?: Contact
   poNumber?: string

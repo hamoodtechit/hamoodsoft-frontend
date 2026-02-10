@@ -52,7 +52,8 @@
     "updating": "Updating...",
     "branch": "Branch",
     "status": "Status",
-    "items": "items"
+    "items": "items",
+    "receipt": "Receipt"
   },
   "auth": {
     "login": "Login",
@@ -398,7 +399,8 @@
     "addAccount": "Add Account",
     "noPaymentSplits": "No payment splits. Click 'Add Account' to split payment.",
     "totalAllocated": "Total Allocated",
-    "remaining": "Remaining"
+    "remaining": "Remaining",
+    "payments": "Payments"
   },
   "sales": {
     "title": "Sales",
@@ -469,7 +471,15 @@
     "creditLimit": "Credit Limit",
     "payments": "Payments",
     "paymentTypeSale": "Sale Payment",
-    "paymentTypePurchase": "Purchase Payment"
+    "paymentTypePurchase": "Purchase Payment",
+    "paymentMethod": "Payment Method",
+    "account": "Account",
+    "selectAccount": "Select account",
+    "paymentSplit": "Payment Split",
+    "addAccount": "Add Account",
+    "noPaymentSplits": "No payment splits. Click 'Add Account' to split payment.",
+    "totalAllocated": "Total Allocated",
+    "remaining": "Remaining"
   },
   "contacts": {
     "title": "Contacts",

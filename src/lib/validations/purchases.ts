@@ -35,6 +35,9 @@ export const createPurchaseSchema = z.object({
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
   discountType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional().default("NONE"),
   discountAmount: z.number().min(0, "Discount amount must be greater than or equal to 0").optional().default(0),
+  taxType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional().default("NONE"),
+  taxRate: z.number().min(0, "Tax rate must be greater than or equal to 0").optional().default(0),
+  taxAmount: z.number().min(0, "Tax amount must be greater than or equal to 0").optional().default(0),
 })
 
 export const updatePurchaseSchema = z.object({

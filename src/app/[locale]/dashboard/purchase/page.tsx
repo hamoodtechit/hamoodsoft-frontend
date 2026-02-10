@@ -3,7 +3,9 @@
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
+import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
+import { PaymentDialog } from "@/components/common/payment-dialog"
 import { PurchaseDialog } from "@/components/common/purchase-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
@@ -28,9 +30,11 @@ import { type PurchasesListParams } from "@/lib/api/purchases"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeletePurchase, usePurchases } from "@/lib/hooks/use-purchases"
+import { useAppSettings } from "@/lib/providers/settings-provider"
+import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Purchase } from "@/types"
-import { Eye, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
+import { CreditCard, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -45,6 +49,7 @@ export default function PurchasePage() {
 
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
+  const { generalSettings } = useAppSettings()
   const deleteMutation = useDeletePurchase()
 
   const [search, setSearch] = useState("")
@@ -226,6 +231,11 @@ export default function PurchasePage() {
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null)
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [paymentPurchase, setPaymentPurchase] = useState<Purchase | null>(null)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [showPaymentsSection, setShowPaymentsSection] = useState(false)
+  const [receiptPurchase, setReceiptPurchase] = useState<Purchase | null>(null)
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false)
 
   // Secure by module access (purchases)
   useEffect(() => {
@@ -258,7 +268,14 @@ export default function PurchasePage() {
 
   const handleView = (purchase: Purchase) => {
     setViewPurchase(purchase)
+    setShowPaymentsSection(false)
     setIsViewOpen(true)
+  }
+
+  const handleViewPayments = (purchase: Purchase) => {
+    setViewPurchase(purchase)
+    setIsViewOpen(true)
+    setShowPaymentsSection(true)
   }
 
   const handleDelete = (purchase: Purchase) => {
@@ -275,6 +292,30 @@ export default function PurchasePage() {
       },
     })
   }
+
+  const handleAddPayment = (purchase: Purchase) => {
+    setPaymentPurchase(purchase)
+    setIsPaymentDialogOpen(true)
+  }
+
+  const handleViewReceipt = (purchase: Purchase) => {
+    setReceiptPurchase(purchase)
+    setIsReceiptOpen(true)
+  }
+
+  // Scroll to payments section when showPaymentsSection is true
+  useEffect(() => {
+    if (showPaymentsSection && viewPurchase && isViewOpen) {
+      const timer = setTimeout(() => {
+        const paymentsSection = document.getElementById('purchase-payments-section')
+        if (paymentsSection) {
+          paymentsSection.scrollIntoView({ behavior: "smooth", block: "start" })
+          setShowPaymentsSection(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [showPaymentsSection, viewPurchase, isViewOpen])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -370,6 +411,22 @@ export default function PurchasePage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {t("viewDetails")}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewReceipt(row)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        {tCommon("receipt") || "Receipt"}
+                      </DropdownMenuItem>
+                      {row.payments && row.payments.length > 0 && (
+                        <DropdownMenuItem onClick={() => handleViewPayments(row)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          View Payments
+                        </DropdownMenuItem>
+                      )}
+                      {(row.dueAmount || 0) > 0 && (
+                        <DropdownMenuItem onClick={() => handleAddPayment(row)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Add Payment
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => handleEdit(row)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         {tCommon("edit")}
@@ -444,6 +501,22 @@ export default function PurchasePage() {
                             <Eye className="mr-2 h-4 w-4" />
                             {t("viewDetails")}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewReceipt(p)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            {tCommon("receipt") || "Receipt"}
+                          </DropdownMenuItem>
+                          {p.payments && p.payments.length > 0 && (
+                            <DropdownMenuItem onClick={() => handleViewPayments(p)}>
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              View Payments
+                            </DropdownMenuItem>
+                          )}
+                          {(p.dueAmount || 0) > 0 && (
+                            <DropdownMenuItem onClick={() => handleAddPayment(p)}>
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Add Payment
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleEdit(p)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {tCommon("edit")}
@@ -536,6 +609,19 @@ export default function PurchasePage() {
                   <p className="font-medium text-lg">
                     {(viewPurchase.totalPrice || viewPurchase.totalAmount || 0)?.toFixed(2) || "0.00"}
                   </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Tax</p>
+                  <div className="flex items-center gap-1">
+                     <p className="font-medium text-lg">
+                       {(viewPurchase.taxAmount || 0).toFixed(2)} 
+                     </p>
+                     {viewPurchase.taxType === "PERCENTAGE" && viewPurchase.taxRate && (
+                        <span className="text-xs text-muted-foreground">
+                          ({viewPurchase.taxRate}%)
+                        </span>
+                     )}
+                  </div>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">{t("paidAmount")}</p>
@@ -666,7 +752,7 @@ export default function PurchasePage() {
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("createdAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewPurchase.createdAt
+                    {viewPurchase?.createdAt
                       ? new Date(viewPurchase.createdAt).toLocaleString()
                       : "-"}
                   </p>
@@ -674,16 +760,105 @@ export default function PurchasePage() {
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("updatedAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewPurchase.updatedAt
+                    {viewPurchase?.updatedAt
                       ? new Date(viewPurchase.updatedAt).toLocaleString()
                       : "-"}
                   </p>
                 </div>
               </div>
+
+              {/* Payments Section */}
+              <div id="purchase-payments-section" className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">{t("payments") || "Payments"}</h4>
+                  {(viewPurchase?.dueAmount || 0) > 0 && (
+                     <Button 
+                       size="sm" 
+                       variant="outline" 
+                       onClick={() => handleAddPayment(viewPurchase as Purchase)}
+                     >
+                       <Plus className="h-4 w-4 mr-2" />
+                       Add Payment
+                     </Button>
+                   )}
+                </div>
+                
+                {viewPurchase?.payments && viewPurchase.payments.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                       <span className="text-sm text-muted-foreground">
+                        {viewPurchase.payments.length} {tCommon("items") || "items"}
+                       </span>
+                    </div>
+                    <div className="space-y-2">
+                      {viewPurchase.payments.map((payment) => (
+                        <div
+                          key={payment.id}
+                          className="rounded-lg border p-3 flex items-center justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default">
+                                {payment.type === "SALE_PAYMENT" ? "Sale Payment" : "Purchase Payment"}
+                              </Badge>
+                              {payment.accountId && (
+                                <span className="text-sm text-muted-foreground">
+                                  Account: {payment.accountId.slice(0, 8)}...
+                                </span>
+                              )}
+                            </div>
+                            {payment.notes && (
+                              <p className="text-sm text-muted-foreground mt-1">{payment.notes}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {payment.occurredAt
+                                ? new Date(payment.occurredAt).toLocaleDateString()
+                                : "-"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-green-600">
+                              {formatCurrency(payment.amount, { generalSettings })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+                    No payments record found.
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
         </SheetContent>
       </Sheet>
+    <PaymentDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={(open) => {
+          setIsPaymentDialogOpen(open)
+          if (!open) {
+            setPaymentPurchase(null)
+          }
+        }}
+        defaultType="PURCHASE_PAYMENT"
+        defaultPurchaseId={paymentPurchase?.id}
+        defaultContactId={paymentPurchase?.contactId}
+        defaultBranchId={paymentPurchase?.branchId}
+        defaultAmount={
+          paymentPurchase
+            ? (paymentPurchase.totalPrice || paymentPurchase.totalAmount || 0) - (paymentPurchase.paidAmount || 0)
+            : undefined
+        }
+      />
+      
+      <InvoiceDialog
+        purchase={receiptPurchase}
+        open={isReceiptOpen}
+        onOpenChange={setIsReceiptOpen}
+      />
     </PageLayout>
   )
 }

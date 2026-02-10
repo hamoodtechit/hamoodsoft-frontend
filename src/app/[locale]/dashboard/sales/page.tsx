@@ -6,6 +6,7 @@ import { ExportButton } from "@/components/common/export-button"
 import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
 import { PaymentDialog } from "@/components/common/payment-dialog"
+import { PermissionGuard } from "@/components/common/permission-guard"
 import { SaleDialog } from "@/components/common/sale-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
@@ -29,15 +30,14 @@ import {
 import { type SalesListParams } from "@/lib/api/sales"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
+import { useHasPermission } from "@/lib/hooks/use-permissions"
 import { useProducts } from "@/lib/hooks/use-products"
 import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
-import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
-import { PermissionGuard } from "@/components/common/permission-guard"
-import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
-import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
+import { MODULES, PERMISSIONS } from "@/lib/utils/permissions"
 import { Payment, Product, Sale } from "@/types"
 import { CreditCard, Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -379,6 +379,20 @@ export default function SalesPage() {
   const canUpdate = useHasPermission(PERMISSIONS.SALES_UPDATE)
   const canDelete = useHasPermission(PERMISSIONS.SALES_DELETE)
 
+  // Scroll to payments section when showPaymentsSection is true
+  useEffect(() => {
+    if (showPaymentsSection && viewSale && isViewOpen) {
+      const timer = setTimeout(() => {
+        const paymentsSection = document.getElementById('payments-section')
+        if (paymentsSection) {
+          paymentsSection.scrollIntoView({ behavior: "smooth", block: "start" })
+          setShowPaymentsSection(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [showPaymentsSection, viewSale, isViewOpen])
+
   // Secure by module access (sales)
   useEffect(() => {
     if (!isCheckingAccess && !hasAccess) {
@@ -429,19 +443,6 @@ export default function SalesPage() {
     setShowPaymentsSection(true)
   }
 
-  // Scroll to payments section when showPaymentsSection is true
-  useEffect(() => {
-    if (showPaymentsSection && viewSale && isViewOpen) {
-      const timer = setTimeout(() => {
-        const paymentsSection = document.getElementById('payments-section')
-        if (paymentsSection) {
-          paymentsSection.scrollIntoView({ behavior: "smooth", block: "start" })
-          setShowPaymentsSection(false)
-        }
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [showPaymentsSection, viewSale, isViewOpen])
 
   const handleDelete = (sale: Sale) => {
     setSaleToDelete(sale)

@@ -24,9 +24,15 @@ type PurchasesResponseShape = {
 }
 
 function normalizePurchase(purchase: Purchase): Purchase {
+  // Normalize purchase items: API returns purchaseItems, but we use items for consistency
+  if (purchase.purchaseItems && !purchase.items) {
+    purchase.items = purchase.purchaseItems
+  }
+
   // Map totalPrice to totalAmount for backward compatibility
   return {
     ...purchase,
+    items: purchase.items || purchase.purchaseItems || [],
     totalAmount: purchase.totalPrice ?? purchase.totalAmount ?? 0,
   }
 }

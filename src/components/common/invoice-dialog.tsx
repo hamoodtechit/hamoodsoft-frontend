@@ -10,35 +10,45 @@ import {
 } from "@/components/ui/dialog"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
-import { Sale } from "@/types"
+import { Purchase, Sale } from "@/types"
 import { Download, History, Printer } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 
 interface InvoiceDialogProps {
-  sale: Sale | null
+  sale?: Sale | null
+  purchase?: Purchase | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onOpenRecentTransactions?: () => void
 }
 
-export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactions }: InvoiceDialogProps) {
+export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecentTransactions }: InvoiceDialogProps) {
   const t = useTranslations("sales")
-  useTranslations("common")
+  const tPurchases = useTranslations("purchases")
+  const tCommon = useTranslations("common")
   const { generalSettings, invoiceSettings } = useAppSettings()
 
-  // Get sale items (handle both items and saleItems)
-  const saleItems = useMemo(() => {
-    if (!sale) return []
-    return sale.items || sale.saleItems || []
-  }, [sale])
+  const transaction = sale || purchase
+  const isPurchase = !!purchase
+
+  // Get items (handle both items and saleItems/purchaseItems)
+  const items = useMemo(() => {
+    if (!transaction) return []
+    if (isPurchase) {
+      const p = transaction as Purchase
+      return p.items || p.purchaseItems || []
+    }
+    const s = transaction as Sale
+    return s.items || s.saleItems || []
+  }, [transaction, isPurchase])
 
   // Calculate totals
   const totals = useMemo(() => {
-    if (!sale) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }
+    if (!transaction) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }
     
     // Calculate item totals with item-level discounts
-    const itemsSubtotal = saleItems.reduce((sum, item) => {
+    const itemsSubtotal = items.reduce((sum, item) => {
       const itemSubtotal = item.price * item.quantity
       const itemDiscount =
         item.discountType === "PERCENTAGE"
@@ -50,21 +60,40 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
       return sum + itemTotal
     }, 0)
     
-    // Apply sale-level discount
-    const saleDiscount = sale.discountAmount || 0
-    const afterDiscount = Math.max(0, itemsSubtotal - saleDiscount)
+    // Apply transaction-level discount
+    const discount = transaction.discountAmount || 0
+    const afterDiscount = Math.max(0, itemsSubtotal - discount)
     
     // Total from backend (includes tax)
-    const total = sale.totalPrice || sale.totalAmount || itemsSubtotal
+    // For purchases, totalAmount/totalPrice is what we want. 
+    const total = transaction.totalPrice || transaction.totalAmount || itemsSubtotal
     
-    // Calculate tax: total - afterDiscount (since total includes tax)
-    const tax = Math.max(0, total - afterDiscount)
+    // Calculate tax
+    let tax = 0
+    if (isPurchase) {
+      const p = transaction as Purchase
+      if (p.taxAmount) {
+        tax = p.taxAmount
+      } else if (p.taxType === "PERCENTAGE" && p.taxRate) {
+        tax = (afterDiscount * p.taxRate) / 100
+      } else {
+        // Fallback or if tax is already in total but fields are missing
+        tax = Math.max(0, total - afterDiscount)
+      }
+    } else {
+       // Sales logic (keep existing or update if Sales has tax fields)
+       tax = Math.max(0, total - afterDiscount)
+    }
     
-    const paid = sale.paidAmount || 0
+    const paid = transaction.paidAmount || 0
     const due = Math.max(0, total - paid)
 
-    return { subtotal: itemsSubtotal, discount: saleDiscount, tax, total, paid, due }
-  }, [sale, saleItems])
+    return { subtotal: afterDiscount, discount, tax, total, paid, due } // Note: subtotal here is effectively "Total before Tax" but after discount. 
+    // Actually, UI shows Subtotal (items sum), Discount, Tax, Total.
+    // The previous logic returned { subtotal: itemsSubtotal ... }
+    // Let's stick to that:
+    return { subtotal: itemsSubtotal, discount, tax, total, paid, due }
+  }, [transaction, items])
 
   // Get invoice layout from settings
   const invoiceLayout = invoiceSettings?.layout || "pos-80mm"
@@ -98,7 +127,7 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Invoice ${sale?.invoiceNumber || sale?.id}</title>
+            <title>${isPurchase ? "Receipt" : "Invoice"} ${transaction?.id}</title>
             <style>
               @page { size: ${invoiceLayout === "pos-a4" ? "A4" : "auto"}; margin: 0; }
               body { 
@@ -127,7 +156,7 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
     }
   }
 
-  if (!sale) return null
+  if (!transaction) return null
   
   // Determine max width based on layout
   const getMaxWidthClass = () => {
@@ -148,7 +177,7 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
       <DialogContent className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto print:max-h-none mx-auto`}>
         {/* Accessibility: DialogContent requires DialogTitle */}
         <DialogHeader className="sr-only">
-          <DialogTitle>Invoice</DialogTitle>
+          <DialogTitle>{isPurchase ? "Receipt" : "Invoice"}</DialogTitle>
         </DialogHeader>
         <div 
           id="invoice-content" 
@@ -173,22 +202,40 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
                   />
                 </div>
               )}
-              <h1 className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}>Invoice</h1>
-              {sale.invoiceNumber && (
-                <p className="text-muted-foreground">
-                  {invoiceSettings?.prefix || "INV"}#: {sale.invoiceNumber}
-                </p>
+              <h1 className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}>
+                {isPurchase ? "PURCHASE RECEIPT" : "INVOICE"}
+              </h1>
+              {isPurchase ? (
+                <>
+                  {purchase?.poNumber && (
+                    <p className="text-muted-foreground">
+                      PO#: {purchase.poNumber}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {sale?.invoiceNumber && (
+                    <p className="text-muted-foreground">
+                      {invoiceSettings?.prefix || "INV"}#: {sale.invoiceNumber}
+                    </p>
+                  )}
+                </>
               )}
-              {/* Receipt-style customer info (kept minimal) */}
-              {sale.contact && (
+              
+              {/* Receipt-style customer/supplier info */}
+              {transaction.contact && (
                 <div className="mt-2 text-sm">
-                  <p className="font-medium">{sale.contact.name}</p>
+                  <p className="font-medium text-xs text-muted-foreground">
+                    {isPurchase ? "SUPPLIER:" : "CUSTOMER:"}
+                  </p>
+                  <p className="font-medium">{transaction.contact.name}</p>
                   <div className="text-muted-foreground">
-                    {sale.contact.phone || sale.contact.email ? (
+                    {transaction.contact.phone || transaction.contact.email ? (
                       <span>
-                        {sale.contact.phone || ""}
-                        {sale.contact.phone && sale.contact.email ? " • " : ""}
-                        {sale.contact.email || ""}
+                        {transaction.contact.phone || ""}
+                        {transaction.contact.phone && transaction.contact.email ? " • " : ""}
+                        {transaction.contact.email || ""}
                       </span>
                     ) : (
                       <span>-</span>
@@ -215,19 +262,17 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
                 </Button>
               </div>
               <Badge
-                variant={sale.paymentStatus === "PAID" ? "default" : "destructive"}
+                variant={transaction.paymentStatus === "PAID" ? "default" : "destructive"}
                 className="text-sm"
               >
-                {sale.paymentStatus === "PAID"
+                {transaction.paymentStatus === "PAID"
                   ? t("paymentStatusPaid")
-                  : sale.paymentStatus === "DUE"
+                  : transaction.paymentStatus === "DUE"
                   ? t("paymentStatusDue")
                   : t("paymentStatusPartial")}
               </Badge>
             </div>
           </div>
-
-          {/* (Removed) Invoice meta section per UX request */}
 
           {/* Items Table */}
           <div className="mb-6">
@@ -245,13 +290,13 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
                 </tr>
               </thead>
               <tbody>
-                {saleItems.length === 0 ? (
+                {items.length === 0 ? (
                   <tr className="border-b">
                     <td className="py-6 px-4 text-center text-muted-foreground" colSpan={totals.discount > 0 ? 6 : 5}>
-                      No items found for this sale.
+                      No items found.
                     </td>
                   </tr>
-                ) : saleItems.map((item, index) => {
+                ) : items.map((item, index) => {
                   const itemSubtotal = item.price * item.quantity
                   const itemDiscount =
                     item.discountType === "PERCENTAGE"
@@ -317,7 +362,7 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
                 <span>Total:</span>
                 <span>{formatCurrency(totals.total, { generalSettings })}</span>
               </div>
-              {sale.paymentStatus !== "PAID" && (
+              {transaction.paymentStatus !== "PAID" && (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Paid:</span>
@@ -335,9 +380,9 @@ export function InvoiceDialog({ sale, open, onOpenChange, onOpenRecentTransactio
           {/* Footer */}
           <div className="mt-8 pt-6 border-t text-center text-sm text-muted-foreground print:mt-12">
             <p>{invoiceSettings?.footer || "Thank you for your business!"}</p>
-            {sale.createdAt && (
+            {transaction.createdAt && (
               <p className="mt-2">
-                Invoice generated on {new Date(sale.createdAt).toLocaleString()}
+                {isPurchase ? "Receipt" : "Invoice"} generated on {new Date(transaction.createdAt).toLocaleString()}
               </p>
             )}
           </div>

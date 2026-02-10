@@ -95,6 +95,9 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
         totalPrice: 0,
         discountType: "NONE" as const,
         discountAmount: 0,
+        taxType: "NONE" as const,
+        taxRate: 0,
+        taxAmount: 0,
       }
     }
     // For update, only include fields that can be updated
@@ -251,6 +254,19 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
       purchaseTotal = Math.max(0, itemsTotal - purchaseDiscountAmount)
     }
 
+    const taxType = (data as any).taxType || "NONE"
+    const taxRate = (data as any).taxRate || 0
+    const taxAmount = (data as any).taxAmount || 0
+    
+    let tax = 0
+    if (taxType === "PERCENTAGE" && taxRate) {
+        tax = (purchaseTotal * taxRate) / 100
+    } else if (taxType === "FIXED" && taxAmount) {
+        tax = taxAmount
+    }
+
+    purchaseTotal = purchaseTotal + tax
+
     // Build payments array based on payment method (same as sales)
     const payments: Array<{ 
       type: "PURCHASE_PAYMENT"
@@ -308,6 +324,9 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
       items: calculatedItems,
       payments: payments.length > 0 ? payments : undefined,
       totalPrice: purchaseTotal,
+      taxType,
+      taxRate: taxType === "PERCENTAGE" ? taxRate : undefined,
+      taxAmount: taxType === "FIXED" ? taxAmount : tax,
       paidAmount: totalPaid,
       paymentStatus,
     }
@@ -410,7 +429,20 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
       discount = purchaseDiscountAmount
     }
     
-    return Math.max(0, itemsTotal - discount)
+    const purchaseSubtotal = Math.max(0, itemsTotal - discount)
+
+    const taxType = form.watch("taxType" as any) || "NONE"
+    const taxRate = form.watch("taxRate" as any) || 0
+    const taxAmount = form.watch("taxAmount" as any) || 0
+
+    let tax = 0
+    if (taxType === "PERCENTAGE") {
+      tax = (purchaseSubtotal * taxRate) / 100
+    } else if (taxType === "FIXED") {
+      tax = taxAmount
+    }
+
+    return purchaseSubtotal + tax
   }
 
   const total = calculateTotal()
@@ -801,6 +833,103 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
 
                     {total !== null && (
                       <>
+                        {/* Order Summary (Discount & Tax) */}
+                        <div className="space-y-4 pt-4 border-t">
+                            <Label className="text-base font-medium">Order Summary</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Discount */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Discount</Label>
+                                    <div className="flex gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="discountType"
+                                            render={({ field }) => (
+                                                <Select value={field.value} onValueChange={field.onChange}>
+                                                    <SelectTrigger className="w-[110px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="NONE">None</SelectItem>
+                                                        <SelectItem value="PERCENTAGE">%</SelectItem>
+                                                        <SelectItem value="FIXED">Fixed</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                        {(form.watch("discountType" as any) === "PERCENTAGE" || form.watch("discountType" as any) === "FIXED") && (
+                                            <FormField
+                                                control={form.control}
+                                                name="discountAmount"
+                                                render={({ field }) => (
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        className="flex-1"
+                                                        {...field}
+                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                    />
+                                                )}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Tax */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Tax</Label>
+                                    <div className="flex gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="taxType"
+                                            render={({ field }) => (
+                                                <Select value={field.value} onValueChange={field.onChange}>
+                                                    <SelectTrigger className="w-[110px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="NONE">None</SelectItem>
+                                                        <SelectItem value="PERCENTAGE">%</SelectItem>
+                                                        <SelectItem value="FIXED">Fixed</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                         {(form.watch("taxType" as any) === "PERCENTAGE") && (
+                                            <FormField
+                                                control={form.control}
+                                                name="taxRate"
+                                                render={({ field }) => (
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="RATE %"
+                                                        className="flex-1"
+                                                        {...field}
+                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                    />
+                                                )}
+                                            />
+                                        )}
+                                        {(form.watch("taxType" as any) === "FIXED") && (
+                                            <FormField
+                                                control={form.control}
+                                                name="taxAmount"
+                                                render={({ field }) => (
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="Amount"
+                                                        className="flex-1"
+                                                        {...field}
+                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                    />
+                                                )}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Payment Method Selection */}
                         <div className="space-y-4 pt-4 border-t">
                           <Label className="text-base font-medium">{t("paymentMethod")}</Label>
