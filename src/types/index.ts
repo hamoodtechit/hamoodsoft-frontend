@@ -315,6 +315,37 @@ export interface Sale {
   updatedAt?: string
 }
 
+export type POSSessionStatus = "OPEN" | "CLOSED"
+
+export interface POSSession {
+  id: string
+  businessId: string
+  branchId: string
+  userId: string
+  status: POSSessionStatus
+  openingBalance: number
+  closingBalance?: number
+  actualBalance?: number
+  openingNote?: string
+  closingNote?: string
+  openedAt: string
+  closedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OpenPOSSessionInput {
+  openingBalance: number
+  openingNote?: string
+  branchId: string
+}
+
+export interface ClosePOSSessionInput {
+  branchId: string
+  actualBalance: number
+  closingNote?: string
+}
+
 export type ContactType = "CUSTOMER" | "SUPPLIER"
 
 export interface Contact {

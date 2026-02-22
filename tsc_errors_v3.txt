@@ -1,0 +1,6 @@
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1593,34): error TS2304: Cannot find name 'NumericInput'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1595,51): error TS7006: Parameter 'val' implicitly has an 'any' type.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1697,30): error TS2304: Cannot find name 'NumericInput'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1708,26): error TS2304: Cannot find name 'NumericInput'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1790,34): error TS2304: Cannot find name 'NumericInput'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1793,51): error TS7006: Parameter 'val' implicitly has an 'any' type.

@@ -146,4 +146,11 @@ export const endpoints = {
     update: (id: string) => `/income-expense-categories/${id}`,
     delete: (id: string) => `/income-expense-categories/${id}`,
   },
+  pos: {
+    sessions: {
+      open: "/pos/sessions/open",
+      close: "/pos/sessions/close",
+      current: (branchId: string) => `/pos/sessions/current/${branchId}`,
+    },
+  },
 } as const

@@ -3,36 +3,36 @@
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select"
 import { useCreateContact, useUpdateContact } from "@/lib/hooks/use-contacts"
 import {
-  createContactSchema,
-  updateContactSchema,
-  type CreateContactInput,
-  type UpdateContactInput,
+    createContactSchema,
+    updateContactSchema,
+    type CreateContactInput,
+    type UpdateContactInput,
 } from "@/lib/validations/contacts"
 import { Contact } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -45,9 +45,10 @@ interface ContactDialogProps {
   contact: Contact | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: (contact: Contact) => void
 }
 
-export function ContactDialog({ contact, open, onOpenChange }: ContactDialogProps) {
+export function ContactDialog({ contact, open, onOpenChange, onSuccess }: ContactDialogProps) {
   const t = useTranslations("contacts")
   const tCommon = useTranslations("common")
   const createMutation = useCreateContact()
@@ -121,8 +122,9 @@ export function ContactDialog({ contact, open, onOpenChange }: ContactDialogProp
       updateMutation.mutate(
         { id: contact.id, data: data as UpdateContactInput },
         {
-          onSuccess: () => {
+          onSuccess: (updatedContact) => {
             onOpenChange(false)
+            onSuccess?.(updatedContact)
           },
         }
       )
@@ -130,9 +132,10 @@ export function ContactDialog({ contact, open, onOpenChange }: ContactDialogProp
     }
 
     createMutation.mutate(data as CreateContactInput, {
-      onSuccess: () => {
+      onSuccess: (newContact) => {
         onOpenChange(false)
         form.reset(defaultValues)
+        onSuccess?.(newContact)
       },
     })
   }

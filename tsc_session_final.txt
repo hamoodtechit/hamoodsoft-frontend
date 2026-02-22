@@ -1,0 +1,1 @@
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1327,24): error TS2304: Cannot find name 'LogOut'.
