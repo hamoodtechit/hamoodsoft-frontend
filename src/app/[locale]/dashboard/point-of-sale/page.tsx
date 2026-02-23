@@ -13,23 +13,23 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NumericInput } from "@/components/ui/numeric-input"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select"
 import { salesApi } from "@/lib/api/sales"
 import { useAccounts } from "@/lib/hooks/use-accounts"
@@ -50,31 +50,31 @@ import { cn } from "@/lib/utils"
 import { getRandomGradient } from "@/lib/utils/aesthetics"
 import { Product, ProductVariant, Sale, Stock, Tanker } from "@/types"
 import {
-  ArrowLeft,
-  Calculator,
-  Check,
-  Container,
-  Droplets,
-  Edit,
-  FileText,
-  Filter,
-  HelpCircle,
-  History,
-  LayoutGrid,
-  List,
-  LogOut,
-  Minus,
-  Package,
-  Plus,
-  Printer,
-  Save,
-  Search,
-  ShoppingCart,
-  Trash2,
-  UserPlus,
-  Volume2,
-  VolumeX,
-  X
+    ArrowLeft,
+    Calculator,
+    Check,
+    Container,
+    Droplets,
+    Edit,
+    FileText,
+    Filter,
+    HelpCircle,
+    History,
+    LayoutGrid,
+    List,
+    LogOut,
+    Minus,
+    Package,
+    Plus,
+    Printer,
+    Save,
+    Search,
+    ShoppingCart,
+    Trash2,
+    UserPlus,
+    Volume2,
+    VolumeX,
+    X
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -1387,15 +1387,17 @@ export default function PointOfSalePage() {
               <Package className="h-4 w-4 mr-2" />
               Standard
             </Button>
-            <Button
-              variant={posMode === "petrol" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setPosMode("petrol")}
-              className={cn("h-8 px-3 transition-all", posMode === "petrol" && "shadow-sm")}
-            >
-              <Droplets className="h-4 w-4 mr-2" />
-              Petrol Pump
-            </Button>
+            {currentBusiness?.modules?.includes("oil-filling-station") && (
+              <Button
+                variant={posMode === "petrol" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setPosMode("petrol")}
+                className={cn("h-8 px-3 transition-all", posMode === "petrol" && "shadow-sm")}
+              >
+                <Droplets className="h-4 w-4 mr-2" />
+                Petrol Pump
+              </Button>
+            )}
           </div>
         </div>
 
