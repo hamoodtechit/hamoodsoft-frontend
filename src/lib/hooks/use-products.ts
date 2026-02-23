@@ -1,33 +1,50 @@
-"use client"
-
 import { productsApi, type ProductsListParams } from "@/lib/api/products"
 import { CreateProductInput, UpdateProductInput } from "@/lib/validations/products"
 import { Product } from "@/types"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export function useProducts(params?: ProductsListParams) {
   // Create a stable query key that includes all relevant params
-  // This ensures React Query properly detects changes and refetches
-  // Always include branchId explicitly (even if undefined) so React Query detects changes
   const branchId = params?.branchId
   const queryKey = [
     "products",
-    params?.page ?? 1,
-    params?.limit ?? 10,
     params?.search ?? "",
     params?.categoryId ?? null,
     params?.unitId ?? null,
-    branchId ?? null, // Explicitly include branchId (null if undefined) so changes trigger refetch
+    branchId ?? null,
   ] as const
 
   return useQuery({
-    queryKey,
+    queryKey: [...queryKey, params?.page ?? 1, params?.limit ?? 10],
     queryFn: () => productsApi.getProducts(params),
-    // Refetch when window regains focus to ensure fresh data
     refetchOnWindowFocus: true,
-    // Don't cache stale data - always refetch when query key changes
     staleTime: 0,
+  })
+}
+
+export function useInfiniteProducts(params?: Omit<ProductsListParams, "page">) {
+  const queryKey = [
+    "products-infinite",
+    params?.search ?? "",
+    params?.categoryId ?? null,
+    params?.unitId ?? null,
+    params?.branchId ?? null,
+  ] as const
+
+  return useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam = 1 }) => 
+      productsApi.getProducts({ ...params, page: pageParam as number }),
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.meta || {}
+      if (page && totalPages && page < totalPages) {
+        return page + 1
+      }
+      return undefined
+    },
+    initialPageParam: 1,
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
   })
 }
 

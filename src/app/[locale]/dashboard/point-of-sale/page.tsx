@@ -6,6 +6,8 @@ import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
 import { ProductDialog } from "@/components/common/product-dialog"
 import { SaleDialog } from "@/components/common/sale-dialog"
+import { SystemLoader } from "@/components/common/system-loader"
+import { POSSessionIndicator } from "@/components/pos/pos-session-indicator"
 import { CloseSessionDialog, OpenSessionDialog } from "@/components/pos/session-dialogs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NumericInput } from "@/components/ui/numeric-input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -37,16 +39,22 @@ import { useBrands } from "@/lib/hooks/use-brands"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useCategories } from "@/lib/hooks/use-categories"
 import { useContacts } from "@/lib/hooks/use-contacts"
+import { useFuelTypes } from "@/lib/hooks/use-fuel-types"
 import { usePOSSession } from "@/lib/hooks/use-pos-sessions"
-import { useProducts } from "@/lib/hooks/use-products"
+import { useInfiniteProducts } from "@/lib/hooks/use-products"
 import { useCreateSale, useDeleteSale, useSales } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
+import { useInfiniteTankers } from "@/lib/hooks/use-tankers"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { cn } from "@/lib/utils"
-import { Product, ProductVariant, Sale, Stock } from "@/types"
+import { getRandomGradient } from "@/lib/utils/aesthetics"
+import { Product, ProductVariant, Sale, Stock, Tanker } from "@/types"
 import {
+  ArrowLeft,
   Calculator,
   Check,
+  Container,
+  Droplets,
   Edit,
   FileText,
   Filter,
@@ -102,6 +110,8 @@ export default function PointOfSalePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all")
   const [selectedBrandId, setSelectedBrandId] = useState<string>("all")
   const [barcodeInput, setBarcodeInput] = useState("")
+  const [posMode, setPosMode] = useState<"standard" | "petrol">("standard")
+  const [selectedTankerId, setSelectedTankerId] = useState<string | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string>("")
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -169,14 +179,23 @@ export default function PointOfSalePage() {
   const [calculatorValue, setCalculatorValue] = useState("0")
   const [calculatorDisplay, setCalculatorDisplay] = useState("")
 
-  // Fetch data with API-side filtering and searching
-  const { data: productsData, isLoading: isLoadingProducts } = useProducts({
+  // Fetch data with Infinite Query for better pagination
+  const { 
+    data: infiniteProductsData, 
+    isLoading: isLoadingProducts,
+    fetchNextPage: fetchNextProducts,
+    hasNextPage: hasMoreProducts,
+    isFetchingNextPage: isFetchingMoreProducts 
+  } = useInfiniteProducts({
     branchId: selectedBranchId || undefined,
     categoryId: selectedCategoryId !== "all" ? selectedCategoryId : undefined,
     search: searchQuery.trim() || undefined,
-    limit: 1000,
+    limit: 50,
   })
-  const products = productsData?.items || []
+  
+  const products = useMemo(() => 
+    infiniteProductsData?.pages.flatMap(page => page.items) || [], 
+  [infiniteProductsData])
 
   const { data: stocksData } = useStocks({
     branchId: selectedBranchId || undefined,
@@ -192,51 +211,51 @@ export default function PointOfSalePage() {
   const brands = brandsData?.items || []
   const { data: branches = [] } = useBranches()
 
-  // Recent transactions - filter by status
-  const { data: recentSalesData } = useSales({
-    branchId: selectedBranchId || undefined,
+  const { data: fuelTypesData } = useFuelTypes({ limit: 1000 })
+  const { 
+    data: infiniteTankersData, 
+    isLoading: isLoadingTankers,
+    fetchNextPage: fetchNextTankers,
+    hasNextPage: hasMoreTankers,
+    isFetchingNextPage: isFetchingMoreTankers
+  } = useInfiniteTankers({ 
     limit: 50,
-    page: 1,
-    status: transactionFilter === "FINAL" ? "SOLD" : transactionFilter === "QUOTATION" ? "PENDING" : "DRAFT",
+    search: searchQuery.trim() || undefined
   })
-  const recentSales = recentSalesData?.items || []
+  
+  const tankers = useMemo(() => 
+    infiniteTankersData?.pages.flatMap(page => page.items) || [],
+  [infiniteTankersData])
 
-  const createSaleMutation = useCreateSale()
-  const deleteSaleMutation = useDeleteSale()
-  
-  // Get accounts for payment creation
-  const { data: accountsData } = useAccounts({ limit: 100 })
-  const accounts = useMemo(() => (accountsData?.items ?? []).filter((acc) => acc.isActive), [accountsData?.items])
-  
-  // POS Session
-  const { data: activeSession, isLoading: isLoadingSession, refetch: refetchSession } = usePOSSession(selectedBranchId || undefined)
-
-  const cashAccounts = useMemo(() => accounts.filter((acc) => acc.type === "CASH"), [accounts])
-  const bankAccounts = useMemo(() => accounts.filter((acc) => acc.type === "BANK"), [accounts])
-  
-  // Set default accounts when available
-  useEffect(() => {
-    if (accounts.length > 0) {
-      // For CASH payment method, prefer CASH type account, but fallback to any account
-      if (paymentMethod === "CASH" && !cashAccountId) {
-        const cashAccount = cashAccounts.length > 0 ? cashAccounts[0] : accounts[0]
-        setCashAccountId(cashAccount.id)
+  // Stock map by SKU - includes both separate stocks query and product.stocks
+  const stockMapBySku = useMemo(() => {
+    const map = new Map<string, Stock>()
+    
+    // Add stocks from separate query
+    stocks.forEach((stock) => {
+      if (stock.sku) {
+        map.set(stock.sku, stock)
       }
-      // For CARD payment method, prefer BANK type account, but fallback to any account
-      if (paymentMethod === "CARD" && !bankAccountId) {
-        const bankAccount = bankAccounts.length > 0 ? bankAccounts[0] : accounts[0]
-        setBankAccountId(bankAccount.id)
+    })
+    
+    // Also add stocks from product.stocks array (if available)
+    products.forEach((product) => {
+      if (product.stocks && Array.isArray(product.stocks)) {
+        product.stocks.forEach((stock) => {
+          if (stock.sku) {
+            // Only add if not already in map (separate query takes precedence)
+            if (!map.has(stock.sku)) {
+              map.set(stock.sku, stock)
+            }
+          }
+        })
       }
-    }
-  }, [accounts, cashAccounts, bankAccounts, paymentMethod, cashAccountId, bankAccountId])
+    })
+    
+    return map
+  }, [stocks, products])
 
-  // Persist sound toggle
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem("pos-sound-enabled", soundEnabled ? "1" : "0")
-  }, [soundEnabled])
-
-
+  // Sound logic
   const playSound = useCallback((kind: "add" | "remove" | "success" | "error") => {
     if (!soundEnabled) return
     if (typeof window === "undefined") return
@@ -280,33 +299,160 @@ export default function PointOfSalePage() {
     }
   }, [soundEnabled])
 
-  // Stock map by SKU - includes both separate stocks query and product.stocks
-  const stockMapBySku = useMemo(() => {
-    const map = new Map<string, Stock>()
+  // Persist sound toggle
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("pos-sound-enabled", soundEnabled ? "1" : "0")
+  }, [soundEnabled])
+
+  // Recent transactions - filter by status
+  const { data: recentSalesData } = useSales({
+    branchId: selectedBranchId || undefined,
+    limit: 50,
+    page: 1,
+    status: transactionFilter === "FINAL" ? "SOLD" : transactionFilter === "QUOTATION" ? "PENDING" : "DRAFT",
+  })
+  const recentSales = recentSalesData?.items || []
+
+  const createSaleMutation = useCreateSale()
+  const deleteSaleMutation = useDeleteSale()
+  
+  // Get accounts for payment creation
+  const { data: accountsData } = useAccounts({ limit: 100 })
+  const accounts = useMemo(() => (accountsData?.items ?? []).filter((acc) => acc.isActive), [accountsData?.items])
+  
+  // POS Session
+  const { data: activeSession, isLoading: isLoadingSession, refetch: refetchSession } = usePOSSession(selectedBranchId || undefined)
+
+  // Consolidate all account filtering to one place
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter((account) => account.isActive)
+  }, [accounts])
+
+  // Update item quantity in cart
+  const calculateItemTotal = useCallback((item: CartItem) => {
+    const total = item.price * item.quantity
+    if (item.discountType === "PERCENTAGE") {
+      return total * (1 - item.discountAmount / 100)
+    } else if (item.discountType === "FIXED") {
+      return total - item.discountAmount
+    }
+    return total
+  }, [])
+
+  const updateQuantity = useCallback((index: number, delta: number) => {
+    const updatedCart = [...cart]
+    const item = updatedCart[index]
+    const newQuantity = Math.max(0.001, item.quantity + delta) // Allow small decimals for fuel
     
-    // Add stocks from separate query
-    stocks.forEach((stock) => {
-      if (stock.sku) {
-        map.set(stock.sku, stock)
+    if (newQuantity < 0.001) return
+
+    // For fuel items, check against tanker's current fuel
+    if (item.productId?.startsWith("fuel-")) {
+      const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+      const availableFuel = tanker?.currentFuel || 0
+      if (newQuantity > availableFuel) {
+        playSound("error")
+        toast.error(`Only ${availableFuel}L available in ${tanker?.name || "tanker"}`)
+        updatedCart[index].quantity = availableFuel
+      } else {
+        updatedCart[index].quantity = newQuantity
+        playSound(delta > 0 ? "add" : "remove")
       }
-    })
-    
-    // Also add stocks from product.stocks array (if available)
-    products.forEach((product) => {
-      if (product.stocks && Array.isArray(product.stocks)) {
-        product.stocks.forEach((stock) => {
-          if (stock.sku) {
-            // Only add if not already in map (separate query takes precedence)
-            if (!map.has(stock.sku)) {
-              map.set(stock.sku, stock)
-            }
-          }
-        })
+      updatedCart[index].availableQuantity = availableFuel
+    } else {
+      // For regular products
+      const product = products.find((p) => p.id === item.productId)
+      const managesStock = product?.manageStocks !== false
+
+      if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
+        const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
+        const availableQty = stock?.quantity || item.availableQuantity || 0
+
+        if (newQuantity > availableQty) {
+          playSound("error")
+          toast.error(`Only ${availableQty} available in stock`)
+          updatedCart[index].quantity = availableQty
+        } else {
+          updatedCart[index].quantity = Math.floor(newQuantity) // Standard products are integers
+          playSound(delta > 0 ? "add" : "remove")
+        }
+        updatedCart[index].availableQuantity = availableQty
+      } else {
+        updatedCart[index].quantity = Math.floor(newQuantity)
+        playSound(delta > 0 ? "add" : "remove")
       }
-    })
-    
-    return map
-  }, [stocks, products])
+    }
+
+    updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
+    setCart(updatedCart)
+  }, [cart, products, stockMapBySku, calculateItemTotal, playSound, tankers])
+
+  // Set absolute quantity
+  const setQuantity = useCallback((index: number, quantity: number) => {
+    const updatedCart = [...cart]
+    const item = updatedCart[index]
+    const newQuantity = Math.max(0.001, quantity) // Allow small decimals for fuel
+
+    // For fuel items, check against tanker's current fuel
+    if (item.productId?.startsWith("fuel-")) {
+      const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+      const availableFuel = tanker?.currentFuel || 0
+      if (newQuantity > availableFuel) {
+        playSound("error")
+        toast.error(`Only ${availableFuel}L available in ${tanker?.name || "tanker"}`)
+        updatedCart[index].quantity = availableFuel
+      } else {
+        updatedCart[index].quantity = newQuantity
+        playSound("add")
+      }
+      updatedCart[index].availableQuantity = availableFuel
+    } else {
+      // For regular products
+      const product = products.find((p) => p.id === item.productId)
+      const managesStock = product?.manageStocks !== false
+
+      if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
+        const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
+        const availableQty = stock?.quantity || item.availableQuantity || 0
+
+        if (newQuantity > availableQty) {
+          playSound("error")
+          toast.error(`Only ${availableQty} available in stock`)
+          updatedCart[index].quantity = availableQty
+        } else {
+          updatedCart[index].quantity = Math.floor(newQuantity)
+          playSound("add")
+        }
+        updatedCart[index].availableQuantity = availableQty
+      } else {
+        updatedCart[index].quantity = Math.floor(newQuantity)
+        playSound("add")
+      }
+    }
+
+    updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
+    setCart(updatedCart)
+  }, [cart, products, stockMapBySku, calculateItemTotal, playSound, tankers])
+
+  const cashAccounts = useMemo(() => accounts.filter((acc) => acc.type === "CASH"), [accounts])
+  const bankAccounts = useMemo(() => accounts.filter((acc) => acc.type === "BANK"), [accounts])
+  
+  // Set default accounts when available
+  useEffect(() => {
+    if (accounts.length > 0) {
+      // For CASH payment method, prefer CASH type account, but fallback to any account
+      if (paymentMethod === "CASH" && !cashAccountId) {
+        const cashAccount = cashAccounts.length > 0 ? cashAccounts[0] : accounts[0]
+        setCashAccountId(cashAccount.id)
+      }
+      // For CARD payment method, prefer BANK type account, but fallback to any account
+      if (paymentMethod === "CARD" && !bankAccountId) {
+        const bankAccount = bankAccounts.length > 0 ? bankAccounts[0] : accounts[0]
+        setBankAccountId(bankAccount.id)
+      }
+    }
+  }, [accounts, cashAccounts, bankAccounts, paymentMethod, cashAccountId, bankAccountId])
 
   // Check access
   useEffect(() => {
@@ -444,16 +590,7 @@ export default function PointOfSalePage() {
   }, [stockMapBySku, stocks, selectedBranchId])
 
   // Calculate item total
-  const calculateItemTotal = useCallback((item: CartItem) => {
-    const subtotal = item.price * item.quantity
-    let discount = 0
-    if (item.discountType === "PERCENTAGE") {
-      discount = (subtotal * item.discountAmount) / 100
-    } else if (item.discountType === "FIXED") {
-      discount = item.discountAmount
-    }
-    return Math.max(0, subtotal - discount)
-  }, [])
+  // The old calculateItemTotal was here, now it's moved up with updateQuantity.
 
   // Calculate cart totals with discount and tax
   const cartTotals = useMemo(() => {
@@ -528,38 +665,36 @@ export default function PointOfSalePage() {
     const unit = product.unit?.suffix || "pcs"
     const managesStock = product.manageStocks !== false
 
-    // If stock not found but product has stocks, try to find it
-    let finalStock = stock
-    if (!finalStock && product.stocks && Array.isArray(product.stocks)) {
-      // Try to find stock by SKU first
-      finalStock = product.stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
-      // If not found, try by productId (for variable products)
-      if (!finalStock) {
-        finalStock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-      }
-    }
+    // Priority for SKU: 
+    // 1. Variant SKU (if provided)
+    // 2. Stock SKU (if found)
+    // 3. Fallback to product.id
+    const finalSku = sku || variant?.sku || stock?.sku || product.id
     
-    // Also try from separate stocks query
-    if (!finalStock) {
-      finalStock = stocks.find((s) => (s.sku === sku || s.productId === product.id) && s.branchId === selectedBranchId)
-    }
-    
-    // Get price: For variants, prioritize variant.price over stock.salePrice
-    // Priority: variant.price > stock.salePrice > product.price
-    // This ensures variant-specific pricing is used first
-    const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
-    
-    const availableQty = finalStock?.quantity || 0
-
-    // Build item name with variant name if available
+    // BUILD ITEM NAME WITH VARIANT NAME
     const itemName = variant?.variantName 
       ? `${product.name} - ${variant.variantName}`
       : product.name
 
-    const finalSku = finalStock?.sku || sku || product.id
+    // FIND EXISTING ITEM IN CART
+    // Use BOTH productId AND finalSku to ensure variants are distinct
     const existingItemIndex = cart.findIndex(
       (item) => item.productId === product.id && item.sku === finalSku
     )
+
+    // Stock lookup refinement
+    let finalStock = stock
+    if (!finalStock && product.stocks && Array.isArray(product.stocks)) {
+      finalStock = product.stocks.find((s) => s.sku === finalSku && s.branchId === selectedBranchId)
+      if (!finalStock && !variant) { 
+        // Only fallback to product-level stock if we don't have a specific variant SKU
+        finalStock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
+      }
+    }
+    
+    // Price lookup: Priority is Variant > Stock > Product
+    const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
+    const availableQty = finalStock?.quantity || (variant ? 0 : (product.manageStocks === false ? 999999 : 0))
 
     if (existingItemIndex >= 0) {
       const updatedCart = [...cart]
@@ -584,7 +719,7 @@ export default function PointOfSalePage() {
       updatedCart[existingItemIndex].totalPrice = calculateItemTotal(updatedCart[existingItemIndex])
       setCart(updatedCart)
     } else {
-      // Real-world scenario: Block if manages stock AND (stock exists with quantity 0 OR stock not found for variable products)
+      // Out of stock check
       if (managesStock && finalStock !== undefined && availableQty <= 0) {
         playSound("error")
         toast.error("This item is out of stock")
@@ -624,6 +759,40 @@ export default function PointOfSalePage() {
       addToCartWithSku(product, product.id, null, undefined) // Use product ID as SKU fallback
     }
   }, [getProductVariants, addToCartWithSku])
+
+  const handleTankerClick = useCallback((tanker: Tanker) => {
+    if (!tanker.fuelType) return
+    
+    const fuelType = tanker.fuelType
+    const productId = `fuel-${fuelType.id}`
+    // Use tanker ID as the unique SKU for fuel items to prevent merging different tankers
+    const tankerSku = tanker.id 
+    
+    const existingIndex = cart.findIndex(
+      (item) => item.productId === productId && item.sku === tankerSku
+    )
+
+    if (existingIndex !== -1) {
+      updateQuantity(existingIndex, 1)
+    } else {
+      const newItem: CartItem = {
+        productId: productId,
+        sku: tankerSku,
+        variantId: tanker.id,
+        itemName: `${fuelType.name} (${tanker.name})`,
+        itemDescription: `Fuel from ${tanker.name}`,
+        unit: "Liter", 
+        price: fuelType.price,
+        quantity: 1,
+        availableQuantity: tanker.currentFuel,
+        discountType: "NONE",
+        discountAmount: 0,
+        totalPrice: fuelType.price,
+      }
+      playSound("add")
+      setCart([...cart, newItem])
+    }
+  }, [cart, updateQuantity, playSound])
 
   // Handle barcode scanning (moved after addToCartWithSku and handleProductClick)
   const handleBarcodeScan = useCallback((barcode: string) => {
@@ -717,7 +886,7 @@ export default function PointOfSalePage() {
       toast.error("Product not found")
       setBarcodeInput("")
     }
-  }, [products, stocks, selectedBranchId, addToCartWithSku, handleProductClick])
+  }, [products, stocks, selectedBranchId, addToCartWithSku, handleProductClick, playSound])
 
   // Handle barcode input (scan or manual entry)
   useEffect(() => {
@@ -729,71 +898,6 @@ export default function PointOfSalePage() {
       return () => clearTimeout(timer)
     }
   }, [barcodeInput, handleBarcodeScan])
-
-  // Update quantity
-  // Update quantity (with delta)
-  const updateQuantity = useCallback((index: number, delta: number) => {
-    const updatedCart = [...cart]
-    const item = updatedCart[index]
-    const newQuantity = item.quantity + delta
-    
-    if (newQuantity < 1) return
-
-    const product = products.find((p) => p.id === item.productId)
-    const managesStock = product?.manageStocks !== false
-
-    if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
-      const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-      const availableQty = stock?.quantity || item.availableQuantity || 0
-
-      if (newQuantity > availableQty) {
-        playSound("error")
-        toast.error(`Only ${availableQty} available in stock`)
-        updatedCart[index].quantity = availableQty
-      } else {
-        updatedCart[index].quantity = newQuantity
-        playSound(delta > 0 ? "add" : "remove")
-      }
-      updatedCart[index].availableQuantity = availableQty
-    } else {
-      updatedCart[index].quantity = newQuantity
-      playSound(delta > 0 ? "add" : "remove")
-    }
-
-    updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
-    setCart(updatedCart)
-  }, [cart, products, stockMapBySku, calculateItemTotal, playSound])
-
-  // Set absolute quantity
-  const setQuantity = useCallback((index: number, quantity: number) => {
-    const updatedCart = [...cart]
-    const item = updatedCart[index]
-    const newQuantity = Math.max(1, quantity)
-
-    const product = products.find((p) => p.id === item.productId)
-    const managesStock = product?.manageStocks !== false
-
-    if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
-      const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-      const availableQty = stock?.quantity || item.availableQuantity || 0
-
-      if (newQuantity > availableQty) {
-        playSound("error")
-        toast.error(`Only ${availableQty} available in stock`)
-        updatedCart[index].quantity = availableQty
-      } else {
-        updatedCart[index].quantity = newQuantity
-        playSound("add")
-      }
-      updatedCart[index].availableQuantity = availableQty
-    } else {
-      updatedCart[index].quantity = newQuantity
-      playSound("add")
-    }
-
-    updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
-    setCart(updatedCart)
-  }, [cart, products, stockMapBySku, calculateItemTotal, playSound])
 
   // Payment splits for Mixed payment
   const addPaymentSplit = useCallback(() => {
@@ -874,15 +978,23 @@ export default function PointOfSalePage() {
     // Validate stock
     const stockErrors: string[] = []
     cart.forEach((item) => {
-      const product = products.find((p) => p.id === item.productId)
-      const managesStock = product?.manageStocks !== false
+      if (item.productId?.startsWith("fuel-")) {
+        const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+        const availableFuel = tanker?.currentFuel || 0
+        if (item.quantity > availableFuel) {
+          stockErrors.push(`${item.itemName}: Only ${availableFuel}L available`)
+        }
+      } else {
+        const product = products.find((p) => p.id === item.productId)
+        const managesStock = product?.manageStocks !== false
 
-      if (managesStock && item.availableQuantity !== undefined) {
-        const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-        const availableQty = stock?.quantity || item.availableQuantity || 0
+        if (managesStock && item.availableQuantity !== undefined) {
+          const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
+          const availableQty = stock?.quantity || item.availableQuantity || 0
 
-        if (item.quantity > availableQty) {
-          stockErrors.push(`${item.itemName}: Only ${availableQty} available`)
+          if (item.quantity > availableQty) {
+            stockErrors.push(`${item.itemName}: Only ${availableQty} available`)
+          }
         }
       }
     })
@@ -1109,7 +1221,8 @@ export default function PointOfSalePage() {
     calculateItemTotal, 
     playSound, 
     createSaleMutation, 
-    clearCart
+    clearCart,
+    tankers
   ])
 
   // Save as draft
@@ -1248,8 +1361,56 @@ export default function PointOfSalePage() {
   }
 
   return (
-    <PageLayout title="Point of Sale" maxWidth="full">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100dvh-180px)]">
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      {/* Custom Compact Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-card shrink-0">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => router.push(`/${locale}/dashboard`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Exit POS</span>
+          </Button>
+          
+          <div className="h-6 w-[1px] bg-border" />
+
+          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border">
+            <Button
+              variant={posMode === "standard" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setPosMode("standard")}
+              className={cn("h-8 px-3 transition-all", posMode === "standard" && "shadow-sm")}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Standard
+            </Button>
+            <Button
+              variant={posMode === "petrol" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setPosMode("petrol")}
+              className={cn("h-8 px-3 transition-all", posMode === "petrol" && "shadow-sm")}
+            >
+              <Droplets className="h-4 w-4 mr-2" />
+              Petrol Pump
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Action buttons could go here if they fit better than the sidebar */}
+          <POSSessionIndicator />
+          <div className="h-6 w-[1px] bg-border" />
+          <Badge variant="outline" className="font-mono">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
         {/* Left Sidebar - Filters and Products */}
         <div className="lg:col-span-8 flex flex-col space-y-4 min-h-0">
           {/* Top Bar - Scan, Search, Filter & View Toggle */}
@@ -1374,37 +1535,98 @@ export default function PointOfSalePage() {
             </CardContent>
           </Card>
 
+          {/* Categories or Petrol Selection */}
+          {posMode === "standard" ? (
+            <Card className="flex-shrink-0">
+              <CardContent className="p-3">
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex space-x-2 pb-1">
+                    <Button
+                      variant={selectedCategoryId === "all" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategoryId("all")}
+                      className="rounded-full px-5 text-xs font-semibold"
+                    >
+                      All Items
+                    </Button>
+                    {categories.map((category) => (
+                      <Button
+                        key={category.id}
+                        variant={selectedCategoryId === category.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedCategoryId(category.id)}
+                        className="rounded-full px-5 text-xs font-semibold"
+                      >
+                        {category.name}
+                      </Button>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="flex-shrink-0">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Droplets className="h-4 w-4 text-primary" />
+                    Petrol Pump Selling Mode
+                  </div>
+                  <Badge variant="outline">Select Tanker Below</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Products Grid */}
           <Card className="flex-1 flex flex-col overflow-hidden">
             <CardHeader className="flex-shrink-0 py-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Products
+                  {posMode === "standard" ? (
+                    <>
+                      <Package className="h-4 w-4" />
+                      Products
+                    </>
+                  ) : (
+                    <>
+                      <Container className="h-4 w-4" />
+                      Select Tanker / Fuel
+                    </>
+                  )}
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => setShowProductDialog(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    New Product
-                  </Button>
+                  {posMode === "standard" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => setShowProductDialog(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      New Product
+                    </Button>
+                  )}
                   <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
-                    {filteredProducts.length} items
+                    {posMode === "standard" ? products.length : tankers.length} items
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 min-h-0">
               <ScrollArea className="h-full pr-2">
-                {isLoadingProducts ? (
-                  <div className="text-center py-12 text-muted-foreground">Loading products...</div>
-                ) : filteredProducts.length === 0 ? (
+                {isLoadingProducts || isLoadingTankers ? (
+                  <div className="py-20">
+                    <SystemLoader text={`Loading ${posMode === "standard" ? "products" : "tankers"}...`} />
+                  </div>
+                ) : posMode === "standard" && products.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     {searchQuery ? "No products found" : "No products available"}
+                  </div>
+                ) : posMode === "petrol" && (tankers.length === 0) ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No tankers found
                   </div>
                 ) : (
                   <div className={cn(
@@ -1413,120 +1635,285 @@ export default function PointOfSalePage() {
                       ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
                       : "space-y-2"
                   )}>
-                    {filteredProducts.map((product) => {
-                      const variants = getProductVariants(product)
-                      const hasMultipleVariants = variants.length > 1
-                      const firstVariant = variants[0]?.variant
-                      const stock = variants[0]?.stock
-                      const managesStock = product.manageStocks !== false
-                      
-                      const isOutOfStock = managesStock && (
-                        hasMultipleVariants 
-                          ? variants.every(v => !v.stock || v.stock.quantity === 0)
-                          : !stock || stock.quantity === 0
-                      )
+                    {posMode === "standard" ? (
+                      products.map((product) => {
+                        const variants = getProductVariants(product)
+                        const hasMultipleVariants = variants.length > 1
+                        const firstVariant = variants[0]?.variant
+                        const stock = variants[0]?.stock
+                        const managesStock = product.manageStocks !== false
+                        
+                        const isOutOfStock = managesStock && (
+                          hasMultipleVariants 
+                            ? variants.every(v => !v.stock || v.stock.quantity === 0)
+                            : !stock || stock.quantity === 0
+                        )
 
-                      const productImage = firstVariant?.thumbnailUrl || product.thumbnailUrl || null
-                      const displayPrice = stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0
-                      const inCart = cartProductIdSet.has(product.id)
-                      const isSelected = lastSelectedProductId === product.id
+                        const productImage = firstVariant?.thumbnailUrl || product.thumbnailUrl || null
+                        const displayPrice = stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0
+                        const inCart = cartProductIdSet.has(product.id)
+                        const isSelected = lastSelectedProductId === product.id
 
-                      if (productViewMode === "list") {
+                        if (productViewMode === "list") {
+                          return (
+                            <button
+                              key={product.id}
+                              onClick={() => !isOutOfStock && handleProductClick(product)}
+                              disabled={isOutOfStock}
+                              className={cn(
+                                "w-full flex items-center gap-4 p-3 border rounded-xl transition-all",
+                                "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
+                                "hover:border-primary/50 hover:shadow-md",
+                                isOutOfStock && "opacity-60",
+                                inCart && "border-primary/40 shadow-sm"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-12 h-12 rounded flex-shrink-0 overflow-hidden border bg-gradient-to-br",
+                                getRandomGradient(product.id, 'vibrant')
+                              )}>
+                                {productImage ? (
+                                  <img src={productImage} alt={product.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package className="h-6 w-6 m-auto text-foreground/20" />
+                                )}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-bold text-sm truncate">{product.name}</div>
+                                  <div className="text-xs text-muted-foreground">SKU: {variants[0]?.sku || 'N/A'}</div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-black text-primary">{displayPrice.toFixed(2)}</div>
+                                <div className="text-[10px] text-muted-foreground">{product.unit?.suffix}</div>
+                              </div>
+                              {managesStock && (
+                                <Badge variant={isOutOfStock ? "destructive" : "outline"} className="ml-2 text-[10px]">
+                                  {isOutOfStock ? "OOS" : `In: ${stock?.quantity || 0}`}
+                                </Badge>
+                              )}
+                            </button>
+                          )
+                        }
+
                         return (
                           <button
                             key={product.id}
                             onClick={() => !isOutOfStock && handleProductClick(product)}
                             disabled={isOutOfStock}
                             className={cn(
-                              "w-full flex items-center gap-4 p-3 border rounded-xl bg-card hover:border-primary/50 transition-all",
-                              isOutOfStock && "opacity-60",
-                              inCart && "border-primary/40 bg-primary/5 shadow-sm"
+                              "group relative border-2 rounded-xl overflow-hidden",
+                              "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
+                              "transition-all duration-200 ease-in-out",
+                              "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
+                              "active:scale-[0.98]",
+                              "flex flex-col h-full",
+                              isOutOfStock && "opacity-60 cursor-not-allowed hover:shadow-none",
+                              inCart && "border-primary/40 shadow-md shadow-primary/5",
+                              isSelected && "ring-2 ring-primary ring-offset-2 shadow-lg"
                             )}
                           >
-                            <div className="w-12 h-12 rounded bg-muted flex-shrink-0 overflow-hidden border">
+                            {/* In Cart Indicator */}
+                            {inCart && (
+                              <div className="absolute right-2 top-2 z-10 rounded-full bg-primary text-primary-foreground p-1.5 shadow-md">
+                                <Check className="h-3.5 w-3.5" />
+                              </div>
+                            )}
+                            
+                            {/* Product Image */}
+                            <div className={cn(
+                              "relative w-full aspect-square overflow-hidden bg-gradient-to-br",
+                              getRandomGradient(product.id, 'vibrant')
+                            )}>
                               {productImage ? (
-                                <img src={productImage} alt={product.name} className="w-full h-full object-cover" />
+                                <img
+                                  src={productImage}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
                               ) : (
-                                <Package className="h-6 w-6 m-auto text-muted-foreground/40" />
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="h-12 w-12 text-foreground/20" />
+                                </div>
                               )}
                             </div>
-                            <div className="flex-1 text-left">
-                              <div className="font-bold text-sm truncate">{product.name}</div>
-                                <div className="text-xs text-muted-foreground">SKU: {variants[0]?.sku || 'N/A'}</div>
+                            
+                            {/* Product Info */}
+                            <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                              <div>
+                                <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-1.5 text-left">
+                                  {product.name}
+                                </h3>
+                                <div className="text-lg font-bold text-primary text-left">
+                                  {displayPrice.toFixed(2)}
+                                </div>
+                              </div>
+                              {managesStock && (
+                                <Badge 
+                                  variant={isOutOfStock ? "destructive" : "secondary"} 
+                                  className="text-[10px] self-start"
+                                >
+                                  {isOutOfStock ? "Out of Stock" : `${stock?.quantity || 0} available`}
+                                </Badge>
+                              )}
                             </div>
-                            <div className="text-right">
-                              <div className="font-black text-primary">{displayPrice.toFixed(2)}</div>
-                              <div className="text-[10px] text-muted-foreground">{product.unit?.suffix}</div>
-                            </div>
-                            {managesStock && (
-                              <Badge variant={isOutOfStock ? "destructive" : "outline"} className="ml-2 text-[10px]">
-                                {isOutOfStock ? "OOS" : `In: ${stock?.quantity || 0}`}
-                              </Badge>
-                            )}
                           </button>
                         )
-                      }
+                      })
+                    ) : (
+                      tankers.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase())).map((tanker) => {
+                        const fuelType = tanker.fuelType
+                        const inCart = cart.some((item) => item.variantId === tanker.id)
+                        const fuelLevel = (tanker.currentFuel / tanker.capacity) * 100
+                        
+                        if (productViewMode === "list") {
+                          return (
+                            <button
+                              key={tanker.id}
+                              onClick={() => handleTankerClick(tanker)}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
+                                "bg-gradient-to-br", getRandomGradient(tanker.id, 'subtle'),
+                                "hover:border-primary/50 hover:bg-primary/5",
+                                inCart && "border-primary/30 ring-1 ring-primary/20"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-10 h-10 rounded flex-shrink-0 border flex overflow-hidden bg-gradient-to-br",
+                                getRandomGradient(tanker.id, 'vibrant')
+                              )}>
+                                <Droplets className="h-6 w-6 m-auto text-primary" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="font-bold text-sm truncate">{tanker.name}</div>
+                                  <div className="text-xs text-muted-foreground">{fuelType?.name || 'Loading...'}</div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-black text-primary">{fuelType?.price.toFixed(2)}</div>
+                                <div className="text-[10px] text-muted-foreground">per Liter</div>
+                              </div>
+                              <div className="ml-4 w-24">
+                                <div className="text-[10px] mb-1">Level: {tanker.currentFuel}L</div>
+                                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className={cn("h-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")} 
+                                    style={{ width: `${fuelLevel}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        }
 
-                      return (
-                        <button
-                          key={product.id}
-                          onClick={() => !isOutOfStock && handleProductClick(product)}
-                          disabled={isOutOfStock}
-                          className={cn(
-                            "group relative bg-card border-2 rounded-xl overflow-hidden",
-                            "transition-all duration-200 ease-in-out",
-                            "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
-                            "active:scale-[0.98]",
-                            "flex flex-col h-full",
-                            isOutOfStock && "opacity-60 cursor-not-allowed hover:shadow-none",
-                            inCart && "border-primary/40 bg-primary/5 shadow-md shadow-primary/5",
-                            isSelected && "ring-2 ring-primary ring-offset-2 shadow-lg"
-                          )}
+                        return (
+                          <button
+                            key={tanker.id}
+                            onClick={() => handleTankerClick(tanker)}
+                            className={cn(
+                              "group relative border-2 rounded-xl overflow-hidden p-4",
+                              "bg-gradient-to-br", getRandomGradient(tanker.id, 'subtle'),
+                              "transition-all duration-200 ease-in-out",
+                              "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
+                              "active:scale-[0.98]",
+                              "flex flex-col h-full",
+                              inCart && "border-primary/40 shadow-md shadow-primary/5"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className={cn(
+                                "h-10 w-10 flex items-center justify-center rounded-lg bg-gradient-to-br text-primary",
+                                getRandomGradient(tanker.id, 'vibrant')
+                              )}>
+                                <Droplets className="h-6 w-6" />
+                              </div>
+                              {inCart && (
+                                <div className="rounded-full bg-primary text-primary-foreground p-1 shadow-md">
+                                  <Check className="h-3 w-3" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="text-left flex-1">
+                              <h3 className="font-bold text-sm truncate mb-1">{tanker.name}</h3>
+                              <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider font-semibold">
+                                {fuelType?.name || 'Loading...'}
+                              </p>
+                              
+                              <div className="flex items-end justify-between mt-auto">
+                                <div>
+                                  <div className="text-lg font-black text-primary">{fuelType?.price.toFixed(2)}</div>
+                                  <div className="text-[10px] text-muted-foreground">Price/Liter</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs font-bold">{tanker.currentFuel}L</div>
+                                  <div className="text-[10px] text-muted-foreground">Current Level</div>
+                                </div>
+                              </div>
+                              <div className="w-full h-2 bg-muted rounded-full overflow-hidden mt-3">
+                                <div 
+                                  className={cn("h-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")} 
+                                  style={{ width: `${fuelLevel}%` }}
+                                />
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })
+                    )}
+                    
+                    {/* Load More Button */}
+                    {posMode === "standard" && hasMoreProducts && (
+                      <div className={cn(
+                        "flex justify-center py-6",
+                        productViewMode === "grid" ? "col-span-full" : "w-full"
+                      )}>
+                        <Button 
+                          variant="outline" 
+                          size="lg"
+                          disabled={isFetchingMoreProducts}
+                          onClick={() => fetchNextProducts()}
+                          className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto"
                         >
-                          {/* In Cart Indicator */}
-                          {inCart && (
-                            <div className="absolute right-2 top-2 z-10 rounded-full bg-primary text-primary-foreground p-1.5 shadow-md">
-                              <Check className="h-3.5 w-3.5" />
+                          {isFetchingMoreProducts ? (
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin text-lg">⏳</div>
+                              Loading...
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Plus className="h-4 w-4" />
+                              Load More Products
                             </div>
                           )}
-                          
-                          {/* Product Image */}
-                          <div className="relative w-full aspect-square bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
-                            {productImage ? (
-                              <img
-                                src={productImage}
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Package className="h-12 w-12 text-muted-foreground/40" />
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Product Info */}
-                          <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
-                            <div>
-                              <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-1.5 text-left">
-                                {product.name}
-                              </h3>
-                              <div className="text-lg font-bold text-primary text-left">
-                                {displayPrice.toFixed(2)}
-                              </div>
+                        </Button>
+                      </div>
+                    )}
+
+                    {posMode === "petrol" && hasMoreTankers && (
+                      <div className={cn(
+                        "flex justify-center py-6",
+                        productViewMode === "grid" ? "col-span-full" : "w-full"
+                      )}>
+                        <Button 
+                          variant="outline" 
+                          size="lg"
+                          disabled={isFetchingMoreTankers}
+                          onClick={() => fetchNextTankers()}
+                          className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto"
+                        >
+                          {isFetchingMoreTankers ? (
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin text-lg">⏳</div>
+                              Loading...
                             </div>
-                            {managesStock && (
-                              <Badge 
-                                variant={isOutOfStock ? "destructive" : "secondary"} 
-                                className="text-[10px] self-start"
-                              >
-                                {isOutOfStock ? "Out of Stock" : `${stock?.quantity || 0} available`}
-                              </Badge>
-                            )}
-                          </div>
-                        </button>
-                      )
-                    })}
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Plus className="h-4 w-4" />
+                              Load More Tankers
+                            </div>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </ScrollArea>
@@ -2432,6 +2819,7 @@ export default function PointOfSalePage() {
           onCloseSuccess={() => refetchSession()}
         />
       )}
-    </PageLayout>
+    </div>
+  </div>
   )
 }

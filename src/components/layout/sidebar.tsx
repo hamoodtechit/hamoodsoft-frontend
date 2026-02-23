@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBusinesses } from "@/lib/hooks/use-business"
+import { usePOSSession } from "@/lib/hooks/use-pos-sessions"
 import { cn } from "@/lib/utils"
 import { useAuthStore, useUIStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
@@ -20,13 +22,12 @@ import {
     LayoutDashboard,
     Package,
     Plus,
-    Receipt,
     Ruler,
     Settings,
     Shield,
     ShoppingCart,
     Users,
-    Wallet,
+    Wallet
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
@@ -106,6 +107,10 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
     accounting: true,
     myBusiness: false,
   })
+  
+  const { selectedBranchId } = useBranchSelection()
+  const { data: activeSession } = usePOSSession(selectedBranchId || undefined)
+  const isPOSOpen = !!activeSession
 
   // Use businesses from multiple sources in priority order
   const businesses = useMemo(() => {
@@ -328,7 +333,15 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
                     isActive && "bg-secondary font-medium"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <div className="relative">
+                    <Icon className="h-4 w-4" />
+                    {item.href === "/dashboard/point-of-sale" && isPOSOpen && (
+                      <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                    )}
+                  </div>
                   <span className="sr-only">{item.title}</span>
                 </Button>
               </Link>
@@ -405,7 +418,15 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
             isActive && "bg-secondary font-medium"
           )}
         >
-          <Icon className="h-4 w-4 flex-shrink-0" />
+          <div className="relative">
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            {item.href === "/dashboard/point-of-sale" && isPOSOpen && (
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+            )}
+          </div>
           <span className="flex-1 text-left text-sm">{item.title}</span>
           {item.badge && (
             <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">

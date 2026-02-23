@@ -1,0 +1,2 @@
+src/app/[locale]/dashboard/point-of-sale/page.tsx(398,22): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(398,46): error TS7006: Parameter 't' implicitly has an 'any' type.

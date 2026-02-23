@@ -5,6 +5,7 @@ import { BusinessSwitcher } from "@/components/common/business-switcher"
 import { LanguageSwitcher } from "@/components/common/language-switcher"
 import { SearchModal } from "@/components/common/search-modal"
 import { ThemeToggle } from "@/components/common/theme-toggle"
+import { POSSessionIndicator } from "@/components/pos/pos-session-indicator"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -78,6 +79,9 @@ export function DashboardHeader() {
           {/* Branch switcher (depends on branches for current business) */}
           <div className="hidden min-[400px]:block">
             <BranchSwitcher />
+          </div>
+          <div className="hidden min-[600px]:block">
+            <POSSessionIndicator />
           </div>
           {/* Show language switcher and theme toggle on larger screens */}
           <div className="hidden sm:flex items-center gap-1 sm:gap-2">

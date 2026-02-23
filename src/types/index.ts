@@ -324,12 +324,14 @@ export interface POSSession {
   userId: string
   status: POSSessionStatus
   openingBalance: number
-  closingBalance?: number
-  actualBalance?: number
-  openingNote?: string
-  closingNote?: string
+  closingBalance: number | null
+  actualBalance: number | null
+  variance: number | null
+  openingNote: string | null
+  closingNote: string | null
+  accountId: string | null
   openedAt: string
-  closedAt?: string
+  closedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -510,4 +512,60 @@ export interface PaginatedResult<T> {
     totalPages?: number
     [key: string]: any
   }
+}
+
+// Fuel & Petrol Pump Types
+export interface FuelType {
+  id: string
+  businessId: string
+  name: string
+  price: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Tanker {
+  id: string
+  businessId: string
+  tankerNumber: string
+  fuelTypeId: string
+  name: string
+  capacity: number
+  currentFuel: number
+  pressure: number
+  temperature: number
+  location: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  fuelType?: FuelType
+}
+
+export interface CreateFuelTypeInput {
+  name: string
+  price: number
+  isActive?: boolean
+}
+
+export interface CreateTankerInput {
+  name: string
+  capacity: number
+  fuelTypeId: string
+  tankerNumber: string
+  currentFuel: number
+  pressure: number
+  temperature: number
+  location: string
+}
+
+export interface UpdateTankerInput {
+  name?: string
+  capacity?: number
+  fuelTypeId?: string
+  tankerNumber?: string
+  currentFuel?: number
+  pressure?: number
+  temperature?: number
+  location?: string
 }

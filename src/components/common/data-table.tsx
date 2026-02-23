@@ -32,6 +32,7 @@ interface DataTableProps<T> {
   getRowId?: (row: T) => string
   onSelectionChange?: (selected: T[]) => void
   emptyMessage?: string
+  isLoading?: boolean
 }
 
 type SortDirection = "asc" | "desc" | null
@@ -46,6 +47,7 @@ export function DataTable<T extends { id: string }>({
   getRowId,
   onSelectionChange,
   emptyMessage = "No data available",
+  isLoading = false,
 }: DataTableProps<T>) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _getRowId = getRowId
@@ -123,6 +125,16 @@ export function DataTable<T extends { id: string }>({
 
   const allSelected = data.length > 0 && selectedRows.size === data.length
   const someSelected = selectedRows.size > 0 && selectedRows.size < data.length
+
+  if (isLoading) {
+    return (
+      <div className="w-full space-y-3">
+        <div className="h-10 w-full animate-pulse bg-muted rounded-md" />
+        <div className="h-20 w-full animate-pulse bg-muted rounded-md" />
+        <div className="h-20 w-full animate-pulse bg-muted rounded-md" />
+      </div>
+    )
+  }
 
   if (data.length === 0) {
     return (

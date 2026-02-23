@@ -1,0 +1,12 @@
+src/app/[locale]/dashboard/point-of-sale/page.tsx(351,22): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(351,46): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(388,69): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(398,22): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(398,46): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(435,69): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(978,24): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(978,48): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1221,5): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1608,73): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1621,47): error TS2304: Cannot find name 'tankersData'.
+src/app/[locale]/dashboard/point-of-sale/page.tsx(1621,62): error TS2304: Cannot find name 'tankersData'.

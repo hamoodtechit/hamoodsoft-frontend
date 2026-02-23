@@ -153,4 +153,16 @@ export const endpoints = {
       current: (branchId: string) => `/pos/sessions/current/${branchId}`,
     },
   },
+  fuelTypes: {
+    create: "/fuel-types",
+    list: "/fuel-types",
+    delete: (id: string) => `/fuel-types/${id}`,
+  },
+  tankers: {
+    create: "/tankers",
+    list: "/tankers",
+    getById: (id: string) => `/tankers/${id}`,
+    update: (id: string) => `/tankers/${id}`,
+    delete: (id: string) => `/tankers/${id}`,
+  },
 } as const
