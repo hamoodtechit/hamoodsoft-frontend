@@ -14,17 +14,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  
-  // Early return if not on dashboard page
-  if (!pathname || !pathname.includes("/dashboard")) {
-    return <>{children}</>
-  }
-  
   const [isHydrated, setIsHydrated] = useState(false)
   const { isAuthenticated, user, token } = useAuthStore()
   const params = useParams()
   const router = useRouter()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
+
+  // Early return if not on dashboard page (must be after hooks to avoid rules-of-hooks errors)
+  const isDashboardRoute = pathname?.includes("/dashboard")
 
   // Wait for Zustand to rehydrate
   useEffect(() => {
@@ -94,6 +91,11 @@ export default function DashboardLayout({
     }
   }, [isHydrated, isAuthenticated, token, user, locale, router])
 
+
+  // Early return if not on dashboard page (must be after all hooks)
+  if (!isDashboardRoute) {
+    return <>{children}</>
+  }
 
   // Show loading state while waiting for hydration
   if (!isHydrated) {
