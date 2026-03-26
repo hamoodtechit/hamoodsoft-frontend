@@ -2,6 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -17,8 +25,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NumericInput } from "@/components/ui/numeric-input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
@@ -27,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
@@ -34,6 +48,7 @@ import { useContacts } from "@/lib/hooks/use-contacts"
 import { useProducts } from "@/lib/hooks/use-products"
 import { useCreatePurchase, useUpdatePurchase } from "@/lib/hooks/use-purchases"
 import { useUnits } from "@/lib/hooks/use-units"
+import { cn } from "@/lib/utils"
 import {
   createPurchaseSchema,
   updatePurchaseSchema,
@@ -42,7 +57,7 @@ import {
 } from "@/lib/validations/purchases"
 import { Purchase } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Package, Plus, Search, Trash2 } from "lucide-react"
+import { Check, ChevronsUpDown, Package, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -128,9 +143,9 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
     name: "items" as any,
   })
   
-  // Track selected products for each item
+  // Track selected products and popover state for each item
   const [selectedProducts, setSelectedProducts] = useState<Record<number, any | null>>({})
-  const [productSearchQueries, setProductSearchQueries] = useState<Record<number, string>>({})
+  const [comboboxOpen, setComboboxOpen] = useState<Record<number, boolean>>({})
   
   // Payment method and account selection
   type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED"
@@ -178,7 +193,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
         }
         // Reset product selections
         setSelectedProducts({})
-        setProductSearchQueries({})
+        setComboboxOpen({})
         // Reset payment method and accounts
         setPaymentMethod("CASH")
         setCashAccountId("")
@@ -353,7 +368,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
       totalPrice: 0,
     })
     setSelectedProducts(prev => ({ ...prev, [newIndex]: null }))
-    setProductSearchQueries(prev => ({ ...prev, [newIndex]: "" }))
+    setComboboxOpen(prev => ({ ...prev, [newIndex]: false }))
   }
 
   const removeItem = (index: number) => {
@@ -375,10 +390,10 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
         })
         return reindexed
       })
-      setProductSearchQueries(prev => {
+      setComboboxOpen(prev => {
         const updated = { ...prev }
         delete updated[index]
-        const reindexed: Record<number, string> = {}
+        const reindexed: Record<number, boolean> = {}
         Object.keys(updated).forEach(key => {
           const oldIndex = parseInt(key)
           if (oldIndex > index) {
@@ -579,14 +594,11 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                           <FormItem>
                             <FormLabel>{t("paidAmount")}</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
+                              <NumericInput
+                                min={0}
                                 {...field}
-                                value={field.value || ""}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                value={field.value || 0}
+                                onValueChange={field.onChange}
                               />
                             </FormControl>
                             <FormMessage />
@@ -636,109 +648,151 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                     {fields.map((field, index) => (
                       <div
                         key={field.id}
-                        className="p-4 border rounded-lg space-y-4 bg-muted/50"
+                        className="p-4 border rounded-lg space-y-4 bg-muted/50 relative"
                       >
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm">{t("item")} {index + 1}</h4>
+                        <div className="absolute top-2 right-2">
                           {fields.length > 1 && (
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
                               onClick={() => removeItem(index)}
-                              className="h-8 w-8"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
 
-                        {/* Product Selection */}
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.itemName` as any}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("itemName")} / {t("product") || "Product"}</FormLabel>
-                              <FormControl>
-                                <div className="space-y-2">
-                                  <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                      placeholder={t("searchPlaceholder") || "Search products..."}
-                                      value={productSearchQueries[index] || ""}
-                                      onChange={(e) => {
-                                        setProductSearchQueries(prev => ({
-                                          ...prev,
-                                          [index]: e.target.value
-                                        }))
-                                      }}
-                                      className="pl-9"
-                                    />
-                                  </div>
-                                  <Select
-                                    value={selectedProducts[index]?.id || ""}
-                                    onValueChange={(productId) => {
-                                      const product = products.find(p => p.id === productId)
-                                      if (product) {
-                                        setSelectedProducts(prev => ({ ...prev, [index]: product }))
-                                        
-                                        // Auto-fill item fields
-                                        field.onChange(product.name)
-                                        // Set SKU from product barcode or generate one
-                                        const sku = product.barcode || `SKU-${product.id}`
-                                        form.setValue(`items.${index}.sku` as any, sku)
-                                        form.setValue(`items.${index}.itemDescription` as any, product.description || "")
-                                        form.setValue(`items.${index}.unit` as any, product.unit?.suffix || "")
-                                        
-                                        // Get price from product
-                                        const price = product.price ?? 0
-                                        form.setValue(`items.${index}.price` as any, price)
-                                        
-                                        // Set default discount values
-                                        form.setValue(`items.${index}.discountType` as any, "NONE")
-                                        form.setValue(`items.${index}.discountAmount` as any, 0)
-                                      }
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={t("selectProduct") || "Select a product"} />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-[300px]">
-                                      {products
-                                        .filter((p) => {
-                                          const query = (productSearchQueries[index] || "").toLowerCase()
-                                          if (!query) return true
-                                          return p.name.toLowerCase().includes(query) ||
-                                            p.barcode?.toLowerCase().includes(query) ||
-                                            p.description?.toLowerCase().includes(query)
-                                        })
-                                        .map((product) => (
-                                          <SelectItem key={product.id} value={product.id}>
-                                            <div className="flex items-center justify-between w-full">
-                                              <span>{product.name}</span>
-                                              <span className="text-xs text-muted-foreground ml-2">
-                                                {product.price} {product.unit?.suffix || ""}
-                                              </span>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        {/* Top row: Product Search */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mt-2">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.itemName` as any}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                                <FormLabel>{t("product") || "Product"}</FormLabel>
+                                <Popover
+                                  open={comboboxOpen[index]}
+                                  onOpenChange={(isOpen) =>
+                                    setComboboxOpen((prev) => ({ ...prev, [index]: isOpen }))
+                                  }
+                                >
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn(
+                                          "w-full justify-between",
+                                          !field.value && "text-muted-foreground"
+                                        )}
+                                      >
+                                        {field.value
+                                          ? field.value
+                                          : t("selectProduct") || "Select product..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[300px] sm:w-[400px] p-0" align="start">
+                                    <Command>
+                                      <CommandInput placeholder={t("searchPlaceholder") || "Search products..."} />
+                                      <CommandList>
+                                        <CommandEmpty>{t("noResults") || "No product found."}</CommandEmpty>
+                                        <CommandGroup>
+                                          {products.map((product) => (
+                                            <CommandItem
+                                              value={`${product.name} ${product.barcode || ''} ${product.description || ''}`}
+                                              key={product.id}
+                                              onSelect={() => {
+                                                setSelectedProducts((prev) => ({ ...prev, [index]: product }))
+                                                field.onChange(product.name)
+                                                // auto-fill...
+                                                const sku = product.barcode || `SKU-${product.id}`
+                                                form.setValue(`items.${index}.sku` as any, sku)
+                                                form.setValue(`items.${index}.itemDescription` as any, product.description || "")
+                                                form.setValue(`items.${index}.unit` as any, product.unit?.suffix || "")
+                                                form.setValue(`items.${index}.price` as any, product.price ?? 0)
+                                                form.setValue(`items.${index}.discountType` as any, "NONE")
+                                                form.setValue(`items.${index}.discountAmount` as any, 0)
+                                                
+                                                setComboboxOpen((prev) => ({ ...prev, [index]: false }))
+                                              }}
+                                            >
+                                              <Check
+                                                className={cn(
+                                                  "mr-2 h-4 w-4",
+                                                  selectedProducts[index]?.id === product.id
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
+                                                )}
+                                              />
+                                              <div className="flex flex-col w-full">
+                                                <div className="flex justify-between w-full">
+                                                  <span className="font-medium">{product.name}</span>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {product.price} {product.unit?.suffix || ""}
+                                                  </span>
+                                                </div>
+                                                {product.barcode && (
+                                                  <span className="text-xs text-muted-foreground font-mono">
+                                                    {product.barcode}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.itemDescription` as any}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("itemDescription")}</FormLabel>
+                                <FormControl>
+                                  <Input placeholder={t("itemDescriptionPlaceholder")} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Bottom Row: Qty, Price, Unit, Subtotal */}
+                        <div className="flex flex-wrap items-end gap-3 mt-4">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity` as any}
+                            render={({ field }) => (
+                              <FormItem className="flex-1 min-w-[100px]">
+                                <FormLabel>{t("quantity")}</FormLabel>
+                                <FormControl>
+                                  <NumericInput
+                                    value={field.value || 0}
+                                    onValueChange={field.onChange}
+                                    min={1}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
                           <FormField
                             control={form.control}
                             name={`items.${index}.unit` as any}
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="flex-[1.5] min-w-[120px]">
                                 <FormLabel>{t("unit")}</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
@@ -758,40 +812,18 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                               </FormItem>
                             )}
                           />
-                        </div>
 
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.itemDescription` as any}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("itemDescription")}</FormLabel>
-                              <FormControl>
-                                <Input placeholder={t("itemDescriptionPlaceholder")} {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name={`items.${index}.price` as any}
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="flex-1 min-w-[100px]">
                                 <FormLabel>{t("price")}</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    {...field}
-                                    value={field.value || ""}
-                                    onChange={(e) =>
-                                      field.onChange(parseFloat(e.target.value) || 0)
-                                    }
+                                  <NumericInput
+                                    value={field.value || 0}
+                                    onValueChange={field.onChange}
+                                    min={0}
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -799,34 +831,12 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                             )}
                           />
 
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.quantity` as any}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("quantity")}</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    placeholder="1"
-                                    {...field}
-                                    value={field.value || ""}
-                                    onChange={(e) =>
-                                      field.onChange(parseInt(e.target.value) || 1)
-                                    }
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="text-sm text-muted-foreground">
-                          {t("subtotal")}:{" "}
-                          {((form.watch(`items.${index}.price` as any) || 0) *
-                            (form.watch(`items.${index}.quantity` as any) || 0)).toFixed(2)}
+                          <div className="flex-1 min-w-[100px] pb-2 text-right">
+                            <span className="text-sm text-muted-foreground mr-2">{t("subtotal")}:</span>
+                            <span className="font-bold whitespace-nowrap">
+                              {((form.watch(`items.${index}.price` as any) || 0) * (form.watch(`items.${index}.quantity` as any) || 0)).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -862,12 +872,11 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                                 control={form.control}
                                                 name="discountAmount"
                                                 render={({ field }) => (
-                                                    <Input
-                                                        type="number"
-                                                        placeholder="0"
+                                                    <NumericInput
                                                         className="flex-1"
                                                         {...field}
-                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                        value={field.value || 0}
+                                                        onValueChange={field.onChange}
                                                     />
                                                 )}
                                             />
@@ -900,12 +909,11 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                                 control={form.control}
                                                 name="taxRate"
                                                 render={({ field }) => (
-                                                    <Input
-                                                        type="number"
-                                                        placeholder="RATE %"
+                                                    <NumericInput
                                                         className="flex-1"
                                                         {...field}
-                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                        value={field.value || 0}
+                                                        onValueChange={field.onChange}
                                                     />
                                                 )}
                                             />
@@ -915,12 +923,11 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                                 control={form.control}
                                                 name="taxAmount"
                                                 render={({ field }) => (
-                                                    <Input
-                                                        type="number"
-                                                        placeholder="Amount"
+                                                    <NumericInput
                                                         className="flex-1"
                                                         {...field}
-                                                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                                        value={field.value || 0}
+                                                        onValueChange={field.onChange}
                                                     />
                                                 )}
                                             />
@@ -1066,20 +1073,16 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                           ))}
                                         </SelectContent>
                                       </Select>
-                                      <Input
-                                        type="number"
-                                        value={split.amount || ""}
-                                        onChange={(e) => {
+                                      <NumericInput
+                                        value={split.amount || 0}
+                                        onValueChange={(value) => {
                                           const updated = [...paymentSplits]
-                                          const amount = Math.max(0, Math.min(Number(e.target.value), total))
+                                          const amount = Math.max(0, Math.min(value, total))
                                           updated[index].amount = amount
                                           setPaymentSplits(updated)
                                         }}
                                         className="h-9 text-xs"
-                                        placeholder="Amount"
                                         min={0}
-                                        max={total}
-                                        step="0.01"
                                       />
                                     </div>
                                     <Button
