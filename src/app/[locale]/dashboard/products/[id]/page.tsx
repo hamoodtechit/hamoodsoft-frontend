@@ -343,9 +343,6 @@ export default function ProductDetailsPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <h4 className="font-semibold text-base">{variant.variantName || "Unnamed Variant"}</h4>
-                                  {variant.sku && (
-                                    <p className="text-xs text-muted-foreground mt-1">SKU: {variant.sku}</p>
-                                  )}
                                 </div>
                                 {variant.price !== null && variant.price !== undefined && variant.price > 0 && (
                                   <div className="text-right flex-shrink-0">

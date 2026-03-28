@@ -13,24 +13,31 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NumericInput } from "@/components/ui/numeric-input"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { salesApi } from "@/lib/api/sales"
 import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
@@ -50,31 +57,34 @@ import { cn } from "@/lib/utils"
 import { getRandomGradient } from "@/lib/utils/aesthetics"
 import { Product, ProductVariant, Sale, Stock, Tanker } from "@/types"
 import {
-    ArrowLeft,
-    Calculator,
-    Check,
-    Container,
-    Droplets,
-    Edit,
-    FileText,
-    Filter,
-    HelpCircle,
-    History,
-    LayoutGrid,
-    List,
-    LogOut,
-    Minus,
-    Package,
-    Plus,
-    Printer,
-    Save,
-    Search,
-    ShoppingCart,
-    Trash2,
-    UserPlus,
-    Volume2,
-    VolumeX,
-    X
+  ArrowLeft,
+  Calculator,
+  Check,
+  ChevronDown,
+  Container,
+  CreditCard,
+  Droplets,
+  Edit,
+  FileText,
+  Filter,
+  HelpCircle,
+  History,
+  LayoutGrid,
+  List,
+  LogOut,
+  Minus,
+  Package,
+  Plus,
+  Printer,
+  Receipt,
+  Save,
+  Search,
+  ShoppingCart,
+  Trash2,
+  UserPlus,
+  Volume2,
+  VolumeX,
+  X
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -132,8 +142,9 @@ export default function PointOfSalePage() {
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
-  const [productViewMode, setProductViewMode] = useState<"grid" | "list">("list") // Default to list for performance
+  const [productViewMode, setProductViewMode] = useState<"grid" | "list">("list")
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const barcodeInputRef = useRef<HTMLInputElement>(null)
@@ -1036,6 +1047,8 @@ export default function PointOfSalePage() {
         
         const itemData = {
           sku: sku,
+          productId: item.productId,
+          variantId: item.variantId,
           itemName: item.itemName,
           itemDescription: item.itemDescription || "",
           unit: item.unit,
@@ -1924,367 +1937,468 @@ export default function PointOfSalePage() {
         </div>
 
         {/* Right Sidebar - Cart and Checkout */}
-        <div className="lg:col-span-4 flex flex-col space-y-4 min-h-0">
-          {/* Cart Card */}
-          <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardHeader className="flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
-                  Cart ({cart.length})
-                </CardTitle>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setSoundEnabled((v) => !v)}
-                    title={soundEnabled ? "Sound: On" : "Sound: Off"}
-                  >
-                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                  {cart.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">
-                      <Trash2 className="h-4 w-4" />
+        <div className="lg:col-span-4 flex flex-col space-y-4 min-h-0 relative">
+          <div className="flex flex-col h-full bg-card overflow-hidden border rounded-lg shadow-sm">
+            {/* Header - Compact */}
+            <div className="p-3 border-b bg-secondary/10 flex justify-between items-center shrink-0">
+                <h2 className="font-semibold flex items-center gap-2 text-base">
+                    <ShoppingCart className="w-4 h-4 text-primary" />
+                    Cart Items
+                </h2>
+                <div className="flex gap-2 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setSoundEnabled((v) => !v)}
+                      title={soundEnabled ? "Sound: On" : "Sound: Off"}
+                    >
+                      {soundEnabled ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
                     </Button>
-                  )}
+                    <Badge variant="secondary" className="px-2 py-0.5 text-xs">{cart.length} items</Badge>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
-              {/* Whole cart panel scrolls when screen height is tight (prevents clipped content) */}
-              <ScrollArea className="flex-1">
-                <div className="p-6 pt-0">
-                  {/* Cart Items - Moved to occupy more height */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                       <Label className="text-xs block">Items</Label>
-                       <Badge variant="outline" className="text-[10px] py-0">{cart.length} items</Badge>
+            </div>
+            
+            {/* Scrollable Items List - maximize height */}
+            <div className="flex-1 overflow-y-auto p-2 min-h-0 custom-scrollbar">
+                {cart.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-50">
+                        <div className="p-3 bg-secondary rounded-full">
+                            <ShoppingCart className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm">No items added yet</p>
                     </div>
-                    {cart.length === 0 ? (
-                      <div className="text-center py-20 text-muted-foreground text-sm border rounded-lg bg-muted/20 border-dashed">
-                        <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        Cart is empty
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
+                ) : (
+                    <div className="space-y-2">
                         {cart.map((item, index) => {
-                          const product = products.find((p) => p.id === item.productId)
-                          const variant = product?.productVariants?.find((v) => v.id === item.variantId) ||
-                                          product?.variants?.find((v) => v.id === item.variantId)
-                          const variantImage = variant?.thumbnailUrl || product?.thumbnailUrl
+                            const product = products.find((p) => p.id === item.productId)
+                            const variant = product?.productVariants?.find((v) => v.id === item.variantId) ||
+                                            product?.variants?.find((v) => v.id === item.variantId)
+                            const isFuel = item.productId?.startsWith("fuel-")
 
-                          return (
-                            <div key={index} className="px-3 py-2 border rounded-lg bg-card hover:border-primary/30 transition-colors flex items-center gap-2">
-                              {variantImage && (
-                                <div className="w-8 h-8 rounded overflow-hidden bg-muted flex-shrink-0 border">
-                                  <img
-                                    src={variantImage}
-                                    alt={item.itemName}
-                                    className="w-full h-full object-cover"
-                                  />
+                            return (
+                            <div key={`${item.productId}-${item.sku}-${index}`} className="bg-card border rounded-md shadow-sm hover:border-primary/20 transition-colors">
+                                <div className="p-2 space-y-1">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-sm truncate leading-tight">
+                                                {product?.name || item.itemName.split(" - ")[0]}
+                                                {variant?.variantName && <span className="text-[11px] font-bold text-primary ml-1 uppercase">({variant.variantName})</span>}
+                                                {isFuel && <span className="text-[11px] font-bold text-primary ml-1 uppercase">(Fuel)</span>}
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground font-medium">{item.price.toFixed(2)}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            {(item.discountAmount > 0) && (
+                                                <span className="text-[10px] text-muted-foreground line-through block leading-none">
+                                                    {(item.price * item.quantity).toFixed(2)}
+                                                </span>
+                                            )}
+                                            <span className="font-black text-sm text-primary leading-tight">{item.totalPrice.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2 border-t pt-1.5 mt-0.5">
+                                        <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 bg-secondary/30 rounded-md p-0.5 border">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 rounded-sm hover:bg-background"
+                                                    onClick={() => updateQuantity(index, -1)}
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </Button>
+                                                <NumericInput 
+                                                    value={item.quantity}
+                                                    onValueChange={(val) => setQuantity(index, val)}
+                                                    className="h-6 w-10 text-center text-[11px] p-0 font-black bg-background border-none focus-visible:ring-1 focus-visible:ring-primary"
+                                                />
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 rounded-sm hover:bg-background"
+                                                    onClick={() => updateQuantity(index, 1)}
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 rounded-sm text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                onClick={() => removeFromCart(index)}
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 bg-secondary/20 rounded-md p-0.5 border">
+                                            <Select 
+                                                value={item.discountType} 
+                                                onValueChange={(val: "NONE"|"PERCENTAGE"|"FIXED") => {
+                                                    const updated = [...cart];
+                                                    updated[index].discountType = val;
+                                                    if (val === "NONE") updated[index].discountAmount = 0;
+                                                    updated[index].totalPrice = calculateItemTotal(updated[index])
+                                                    setCart(updated);
+                                                }}
+                                            >
+                                                <SelectTrigger className="h-6 text-[10px] w-[50px] bg-background border-none px-1">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="NONE" className="text-[10px]">No</SelectItem>
+                                                    <SelectItem value="PERCENTAGE" className="text-[10px]">%</SelectItem>
+                                                    <SelectItem value="FIXED" className="text-[10px]">Flat</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <div className="w-px h-4 bg-border mx-1" />
+                                            <NumericInput 
+                                                placeholder="Amt"
+                                                className="h-6 text-[10px] w-14 bg-background border-none px-1"
+                                                value={item.discountAmount}
+                                                disabled={item.discountType === "NONE"}
+                                                onValueChange={(val) => {
+                                                    const updated = [...cart];
+                                                    updated[index].discountAmount = val;
+                                                    updated[index].totalPrice = calculateItemTotal(updated[index])
+                                                    setCart(updated);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-bold truncate leading-tight">{item.itemName}</div>
-                                <div className="text-[10px] text-muted-foreground">
-                                  {item.price.toFixed(2)}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => updateQuantity(index, -1)}
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <NumericInput
-                                  value={item.quantity}
-                                  onValueChange={(val) => setQuantity(index, val)}
-                                  className="h-7 w-12 text-xs text-center p-0 border-none bg-transparent"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => updateQuantity(index, 1)}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <div className="text-xs font-black text-primary min-w-[60px] text-right">
-                                {item.totalPrice.toFixed(2)}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => removeFromCart(index)}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </ScrollArea>
-
-              {/* Sticky Cart Footer with Scrollable Settings */}
-              <div className="border-t bg-card mt-auto flex flex-col shadow-[0_-4px_10px_rgba(0,0,0,0.05)] max-h-[60%]">
-                <ScrollArea className="flex-1">
-                  <div className="p-4 pt-4 space-y-4">
-                    {/* Customer & Sale Type Moved HERE */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground block">Customer</Label>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-4 w-4 text-primary hover:text-primary/80"
-                            onClick={() => setIsContactDialogOpen(true)}
-                          >
-                            <UserPlus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <Select value={selectedContactId} onValueChange={setSelectedContactId}>
-                          <SelectTrigger className="h-8 text-[10px] px-2">
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {contacts.map((contact) => (
-                              <SelectItem key={contact.id} value={contact.id} className="text-xs">
-                                {contact.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Sale Type</Label>
-                        <Select value={saleType} onValueChange={(v: SaleType) => setSaleType(v)}>
-                          <SelectTrigger className="h-8 text-[10px] px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CARD" className="text-xs">Sale</SelectItem>
-                            <SelectItem value="DRAFT" className="text-xs">Draft</SelectItem>
-                            <SelectItem value="QUOTATION" className="text-xs">Quote</SelectItem>
-                            <SelectItem value="SUSPEND" className="text-xs">Hold</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                        )})}
                     </div>
+                )}
+            </div>
 
-                    {/* Discount, Tax, and Payment Method */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Discount</Label>
-                        <div className="flex gap-1">
-                          <Select
-                            value={discountType}
-                            onValueChange={(v: "NONE" | "PERCENTAGE" | "FIXED") => {
-                              setDiscountType(v)
-                              if (v === "NONE") setDiscountAmount(0)
-                            }}
-                          >
-                            <SelectTrigger className="h-8 text-[10px] px-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="text-xs">
-                              <SelectItem value="NONE" className="text-xs">None</SelectItem>
-                              <SelectItem value="PERCENTAGE" className="text-xs">%</SelectItem>
-                              <SelectItem value="FIXED" className="text-xs">Flat</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {discountType !== "NONE" && (
-                            <NumericInput
-                              value={discountAmount}
-                              onValueChange={setDiscountAmount}
-                              className="h-8 flex-1 text-xs px-2"
-                            />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Tax (%)</Label>
-                        <NumericInput
-                          value={taxRate}
-                          onValueChange={setTaxRate}
-                          className="h-8 w-full text-xs px-2"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Payment Method</Label>
-                        <Select value={paymentMethod} onValueChange={(v: PaymentMethod) => {
-                          setPaymentMethod(v)
-                          if (v === "MIXED" && paymentSplits.length === 0) {
-                            setPaymentSplits([{ id: "1", accountId: "", amount: cartTotals.total }])
-                          }
-                        }}>
-                          <SelectTrigger className="h-8 text-[10px] px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CASH" className="text-xs">Cash</SelectItem>
-                            <SelectItem value="CARD" className="text-xs">Card</SelectItem>
-                            <SelectItem value="CREDIT" className="text-xs">Credit</SelectItem>
-                            <SelectItem value="MIXED" className="text-xs">Mixed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {(paymentMethod === "CASH" || paymentMethod === "CARD") && accounts.length > 0 && (
-                        <div>
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Account</Label>
-                          <Select 
-                            value={paymentMethod === "CASH" ? cashAccountId : bankAccountId} 
-                            onValueChange={paymentMethod === "CASH" ? setCashAccountId : setBankAccountId}
-                          >
-                            <SelectTrigger className="h-8 text-[10px] px-2 font-medium">
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[200px]">
-                              {(paymentMethod === "CASH" ? cashAccounts : bankAccounts).map(acc => (
-                                <SelectItem key={acc.id} value={acc.id} className="text-xs">
-                                  {acc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mixed Payment Splits */}
-                    {paymentMethod === "MIXED" && (
-                      <div className="pt-2 border-t border-dashed space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Splits</Label>
-                          <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={addPaymentSplit}>
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </Button>
-                        </div>
-                        <div className="space-y-2 py-1">
-                          {paymentSplits.map((split) => (
-                            <div key={split.id} className="flex gap-1 items-end">
-                              <div className="flex-1">
-                                <Select 
-                                  value={split.accountId} 
-                                  onValueChange={(v) => updatePaymentSplit(split.id, { accountId: v })}
-                                >
-                                  <SelectTrigger className="h-8 text-[10px] px-2">
-                                    <SelectValue placeholder="Acc" />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-[200px]">
-                                    {accounts.map(acc => (
-                                      <SelectItem key={acc.id} value={acc.id} className="text-xs">
-                                        {acc.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="w-20">
-                                <NumericInput 
-                                  className="h-8 text-[10px] px-2" 
-                                  value={split.amount}
-                                  onValueChange={(val) => updatePaymentSplit(split.id, { amount: val })}
-                                  placeholder="Amt"
-                                />
-                              </div>
-                              {paymentSplits.length > 1 && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removePaymentSplit(split.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Remaining Amount Indicator */}
-                        {Math.abs(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)) > 0.01 && (
-                          <div className="text-[10px] text-right font-medium text-destructive">
-                            Remaining: {(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)).toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                  </div>
-                </ScrollArea>
-
-                {/* Cart Summary - Pinned above checkout button */}
-                {cart.length > 0 && (
-                  <div className="px-4 py-3 border-t bg-card space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{cartTotals.itemsSubtotal.toFixed(2)}</span>
+            {/* Footer Section - Simplified Sticky Footer */}
+            <div className="p-3 bg-secondary/5 border-t shrink-0 flex flex-col gap-3">
+                {/* 1. Summary Totals */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                        <span>Subtotal ({cart.length} items)</span>
+                        <span>{cartTotals.itemsSubtotal.toFixed(2)}</span>
                     </div>
                     {cartTotals.saleDiscount > 0 && (
-                      <div className="flex justify-between text-xs text-destructive">
-                        <span>Discount</span>
-                        <span>-{cartTotals.saleDiscount.toFixed(2)}</span>
-                      </div>
+                        <div className="flex justify-between text-xs font-medium text-destructive">
+                            <span>Discount</span>
+                            <span>-{cartTotals.saleDiscount.toFixed(2)}</span>
+                        </div>
                     )}
                     {cartTotals.tax > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span>Tax ({taxRate}%)</span>
-                        <span>{cartTotals.tax.toFixed(2)}</span>
-                      </div>
+                        <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                            <span>Tax (VAT {taxRate}%)</span>
+                            <span>{cartTotals.tax.toFixed(2)}</span>
+                        </div>
                     )}
-                    <div className="flex justify-between font-black text-sm border-t pt-1 mt-1 text-primary">
-                      <span>Total</span>
-                      <span>{cartTotals.total.toFixed(2)}</span>
+                    <div className="flex justify-between items-baseline pt-1 border-t mt-1">
+                        <span className="text-sm font-bold uppercase">Total to Pay</span>
+                        <span className="text-2xl font-black text-primary">{cartTotals.total.toFixed(2)}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Permanent Action Buttons */}
-                <div className="p-4 border-t bg-card">
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      size="lg"
-                      className="w-full text-base font-black h-12 shadow-lg hover:shadow-primary/20 transition-all active:scale-[0.98]"
-                      disabled={cart.length === 0 || isProcessing || (paymentMethod === "MIXED" && Math.abs(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)) > 0.01)}
-                      onClick={handleCheckout}
-                    >
-                      {isProcessing ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
-                          Processing...
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between w-full">
-                          <span className="flex items-center">
-                            <Save className="h-5 w-5 mr-2" />
-                            {saleType === "CARD" ? "COMPLETE SALE" : `SAVE AS ${saleType}`}
-                          </span>
-                          <span className="text-xl font-black">{cartTotals.total.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </Button>
-                  </div>
                 </div>
-              </div>
 
-            </CardContent>
-          </Card>
+                {/* 2. Main Checkout Trigger (Drawer) */}
+                <Sheet open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+                    <SheetTrigger asChild>
+                        <Button 
+                            className="w-full h-12 text-lg font-bold shadow-lg transition-all active:scale-[0.98] bg-primary hover:bg-primary/90"
+                            disabled={cart.length === 0}
+                            onClick={() => setIsCheckoutOpen(true)}
+                        >
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Review & Pay
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0 gap-0">
+                        <SheetHeader className="p-4 border-b bg-secondary/10 flex-shrink-0">
+                            <SheetTitle className="flex items-center gap-2">
+                                <Receipt className="w-5 h-5 text-primary" />
+                                Checkout Details
+                            </SheetTitle>
+                        </SheetHeader>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0 custom-scrollbar">
+                            {/* Drawer: Customer Selection and Sale Type */}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                          Customer
+                                      </Label>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-5 w-5 text-primary hover:bg-primary/10"
+                                        onClick={() => setIsContactDialogOpen(true)}
+                                      >
+                                        <UserPlus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                    <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+                                      <SelectTrigger className="h-10 text-sm">
+                                        <SelectValue placeholder="Walk-in Customer" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {contacts.map((contact) => (
+                                          <SelectItem key={contact.id} value={contact.id}>
+                                            {contact.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        Sale Type
+                                    </Label>
+                                    <Select value={saleType} onValueChange={(v: SaleType) => setSaleType(v)}>
+                                      <SelectTrigger className="h-10 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="CARD">Direct Sale</SelectItem>
+                                        <SelectItem value="DRAFT">Draft</SelectItem>
+                                        <SelectItem value="QUOTATION">Quotation</SelectItem>
+                                        <SelectItem value="SUSPEND">Suspended (Hold)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Drawer: Sale Discount & Tax */}
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                    Global Sale Adjustment
+                                </Label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px] text-muted-foreground">Discount Type</Label>
+                                      <Select
+                                        value={discountType}
+                                        onValueChange={(v: "NONE" | "PERCENTAGE" | "FIXED") => {
+                                          setDiscountType(v)
+                                          if (v === "NONE") setDiscountAmount(0)
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-10 text-sm">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="NONE">None</SelectItem>
+                                          <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
+                                          <SelectItem value="FIXED">Flat Target</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] text-muted-foreground">Discount Value</Label>
+                                        <NumericInput 
+                                            placeholder="Value" 
+                                            className="h-10 text-sm" 
+                                            value={discountType === "NONE" ? 0 : discountAmount}
+                                            disabled={discountType === "NONE"}
+                                            onValueChange={setDiscountAmount}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="pt-2">
+                                    <Label className="text-[10px] text-muted-foreground block mb-1">Global Tax (VAT %)</Label>
+                                    <NumericInput
+                                      value={taxRate}
+                                      onValueChange={setTaxRate}
+                                      className="h-10 w-full text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Drawer: Payment Details */}
+                            <div className="space-y-4 pt-4 border-t">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Payment Method</Label>
+                                        <Select value={paymentMethod} onValueChange={(v: PaymentMethod) => {
+                                          setPaymentMethod(v)
+                                          if (v === "MIXED" && paymentSplits.length === 0) {
+                                            setPaymentSplits([{ id: "1", accountId: "", amount: cartTotals.total }])
+                                          }
+                                        }}>
+                                            <SelectTrigger className="h-10 text-sm">
+                                                <SelectValue placeholder="Method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="CASH">Cash</SelectItem>
+                                                <SelectItem value="CARD">Card</SelectItem>
+                                                <SelectItem value="CREDIT">Credit</SelectItem>
+                                                <SelectItem value="MIXED">Mixed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Amount Paid</Label>
+                                        <NumericInput 
+                                            value={paymentMethod === "CREDIT" || saleType === "DRAFT" ? 0 : paidAmountInput}
+                                            onValueChange={setPaidAmountInput}
+                                            disabled={paymentMethod === "CREDIT" || paymentMethod === "MIXED" || saleType === "DRAFT"}
+                                            className="h-10 text-base font-bold border-primary/20 text-primary"
+                                        />
+                                    </div>
+                                </div>
+
+                                {(paymentMethod === "CASH" || paymentMethod === "CARD") && accounts.length > 0 && (
+                                  <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Target Account</Label>
+                                      <Select 
+                                          value={paymentMethod === "CASH" ? cashAccountId : bankAccountId} 
+                                          onValueChange={paymentMethod === "CASH" ? setCashAccountId : setBankAccountId}
+                                      >
+                                          <SelectTrigger className="h-10 text-sm">
+                                              <SelectValue placeholder="Select Account" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {(paymentMethod === "CASH" ? cashAccounts : bankAccounts).map(acc => (
+                                              <SelectItem key={acc.id} value={acc.id}>
+                                                {acc.name} ({acc.type})
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                                )}
+
+                                {/* Mixed Payment Splits */}
+                                {paymentMethod === "MIXED" && (
+                                  <div className="pt-2 border-t border-dashed space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Payment Splits</Label>
+                                      <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={addPaymentSplit}>
+                                        <Plus className="h-3 w-3 mr-1" /> Add
+                                      </Button>
+                                    </div>
+                                    <div className="space-y-2 py-1">
+                                      {paymentSplits.map((split) => (
+                                        <div key={split.id} className="flex gap-2 items-end">
+                                          <div className="flex-1">
+                                            <Select 
+                                              value={split.accountId} 
+                                              onValueChange={(v) => updatePaymentSplit(split.id, { accountId: v })}
+                                            >
+                                              <SelectTrigger className="h-10 text-xs">
+                                                <SelectValue placeholder="Account" />
+                                              </SelectTrigger>
+                                              <SelectContent className="max-h-[200px]">
+                                                {accounts.map(acc => (
+                                                  <SelectItem key={acc.id} value={acc.id} className="text-xs">
+                                                    {acc.name}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div className="w-24">
+                                            <NumericInput 
+                                              className="h-10 text-xs px-2" 
+                                              value={split.amount}
+                                              onValueChange={(val) => updatePaymentSplit(split.id, { amount: val })}
+                                              placeholder="Amt"
+                                            />
+                                          </div>
+                                          {paymentSplits.length > 1 && (
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-10 w-10 text-muted-foreground hover:text-destructive shrink-0 border"
+                                              onClick={() => removePaymentSplit(split.id)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {Math.abs(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)) > 0.01 && (
+                                      <div className="text-xs font-medium text-destructive bg-destructive/10 p-2 rounded">
+                                        Remaining Balance: {(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)).toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Drawer Footer: Totals and Completion */}
+                        <div className="p-4 border-t bg-foreground text-background shrink-0 mt-auto">
+                            <div className="space-y-1 mb-4">
+                                <div className="flex justify-between text-xs opacity-70">
+                                    <span>Subtotal</span>
+                                    <span>{cartTotals.itemsSubtotal.toFixed(2)}</span>
+                                </div>
+                                {cartTotals.saleDiscount > 0 && (
+                                    <div className="flex justify-between text-xs text-emerald-400">
+                                        <span>Discount</span>
+                                        <span>-{cartTotals.saleDiscount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {cartTotals.tax > 0 && (
+                                    <div className="flex justify-between text-xs opacity-70">
+                                        <span>Tax ({taxRate}%)</span>
+                                        <span>{cartTotals.tax.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-sm font-bold border-t border-white/20 pt-1 mt-1">
+                                    <span>Total Payable</span>
+                                    <span>{cartTotals.total.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center mt-2">
+                                    <span className={cn(
+                                        "text-xs font-black uppercase tracking-widest",
+                                        paidAmountInput >= (cartTotals.total - 0.01) ? "text-emerald-400" : "text-rose-400"
+                                    )}>
+                                        {paidAmountInput >= (cartTotals.total - 0.01) ? "Return Change" : "Balance Due"}
+                                    </span>
+                                    <span className={cn(
+                                        "text-xl font-black",
+                                        paidAmountInput >= (cartTotals.total - 0.01) ? "text-emerald-400" : "text-rose-400"
+                                    )}>
+                                        {Math.abs(paidAmountInput - cartTotals.total).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <Button 
+                                className={cn(
+                                    "w-full h-14 text-lg font-black shadow-xl transition-all active:scale-[0.98]",
+                                    paidAmountInput < (cartTotals.total - 0.01) && cartTotals.total > 0 && saleType === "CARD" && paymentMethod !== "CREDIT"
+                                        ? "bg-rose-500 hover:bg-rose-600 text-white" 
+                                        : "bg-emerald-500 hover:bg-emerald-600 text-white",
+                                    isProcessing && "opacity-70 cursor-not-allowed"
+                                )}
+                                disabled={cart.length === 0 || isProcessing || (paymentMethod === "MIXED" && Math.abs(cartTotals.total - paymentSplits.reduce((acc, s) => acc + s.amount, 0)) > 0.01)}
+                                onClick={() => {
+                                    handleCheckout()
+                                }}
+                            >
+                                {isProcessing ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+                                        Processing...
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Save className="mr-3 h-6 w-6" />
+                                        {saleType === "CARD" ? "COMPLETE PAYMENT" : `SAVE AS ${saleType}`}
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
+          </div>
         </div>
       </div>
 
