@@ -45,7 +45,7 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
 
   // Calculate totals
   const totals = useMemo(() => {
-    if (!transaction) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }
+    if (!transaction) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0, change: 0 }
     
     // Calculate item totals with item-level discounts
     const itemsSubtotal = items.reduce((sum, item) => {
@@ -87,12 +87,9 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
     
     const paid = transaction.paidAmount || 0
     const due = Math.max(0, total - paid)
+    const change = Math.max(0, paid - total)
 
-    return { subtotal: afterDiscount, discount, tax, total, paid, due } // Note: subtotal here is effectively "Total before Tax" but after discount. 
-    // Actually, UI shows Subtotal (items sum), Discount, Tax, Total.
-    // The previous logic returned { subtotal: itemsSubtotal ... }
-    // Let's stick to that:
-    return { subtotal: itemsSubtotal, discount, tax, total, paid, due }
+    return { subtotal: itemsSubtotal, discount, tax, total, paid, due, change }
   }, [transaction, items])
 
   // Get invoice layout from settings
@@ -362,17 +359,23 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
                 <span>Total:</span>
                 <span>{formatCurrency(totals.total, { generalSettings })}</span>
               </div>
-              {transaction.paymentStatus !== "PAID" && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Paid:</span>
-                    <span className="text-green-600">{formatCurrency(totals.paid, { generalSettings })}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold text-red-600">
-                    <span>Due:</span>
-                    <span>{formatCurrency(totals.due, { generalSettings })}</span>
-                  </div>
-                </>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Paid:</span>
+                <span className="text-green-600">{formatCurrency(totals.paid, { generalSettings })}</span>
+              </div>
+              
+              {totals.due > 0 && (
+                <div className="flex justify-between text-sm font-semibold text-red-600">
+                  <span>Due:</span>
+                  <span>{formatCurrency(totals.due, { generalSettings })}</span>
+                </div>
+              )}
+              
+              {totals.change > 0 && (
+                <div className="flex justify-between text-sm font-semibold text-blue-600">
+                  <span>Change:</span>
+                  <span>{formatCurrency(totals.change, { generalSettings })}</span>
+                </div>
               )}
             </div>
           </div>

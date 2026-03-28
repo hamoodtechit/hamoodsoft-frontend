@@ -23,6 +23,9 @@ export default function ProductDetailsPage() {
   const productId = params.id as string
 
   const { data: product, isLoading } = useProduct(productId)
+  if (product) {
+    console.log("🔍 Product Details API Data:", product)
+  }
 
   const { data: branches } = useBranches()
   const [activeTab, setActiveTab] = useState<TabType>("overview")
@@ -149,6 +152,7 @@ export default function ProductDetailsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {allImages.map((img, idx) => (
                         <div key={idx} className="aspect-square rounded-md overflow-hidden border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={img}
                             alt={`${product.name} - Image ${idx + 1}`}
@@ -316,6 +320,7 @@ export default function ProductDetailsPage() {
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {(product.productVariants || product.variants || []).map((variant: any) => {
                     const variantImage = variant.thumbnailUrl || (variant.images && Array.isArray(variant.images) && variant.images.length > 0 ? variant.images[0] : null)
                     const variantImages = variant.images && Array.isArray(variant.images) ? variant.images : []
@@ -326,6 +331,7 @@ export default function ProductDetailsPage() {
                             {/* Variant Image */}
                             {variantImage ? (
                               <div className="w-full sm:w-32 h-32 sm:h-auto bg-muted border-b sm:border-b-0 sm:border-r flex-shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={variantImage}
                                   alt={variant.variantName || "Variant"}
@@ -385,6 +391,7 @@ export default function ProductDetailsPage() {
                                   <div className="flex gap-1.5 overflow-x-auto pb-1">
                                     {variantImages.slice(0, 5).map((img: string, idx: number) => (
                                       <div key={idx} className="w-12 h-12 rounded border overflow-hidden flex-shrink-0">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                           src={img}
                                           alt={`Gallery ${idx + 1}`}
@@ -448,11 +455,6 @@ export default function ProductDetailsPage() {
                                   {stock.quantity} {product.unit?.suffix || ""}
                                 </Badge>
                               </div>
-                              {stock.sku && (
-                                <p className="text-sm text-muted-foreground">
-                                  SKU: {stock.sku}
-                                </p>
-                              )}
                               <div className="grid sm:grid-cols-2 gap-2 text-sm">
                                 {stock.purchasePrice !== null && stock.purchasePrice !== undefined && (
                                   <div>

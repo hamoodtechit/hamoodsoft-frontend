@@ -183,6 +183,7 @@ export interface Stock {
   unitId: string
   quantity: number
   sku?: string // SKU field from stock
+  variantId?: string | null // Variant ID for variant-specific stock
   purchasePrice?: number | null
   salePrice?: number | null
   profitMarginPercent?: number

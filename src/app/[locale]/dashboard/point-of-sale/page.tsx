@@ -1,5 +1,7 @@
 "use client"
 
+
+import Image from "next/image"
 import { ContactDialog } from "@/components/common/contact-dialog"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { InvoiceDialog } from "@/components/common/invoice-dialog"
@@ -60,7 +62,6 @@ import {
   ArrowLeft,
   Calculator,
   Check,
-  ChevronDown,
   Container,
   CreditCard,
   Droplets,
@@ -84,7 +85,6 @@ import {
   UserPlus,
   Volume2,
   VolumeX,
-  X
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -121,7 +121,6 @@ export default function PointOfSalePage() {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("all")
   const [barcodeInput, setBarcodeInput] = useState("")
   const [posMode, setPosMode] = useState<"standard" | "petrol">("standard")
-  const [selectedTankerId, setSelectedTankerId] = useState<string | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string>("")
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -204,15 +203,17 @@ export default function PointOfSalePage() {
     limit: 50,
   })
   
-  const products = useMemo(() => 
-    infiniteProductsData?.pages.flatMap(page => page.items) || [], 
-  [infiniteProductsData])
+  const products = useMemo(() => {
+    return infiniteProductsData?.pages.flatMap(page => page.items) || []
+  }, [infiniteProductsData])
 
   const { data: stocksData } = useStocks({
     branchId: selectedBranchId || undefined,
     limit: 10000,
   })
-  const stocks = stocksData?.items || []
+  const stocks = useMemo(() => {
+    return stocksData?.items || []
+  }, [stocksData])
 
   const { data: contactsData } = useContacts({ type: "CUSTOMER" })
   const contacts = contactsData?.items || []
@@ -222,7 +223,7 @@ export default function PointOfSalePage() {
   const brands = brandsData?.items || []
   const { data: branches = [] } = useBranches()
 
-  const { data: fuelTypesData } = useFuelTypes({ limit: 1000 })
+  useFuelTypes({ limit: 1000 })
   const { 
     data: infiniteTankersData, 
     isLoading: isLoadingTankers,
@@ -238,33 +239,6 @@ export default function PointOfSalePage() {
     infiniteTankersData?.pages.flatMap(page => page.items) || [],
   [infiniteTankersData])
 
-  // Stock map by SKU - includes both separate stocks query and product.stocks
-  const stockMapBySku = useMemo(() => {
-    const map = new Map<string, Stock>()
-    
-    // Add stocks from separate query
-    stocks.forEach((stock) => {
-      if (stock.sku) {
-        map.set(stock.sku, stock)
-      }
-    })
-    
-    // Also add stocks from product.stocks array (if available)
-    products.forEach((product) => {
-      if (product.stocks && Array.isArray(product.stocks)) {
-        product.stocks.forEach((stock) => {
-          if (stock.sku) {
-            // Only add if not already in map (separate query takes precedence)
-            if (!map.has(stock.sku)) {
-              map.set(stock.sku, stock)
-            }
-          }
-        })
-      }
-    })
-    
-    return map
-  }, [stocks, products])
 
   // Sound logic
   const playSound = useCallback((kind: "add" | "remove" | "success" | "error") => {
@@ -335,10 +309,109 @@ export default function PointOfSalePage() {
   // POS Session
   const { data: activeSession, isLoading: isLoadingSession, refetch: refetchSession } = usePOSSession(selectedBranchId || undefined)
 
-  // Consolidate all account filtering to one place
-  const filteredAccounts = useMemo(() => {
-    return accounts.filter((account) => account.isActive)
-  }, [accounts])
+  // Get product variants/SKUs AND Batches
+  const getProductVariants = useCallback((product: Product): Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> => {
+    // 1. Gather all unique stock records for this branch
+    const seenStockIds = new Set<string>()
+    const branchStocks: Stock[] = []
+    
+    // Add from product-level stocks (pre-joined from API)
+    ;(product.stocks || []).forEach(s => {
+      if (s.branchId === selectedBranchId && s.id) {
+        seenStockIds.add(s.id)
+        branchStocks.push(s)
+      }
+    })
+    
+    // Add from global stocks array (pagination fallback)
+    stocks.forEach(s => {
+      if (s.productId === product.id && s.branchId === selectedBranchId && s.id) {
+        if (!seenStockIds.has(s.id)) {
+          seenStockIds.add(s.id)
+          branchStocks.push(s)
+        }
+      }
+    })
+
+    // 2. Handle Non-Variable Products (Aggregate all into 1 entry)
+    if (product.isVariable === false) {
+      if (branchStocks.length === 0) {
+        return [{ sku: product.id, variant: null, stock: undefined }]
+      }
+      const totalQty = branchStocks.reduce((sum, s) => sum + (s.quantity || 0), 0)
+      const baseStock = { ...branchStocks[0], quantity: totalQty }
+      return [{ 
+        sku: product.id, 
+        variant: null, 
+        stock: baseStock 
+      }]
+    }
+
+    const productVariants = product.productVariants || product.variants || []
+    const variantStockMap = new Map<string, { sku: string; variant: ProductVariant | null; stock: Stock }>()
+    
+    // 3. VARIABLE PRODUCTS: Map and aggregate stock entries
+    branchStocks.forEach(stock => {
+      const variant = productVariants.find(v => 
+        (stock.variantId && v.id === stock.variantId) || 
+        (stock.sku && v.sku === stock.sku)
+      )
+      
+      const variantId = variant?.id || 'base'
+      const skuId = stock.sku || variant?.sku || variant?.id || product.id
+      const key = `${variantId}-${skuId}`
+
+      if (variantStockMap.has(key)) {
+        const entry = variantStockMap.get(key)!
+        entry.stock = {
+          ...entry.stock,
+          quantity: entry.stock.quantity + stock.quantity
+        }
+      } else {
+        variantStockMap.set(key, {
+          sku: skuId,
+          variant: variant ? {
+            ...variant,
+            id: variant.id || '',
+            productId: product.id,
+            sku: skuId,
+            price: variant.price ?? stock.salePrice ?? product.price ?? 0,
+            unitId: variant.unitId || product.unitId,
+            variantName: variant.variantName || '',
+            options: variant.options || {},
+            thumbnailUrl: variant.thumbnailUrl || null,
+            images: variant.images || [],
+          } as ProductVariant : null,
+          stock: { ...stock }
+        })
+      }
+    })
+
+    const result: Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> = Array.from(variantStockMap.values())
+
+    // 4. Add defined variants that have NO stock records at all
+    productVariants.forEach(variant => {
+      const isAlreadyHandled = result.some(r => r.variant?.id === variant.id)
+      if (!isAlreadyHandled) {
+        result.push({
+          sku: variant.sku || variant.id || product.id,
+          variant: {
+             ...variant,
+             id: variant.id || variant.sku || product.id,
+             productId: product.id,
+             sku: variant.sku || variant.id || product.id,
+             price: variant.price ?? product.price ?? 0,
+             unitId: variant.unitId || product.unitId,
+             variantName: variant.variantName || product.name,
+          } as ProductVariant,
+          stock: undefined,
+        })
+      }
+    })
+
+    // 5. Sort by quantity
+    return result.sort((a, b) => (b.stock?.quantity || 0) - (a.stock?.quantity || 0))
+  }, [stocks, selectedBranchId])
 
   // Update item quantity in cart
   const calculateItemTotal = useCallback((item: CartItem) => {
@@ -377,8 +450,9 @@ export default function PointOfSalePage() {
       const managesStock = product?.manageStocks !== false
 
       if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
-        const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-        const availableQty = stock?.quantity || item.availableQuantity || 0
+        const productVariants = product ? getProductVariants(product) : []
+        const variantEntry = productVariants.find(v => v.sku === item.sku)
+        const availableQty = variantEntry?.stock?.quantity ?? item.availableQuantity ?? 0
 
         if (newQuantity > availableQty) {
           playSound("error")
@@ -397,7 +471,7 @@ export default function PointOfSalePage() {
 
     updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
     setCart(updatedCart)
-  }, [cart, products, stockMapBySku, calculateItemTotal, playSound, tankers])
+  }, [cart, products, getProductVariants, calculateItemTotal, playSound, tankers])
 
   // Set absolute quantity
   const setQuantity = useCallback((index: number, quantity: number) => {
@@ -424,8 +498,9 @@ export default function PointOfSalePage() {
       const managesStock = product?.manageStocks !== false
 
       if (managesStock && item.availableQuantity !== undefined && item.availableQuantity > 0) {
-        const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-        const availableQty = stock?.quantity || item.availableQuantity || 0
+        const productVariants = product ? getProductVariants(product) : []
+        const variantEntry = productVariants.find(v => v.sku === item.sku)
+        const availableQty = variantEntry?.stock?.quantity ?? item.availableQuantity ?? 0
 
         if (newQuantity > availableQty) {
           playSound("error")
@@ -444,7 +519,8 @@ export default function PointOfSalePage() {
 
     updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
     setCart(updatedCart)
-  }, [cart, products, stockMapBySku, calculateItemTotal, playSound, tankers])
+  }, [cart, products, getProductVariants, calculateItemTotal, playSound, tankers])
+
 
   const cashAccounts = useMemo(() => accounts.filter((acc) => acc.type === "CASH"), [accounts])
   const bankAccounts = useMemo(() => accounts.filter((acc) => acc.type === "BANK"), [accounts])
@@ -497,108 +573,6 @@ export default function PointOfSalePage() {
     return () => window.clearTimeout(t)
   }, [lastSelectedProductId])
 
-  // Get product variants/SKUs
-  const getProductVariants = useCallback((product: Product): Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> => {
-    const variants: Array<{ sku: string; variant: ProductVariant | null; stock?: Stock }> = []
-    
-    // Use productVariants from API response, or fallback to variants (normalized)
-    const productVariants = product.productVariants || product.variants || []
-
-    if (productVariants.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      productVariants.forEach((variant: any) => {
-        // Ensure we have a SKU (use variant.sku or variant.id as fallback)
-        const sku = variant.sku || variant.id || product.id
-        
-        // Try to find stock: multiple strategies
-        let stock: Stock | undefined = undefined
-        
-        // Strategy 1: Find by SKU in stockMapBySku
-        stock = stockMapBySku.get(sku)
-        
-        // Strategy 2: Find by SKU in product.stocks
-        if (!stock && product.stocks && Array.isArray(product.stocks)) {
-          stock = product.stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
-        }
-        
-        // Strategy 3: Try from separate stocks query by SKU
-        if (!stock) {
-          stock = stocks.find((s) => s.sku === sku && s.branchId === selectedBranchId)
-        }
-        
-        // Strategy 4: For variable products, if variant has no stock but product has stocks, 
-        // try to find any stock for this product (variant might not have explicit SKU match)
-        // This handles cases where stock SKU doesn't match variant SKU exactly
-        if (!stock && product.stocks && Array.isArray(product.stocks)) {
-          // Try to find stock by productId and branchId (for variable products)
-          // Use the first stock found for this product/branch
-          stock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-        }
-        
-        // Strategy 5: Try from separate stocks query by productId (fallback for variable products)
-        if (!stock) {
-          stock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-        }
-        
-        // Get price: For variants, prioritize variant.price over stock.salePrice
-        // Priority: variant.price > stock.salePrice > product.price
-        // This ensures variant-specific pricing is used first
-        const originalVariantPrice = variant.price !== null && variant.price !== undefined ? variant.price : null
-        const variantPrice = originalVariantPrice ?? stock?.salePrice ?? product.price ?? 0
-        
-        // Map variant to ProductVariant type
-        // Preserve the original variant object but use calculated price for display/cart
-        const variantData: ProductVariant = {
-          id: variant.id || '',
-          productId: product.id,
-          sku: sku,
-          price: variantPrice, // Use calculated price (stock.salePrice > variant.price > product.price)
-          unitId: variant.unitId || product.unitId,
-          variantName: variant.variantName || '',
-          options: variant.options || {},
-          thumbnailUrl: variant.thumbnailUrl || null,
-          images: variant.images || [],
-        }
-        
-        // Debug log in development to track price calculation
-        if (process.env.NODE_ENV === "development") {
-          console.log("🔍 Variant Price Calculation:", {
-            variantId: variant.id,
-            variantName: variant.variantName,
-            originalVariantPrice: variant.price,
-            stockSalePrice: stock?.salePrice,
-            productPrice: product.price,
-            calculatedPrice: variantPrice,
-            sku: sku
-          })
-        }
-        
-        variants.push({
-          sku,
-          variant: variantData,
-          stock,
-        })
-      })
-    } else {
-      // No variants - use product-level stock
-      // First try from separate stocks query
-      let stock = stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-      
-      // If not found, try from product.stocks
-      if (!stock && product.stocks && Array.isArray(product.stocks)) {
-        stock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-      }
-      
-      // Get price: Use stock.salePrice if available, otherwise product.price
-      variants.push({
-        sku: stock?.sku || product.id, // Use product ID as fallback SKU
-        variant: null,
-        stock,
-      })
-    }
-
-    return variants
-  }, [stockMapBySku, stocks, selectedBranchId])
 
   // Calculate item total
   // The old calculateItemTotal was here, now it's moved up with updateQuantity.
@@ -693,15 +667,9 @@ export default function PointOfSalePage() {
       (item) => item.productId === product.id && item.sku === finalSku
     )
 
-    // Stock lookup refinement
-    let finalStock = stock
-    if (!finalStock && product.stocks && Array.isArray(product.stocks)) {
-      finalStock = product.stocks.find((s) => s.sku === finalSku && s.branchId === selectedBranchId)
-      if (!finalStock && !variant) { 
-        // Only fallback to product-level stock if we don't have a specific variant SKU
-        finalStock = product.stocks.find((s) => s.productId === product.id && s.branchId === selectedBranchId)
-      }
-    }
+    const variants = getProductVariants(product)
+    const variantEntry = variants.find(v => v.sku === finalSku)
+    const finalStock = variantEntry?.stock
     
     // Price lookup: Priority is Variant > Stock > Product
     const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
@@ -754,7 +722,7 @@ export default function PointOfSalePage() {
       playSound("add")
       setCart([...cart, newItem])
     }
-  }, [cart, selectedBranchId, stocks, calculateItemTotal, playSound])
+  }, [cart, selectedBranchId, calculateItemTotal, playSound])
 
   // Handle product click
   const handleProductClick = useCallback((product: Product) => {
@@ -830,21 +798,15 @@ export default function PointOfSalePage() {
         break
       }
 
-      // Check variant SKUs (barcode scanner might scan SKU)
-      const variants = product.productVariants || product.variants || []
-      for (const variant of variants) {
-        if (variant.sku === barcode) {
-          foundProduct = product
-          foundVariant = variant
-          // Find stock for this variant
-          if (product.stocks && Array.isArray(product.stocks)) {
-            foundStock = product.stocks.find((s) => s.sku === variant.sku && s.branchId === selectedBranchId)
-          }
-          if (!foundStock) {
-            foundStock = stocks.find((s) => s.sku === variant.sku && s.branchId === selectedBranchId)
-          }
-          break
-        }
+      // Check variant SKUs or Batch SKUs
+      const allPossibleVariants = getProductVariants(product)
+      const matchingVariant = allPossibleVariants.find(v => v.sku === barcode)
+      
+      if (matchingVariant) {
+        foundProduct = product
+        foundVariant = matchingVariant.variant
+        foundStock = matchingVariant.stock
+        break
       }
       if (foundProduct) break
     }
@@ -897,7 +859,7 @@ export default function PointOfSalePage() {
       toast.error("Product not found")
       setBarcodeInput("")
     }
-  }, [products, stocks, selectedBranchId, addToCartWithSku, handleProductClick, playSound])
+  }, [products, stocks, selectedBranchId, getProductVariants, addToCartWithSku, handleProductClick, playSound])
 
   // Handle barcode input (scan or manual entry)
   useEffect(() => {
@@ -1000,8 +962,9 @@ export default function PointOfSalePage() {
         const managesStock = product?.manageStocks !== false
 
         if (managesStock && item.availableQuantity !== undefined) {
-          const stock = item.sku ? stockMapBySku.get(item.sku) : undefined
-          const availableQty = stock?.quantity || item.availableQuantity || 0
+          const productVariants = product ? getProductVariants(product) : []
+          const variantEntry = productVariants.find(v => v.sku === item.sku)
+          const availableQty = variantEntry?.stock?.quantity ?? item.availableQuantity ?? 0
 
           if (item.quantity > availableQty) {
             stockErrors.push(`${item.itemName}: Only ${availableQty} available`)
@@ -1230,7 +1193,7 @@ export default function PointOfSalePage() {
     paymentSplits, 
     accounts, 
     products, 
-    stockMapBySku, 
+    getProductVariants, 
     calculateItemTotal, 
     playSound, 
     createSaleMutation, 
@@ -1651,21 +1614,22 @@ export default function PointOfSalePage() {
                       : "space-y-2"
                   )}>
                     {posMode === "standard" ? (
-                      products.map((product) => {
+                      filteredProducts.map((product) => {
                         const variants = getProductVariants(product)
                         const hasMultipleVariants = variants.length > 1
                         const firstVariant = variants[0]?.variant
                         const stock = variants[0]?.stock
                         const managesStock = product.manageStocks !== false
+                        const totalStockQuantity = variants.reduce((sum, v) => sum + (v.stock?.quantity || 0), 0)
                         
                         const isOutOfStock = managesStock && (
                           hasMultipleVariants 
-                            ? variants.every(v => !v.stock || v.stock.quantity === 0)
-                            : !stock || stock.quantity === 0
+                            ? totalStockQuantity <= 0
+                            : !stock || stock.quantity <= 0
                         )
 
                         const productImage = firstVariant?.thumbnailUrl || product.thumbnailUrl || null
-                        const displayPrice = stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0
+                        const displayPrice = hasMultipleVariants ? product.price : (stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0)
                         const inCart = cartProductIdSet.has(product.id)
                         const isSelected = lastSelectedProductId === product.id
 
@@ -1688,14 +1652,20 @@ export default function PointOfSalePage() {
                                 getRandomGradient(product.id, 'vibrant')
                               )}>
                                 {productImage ? (
-                                  <img src={productImage} alt={product.name} className="w-full h-full object-cover" />
+                                  <Image 
+                                    src={productImage} 
+                                    alt={product.name} 
+                                    width={48} 
+                                    height={48} 
+                                    className="w-full h-full object-cover" 
+                                    unoptimized 
+                                  />
                                 ) : (
                                   <Package className="h-6 w-6 m-auto text-foreground/20" />
                                 )}
                               </div>
                               <div className="flex-1 text-left">
                                 <div className="font-bold text-sm truncate">{product.name}</div>
-                                  <div className="text-xs text-muted-foreground">SKU: {variants[0]?.sku || 'N/A'}</div>
                               </div>
                               <div className="text-right">
                                 <div className="font-black text-primary">{displayPrice.toFixed(2)}</div>
@@ -1703,7 +1673,7 @@ export default function PointOfSalePage() {
                               </div>
                               {managesStock && (
                                 <Badge variant={isOutOfStock ? "destructive" : "outline"} className="ml-2 text-[10px]">
-                                  {isOutOfStock ? "OOS" : `In: ${stock?.quantity || 0}`}
+                                  {isOutOfStock ? "OOS" : `In: ${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)}`}
                                 </Badge>
                               )}
                             </button>
@@ -1740,10 +1710,12 @@ export default function PointOfSalePage() {
                               getRandomGradient(product.id, 'vibrant')
                             )}>
                               {productImage ? (
-                                <img
+                                <Image
                                   src={productImage}
                                   alt={product.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  fill
+                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  unoptimized
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
@@ -1767,7 +1739,7 @@ export default function PointOfSalePage() {
                                   variant={isOutOfStock ? "destructive" : "secondary"} 
                                   className="text-[10px] self-start"
                                 >
-                                  {isOutOfStock ? "Out of Stock" : `${stock?.quantity || 0} available`}
+                                  {isOutOfStock ? "Out of Stock" : `${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)} available`}
                                 </Badge>
                               )}
                             </div>
@@ -2539,8 +2511,8 @@ export default function PointOfSalePage() {
                   const stock = variantData.stock
                   const availableQty = stock?.quantity || 0
                   const managesStock = selectedProductForSku.manageStocks !== false
-                  // Out of stock if: manages stock AND (stock doesn't exist OR quantity is 0)
-                  const isOutOfStock = managesStock && (stock === undefined || stock.quantity === 0)
+                  // Out of stock if: manages stock AND (stock doesn't exist OR quantity is <= 0)
+                  const isOutOfStock = managesStock && (stock === undefined || stock.quantity <= 0)
 
                   // Get variant image
                   const variantImage = variant?.thumbnailUrl || 
@@ -2592,12 +2564,14 @@ export default function PointOfSalePage() {
                       )}
                     >
                       {/* Variant Image */}
-                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 border">
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 border relative">
                         {variantImage ? (
-                          <img
+                          <Image
                             src={variantImage}
                             alt={variant?.variantName || selectedProductForSku.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            unoptimized
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -2609,7 +2583,7 @@ export default function PointOfSalePage() {
                       {/* Variant Info */}
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
-                          {variant?.variantName || selectedProductForSku.name}
+                          {variant?.variantName || (variantData.sku !== selectedProductForSku.id ? "Main Stock / Batch" : selectedProductForSku.name)}
                         </div>
                         {optionsText && (
                           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2621,10 +2595,8 @@ export default function PointOfSalePage() {
                           </div>
                         )}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>SKU: {variantData.sku}</span>
                           {managesStock && (
                             <>
-                              <span>•</span>
                               {isOutOfStock ? (
                                 <Badge variant="destructive" className="text-xs px-2 py-0.5">
                                   Out of stock
