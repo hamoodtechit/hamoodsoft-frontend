@@ -5,6 +5,7 @@ import { endpoints } from "./endpoints";
 export const fuelTypesApi = {
   list: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResult<FuelType>> => {
     const response = await apiClient.get<ApiResponse<PaginatedResult<FuelType>>>(endpoints.fuelTypes.list, { params })
+    // console.log(response.data.data)
     return response.data.data
   },
 

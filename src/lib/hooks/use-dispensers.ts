@@ -1,12 +1,24 @@
 import { dispensersApi } from "@/lib/api/dispensers"
 import { CreateDispenserInput, UpdateDispenserInput } from "@/types"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export function useDispensers(params?: { page?: number; limit?: number; search?: string; branchId?: string }) {
   return useQuery({
     queryKey: ["dispensers", params?.search ?? "", params?.branchId ?? "", params?.page ?? 1, params?.limit ?? 10],
     queryFn: () => dispensersApi.list(params),
+  })
+}
+
+export function useInfiniteDispensers(params?: { limit?: number; search?: string; branchId?: string }) {
+  return useInfiniteQuery({
+    queryKey: ["dispensers", "infinite", params?.search ?? "", params?.branchId ?? "", params?.limit ?? 10],
+    queryFn: ({ pageParam = 1 }) => dispensersApi.list({ ...params, page: pageParam }),
+    getNextPageParam: (lastPage, allPages) => {
+      const morePagesExist = lastPage.items.length === (params?.limit ?? 10)
+      return morePagesExist ? allPages.length + 1 : undefined
+    },
+    initialPageParam: 1,
   })
 }
 

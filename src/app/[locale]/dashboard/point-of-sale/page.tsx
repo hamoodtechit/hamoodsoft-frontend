@@ -53,11 +53,11 @@ import { usePOSSession } from "@/lib/hooks/use-pos-sessions"
 import { useInfiniteProducts } from "@/lib/hooks/use-products"
 import { useCreateSale, useDeleteSale, useSales } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
-import { useInfiniteTankers } from "@/lib/hooks/use-tankers"
+import { useInfiniteDispensers } from "@/lib/hooks/use-dispensers"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { cn } from "@/lib/utils"
 import { getRandomGradient } from "@/lib/utils/aesthetics"
-import { Product, ProductVariant, Sale, Stock, Tanker } from "@/types"
+import { Product, ProductVariant, Sale, Stock, Dispenser } from "@/types"
 import {
   ArrowLeft,
   Calculator,
@@ -94,6 +94,7 @@ interface CartItem {
   productId?: string
   sku?: string
   variantId?: string
+  dispenserId?: string
   itemName: string
   itemDescription?: string
   unit: string
@@ -225,19 +226,20 @@ export default function PointOfSalePage() {
 
   useFuelTypes({ limit: 1000 })
   const { 
-    data: infiniteTankersData, 
-    isLoading: isLoadingTankers,
-    fetchNextPage: fetchNextTankers,
-    hasNextPage: hasMoreTankers,
-    isFetchingNextPage: isFetchingMoreTankers
-  } = useInfiniteTankers({ 
+    data: infiniteDispensersData, 
+    isLoading: isLoadingDispensers,
+    fetchNextPage: fetchNextDispensers,
+    hasNextPage: hasMoreDispensers,
+    isFetchingNextPage: isFetchingMoreDispensers
+  } = useInfiniteDispensers({ 
     limit: 50,
-    search: searchQuery.trim() || undefined
+    search: searchQuery.trim() || undefined,
+    branchId: selectedBranchId || undefined
   })
   
-  const tankers = useMemo(() => 
-    infiniteTankersData?.pages.flatMap(page => page.items) || [],
-  [infiniteTankersData])
+  const dispensers = useMemo(() => 
+    infiniteDispensersData?.pages.flatMap(page => page.items) || [],
+  [infiniteDispensersData])
 
 
   // Sound logic
@@ -432,8 +434,9 @@ export default function PointOfSalePage() {
     if (newQuantity < 0.001) return
 
     // For fuel items, check against tanker's current fuel
-    if (item.productId?.startsWith("fuel-")) {
-      const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+    if (item.productId?.startsWith("fuel-") && item.dispenserId) {
+      const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
+      const tanker = dispenser?.tanker
       const availableFuel = tanker?.currentFuel || 0
       if (newQuantity > availableFuel) {
         playSound("error")
@@ -471,7 +474,7 @@ export default function PointOfSalePage() {
 
     updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
     setCart(updatedCart)
-  }, [cart, products, getProductVariants, calculateItemTotal, playSound, tankers])
+  }, [cart, products, getProductVariants, calculateItemTotal, playSound, dispensers])
 
   // Set absolute quantity
   const setQuantity = useCallback((index: number, quantity: number) => {
@@ -480,8 +483,9 @@ export default function PointOfSalePage() {
     const newQuantity = Math.max(0.001, quantity) // Allow small decimals for fuel
 
     // For fuel items, check against tanker's current fuel
-    if (item.productId?.startsWith("fuel-")) {
-      const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+    if (item.productId?.startsWith("fuel-") && item.dispenserId) {
+      const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
+      const tanker = dispenser?.tanker
       const availableFuel = tanker?.currentFuel || 0
       if (newQuantity > availableFuel) {
         playSound("error")
@@ -519,7 +523,7 @@ export default function PointOfSalePage() {
 
     updatedCart[index].totalPrice = calculateItemTotal(updatedCart[index])
     setCart(updatedCart)
-  }, [cart, products, getProductVariants, calculateItemTotal, playSound, tankers])
+  }, [cart, products, getProductVariants, calculateItemTotal, playSound, dispensers])
 
 
   const cashAccounts = useMemo(() => accounts.filter((acc) => acc.type === "CASH"), [accounts])
@@ -722,7 +726,7 @@ export default function PointOfSalePage() {
       playSound("add")
       setCart([...cart, newItem])
     }
-  }, [cart, selectedBranchId, calculateItemTotal, playSound])
+  }, [cart, selectedBranchId, calculateItemTotal, playSound, getProductVariants])
 
   // Handle product click
   const handleProductClick = useCallback((product: Product) => {
@@ -739,16 +743,17 @@ export default function PointOfSalePage() {
     }
   }, [getProductVariants, addToCartWithSku])
 
-  const handleTankerClick = useCallback((tanker: Tanker) => {
-    if (!tanker.fuelType) return
+  const handleDispenserClick = useCallback((dispenser: Dispenser) => {
+    if (!dispenser.tanker?.fuelType) return
     
-    const fuelType = tanker.fuelType
+    const fuelType = dispenser.tanker.fuelType
+    const tanker = dispenser.tanker
     const productId = `fuel-${fuelType.id}`
-    // Use tanker ID as the unique SKU for fuel items to prevent merging different tankers
-    const tankerSku = tanker.id 
+    // Use dispenser ID as the unique SKU for fuel items to prevent merging different dispensers
+    const dispenserSku = dispenser.id 
     
     const existingIndex = cart.findIndex(
-      (item) => item.productId === productId && item.sku === tankerSku
+      (item) => item.productId === productId && item.sku === dispenserSku
     )
 
     if (existingIndex !== -1) {
@@ -756,10 +761,11 @@ export default function PointOfSalePage() {
     } else {
       const newItem: CartItem = {
         productId: productId,
-        sku: tankerSku,
+        sku: dispenserSku,
         variantId: tanker.id,
-        itemName: `${fuelType.name} (${tanker.name})`,
-        itemDescription: `Fuel from ${tanker.name}`,
+        dispenserId: dispenser.id,
+        itemName: `${fuelType.name} (${dispenser.name})`,
+        itemDescription: `Fuel from ${dispenser.name}`,
         unit: "Liter", 
         price: fuelType.price,
         quantity: 1,
@@ -952,7 +958,8 @@ export default function PointOfSalePage() {
     const stockErrors: string[] = []
     cart.forEach((item) => {
       if (item.productId?.startsWith("fuel-")) {
-        const tanker = tankers.find((t: Tanker) => t.id === item.variantId)
+        const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
+        const tanker = dispenser?.tanker
         const availableFuel = tanker?.currentFuel || 0
         if (item.quantity > availableFuel) {
           stockErrors.push(`${item.itemName}: Only ${availableFuel}L available`)
@@ -1198,7 +1205,7 @@ export default function PointOfSalePage() {
     playSound, 
     createSaleMutation, 
     clearCart,
-    tankers
+    dispensers
   ])
 
   // Save as draft
@@ -1587,24 +1594,24 @@ export default function PointOfSalePage() {
                     </Button>
                   )}
                   <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
-                    {posMode === "standard" ? products.length : tankers.length} items
+                    {posMode === "standard" ? products.length : dispensers.length} items
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 min-h-0">
               <ScrollArea className="h-full pr-2">
-                {isLoadingProducts || isLoadingTankers ? (
+                {isLoadingProducts || isLoadingDispensers ? (
                   <div className="py-20">
-                    <SystemLoader text={`Loading ${posMode === "standard" ? "products" : "tankers"}...`} />
+                    <SystemLoader text={`Loading ${posMode === "standard" ? "products" : "dispensers"}...`} />
                   </div>
                 ) : posMode === "standard" && products.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     {searchQuery ? "No products found" : "No products available"}
                   </div>
-                ) : posMode === "petrol" && (tankers.length === 0) ? (
+                ) : posMode === "petrol" && (dispensers.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    No tankers found
+                    No dispensers found
                   </div>
                 ) : (
                   <div className={cn(
@@ -1747,31 +1754,32 @@ export default function PointOfSalePage() {
                         )
                       })
                     ) : (
-                      tankers.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase())).map((tanker) => {
-                        const fuelType = tanker.fuelType
-                        const inCart = cart.some((item) => item.variantId === tanker.id)
-                        const fuelLevel = (tanker.currentFuel / tanker.capacity) * 100
+                      dispensers.filter((d: Dispenser) => d.name.toLowerCase().includes(searchQuery.toLowerCase())).map((dispenser: Dispenser) => {
+                        const tanker = dispenser.tanker
+                        const fuelType = tanker?.fuelType
+                        const inCart = cart.some((item) => item.dispenserId === dispenser.id)
+                        const fuelLevel = tanker ? (tanker.currentFuel / tanker.capacity) * 100 : 0
                         
                         if (productViewMode === "list") {
                           return (
                             <button
-                              key={tanker.id}
-                              onClick={() => handleTankerClick(tanker)}
+                              key={dispenser.id}
+                              onClick={() => handleDispenserClick(dispenser)}
                               className={cn(
                                 "flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
-                                "bg-gradient-to-br", getRandomGradient(tanker.id, 'subtle'),
+                                "bg-gradient-to-br", getRandomGradient(dispenser.id, 'subtle'),
                                 "hover:border-primary/50 hover:bg-primary/5",
                                 inCart && "border-primary/30 ring-1 ring-primary/20"
                               )}
                             >
                               <div className={cn(
                                 "w-10 h-10 rounded flex-shrink-0 border flex overflow-hidden bg-gradient-to-br",
-                                getRandomGradient(tanker.id, 'vibrant')
+                                getRandomGradient(dispenser.id, 'vibrant')
                               )}>
                                 <Droplets className="h-6 w-6 m-auto text-primary" />
                               </div>
                               <div className="flex-1 text-left">
-                                <div className="font-bold text-sm truncate">{tanker.name}</div>
+                                <div className="font-bold text-sm truncate">{dispenser.name}</div>
                                   <div className="text-xs text-muted-foreground">{fuelType?.name || 'Loading...'}</div>
                               </div>
                               <div className="text-right">
@@ -1779,7 +1787,7 @@ export default function PointOfSalePage() {
                                 <div className="text-[10px] text-muted-foreground">per Liter</div>
                               </div>
                               <div className="ml-4 w-24">
-                                <div className="text-[10px] mb-1">Level: {tanker.currentFuel}L</div>
+                                <div className="text-[10px] mb-1">Level: {tanker?.currentFuel || 0}L</div>
                                 <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                                   <div 
                                     className={cn("h-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")} 
@@ -1793,11 +1801,11 @@ export default function PointOfSalePage() {
 
                         return (
                           <button
-                            key={tanker.id}
-                            onClick={() => handleTankerClick(tanker)}
+                            key={dispenser.id}
+                            onClick={() => handleDispenserClick(dispenser)}
                             className={cn(
                               "group relative border-2 rounded-xl overflow-hidden p-4",
-                              "bg-gradient-to-br", getRandomGradient(tanker.id, 'subtle'),
+                              "bg-gradient-to-br", getRandomGradient(dispenser.id, 'subtle'),
                               "transition-all duration-200 ease-in-out",
                               "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
                               "active:scale-[0.98]",
@@ -1808,7 +1816,7 @@ export default function PointOfSalePage() {
                             <div className="flex items-center justify-between mb-3">
                               <div className={cn(
                                 "h-10 w-10 flex items-center justify-center rounded-lg bg-gradient-to-br text-primary",
-                                getRandomGradient(tanker.id, 'vibrant')
+                                getRandomGradient(dispenser.id, 'vibrant')
                               )}>
                                 <Droplets className="h-6 w-6" />
                               </div>
@@ -1820,7 +1828,7 @@ export default function PointOfSalePage() {
                             </div>
                             
                             <div className="text-left flex-1">
-                              <h3 className="font-bold text-sm truncate mb-1">{tanker.name}</h3>
+                              <h3 className="font-bold text-sm truncate mb-1">{dispenser.name}</h3>
                               <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider font-semibold">
                                 {fuelType?.name || 'Loading...'}
                               </p>
@@ -1831,7 +1839,7 @@ export default function PointOfSalePage() {
                                   <div className="text-[10px] text-muted-foreground">Price/Liter</div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-xs font-bold">{tanker.currentFuel}L</div>
+                                  <div className="text-xs font-bold">{tanker?.currentFuel || 0}L</div>
                                   <div className="text-[10px] text-muted-foreground">Current Level</div>
                                 </div>
                               </div>
@@ -1875,7 +1883,7 @@ export default function PointOfSalePage() {
                       </div>
                     )}
 
-                    {posMode === "petrol" && hasMoreTankers && (
+                    {posMode === "petrol" && hasMoreDispensers && (
                       <div className={cn(
                         "flex justify-center py-6",
                         productViewMode === "grid" ? "col-span-full" : "w-full"
@@ -1883,11 +1891,11 @@ export default function PointOfSalePage() {
                         <Button 
                           variant="outline" 
                           size="lg"
-                          disabled={isFetchingMoreTankers}
-                          onClick={() => fetchNextTankers()}
+                          disabled={isFetchingMoreDispensers}
+                          onClick={() => fetchNextDispensers()}
                           className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto"
                         >
-                          {isFetchingMoreTankers ? (
+                          {isFetchingMoreDispensers ? (
                             <div className="flex items-center gap-2">
                               <div className="animate-spin text-lg">⏳</div>
                               Loading...
@@ -1895,7 +1903,7 @@ export default function PointOfSalePage() {
                           ) : (
                             <div className="flex items-center gap-2">
                               <Plus className="h-4 w-4" />
-                              Load More Tankers
+                              Load More Dispensers
                             </div>
                           )}
                         </Button>

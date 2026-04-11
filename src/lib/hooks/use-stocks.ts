@@ -11,6 +11,7 @@ export function useStocks(params?: StocksListParams) {
     queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId],
     queryFn: () => stocksApi.list(params),
     refetchOnWindowFocus: true,
+    enabled: !!params?.branchId,
   })
 }
 
@@ -29,6 +30,7 @@ export function useStockHistory(params?: StockHistoryListParams) {
     queryKey: ["stockHistory", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId],
     queryFn: () => stocksApi.listHistory(params),
     refetchOnWindowFocus: true,
+    enabled: !!params?.branchId,
   })
 }
 
@@ -38,6 +40,7 @@ export function useStockAdjustments(params?: StockAdjustmentsListParams) {
     queryKey: ["stockAdjustments", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId],
     queryFn: () => stocksApi.listAdjustments(params),
     refetchOnWindowFocus: true,
+    enabled: !!params?.branchId,
   })
 }
 
