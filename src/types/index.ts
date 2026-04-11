@@ -570,3 +570,58 @@ export interface UpdateTankerInput {
   temperature?: number
   location?: string
 }
+
+// Dispenser Types
+export type DispenserStatus = "ACTIVE" | "INACTIVE" | "MAINTENANCE"
+
+export interface Dispenser {
+  id: string
+  businessId: string
+  branchId: string
+  name: string
+  status: DispenserStatus
+  tankerId: string
+  tanker?: Tanker
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateDispenserInput {
+  name: string
+  branchId: string
+  tankerId: string
+  status?: DispenserStatus
+}
+
+export interface UpdateDispenserInput {
+  name?: string
+  branchId?: string
+  tankerId?: string
+  status?: DispenserStatus
+}
+
+// Dispenser Reading Types
+export interface DispenserReading {
+  id: string
+  businessId: string
+  branchId: string
+  openingReading: number
+  closingReading: number
+  volumeDispensed: number
+  readingDate: string
+  tankerId: string
+  dispenserId: string
+  tanker?: Tanker
+  dispenser?: Dispenser
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateDispenserReadingInput {
+  dispenserId: string
+  tankerId: string
+  branchId: string
+  openingReading: number
+  closingReading: number
+  readingDate?: string
+}

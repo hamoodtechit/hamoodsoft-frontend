@@ -5,6 +5,8 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { PageLayout } from "@/components/common/page-layout"
 import { FuelTypeDialog } from "@/components/pos/fuel-type-dialog"
 import { TankerDialog } from "@/components/pos/tanker-dialog"
+import { DispenserDialog } from "@/components/pos/dispenser-dialog"
+import { DispenserReadingDialog } from "@/components/pos/dispenser-reading-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,10 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useBranches } from "@/lib/hooks/use-branches"
 import { useDeleteFuelType, useFuelTypes } from "@/lib/hooks/use-fuel-types"
 import { useDeleteTanker, useTankers } from "@/lib/hooks/use-tankers"
-import { FuelType, Tanker } from "@/types"
-import { Container, Droplets, Fuel, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
+import { useDeleteDispenser, useDispensers } from "@/lib/hooks/use-dispensers"
+import { useDeleteDispenserReading, useDispenserReadings } from "@/lib/hooks/use-dispenser-readings"
+import { Dispenser, DispenserReading, FuelType, Tanker } from "@/types"
+import { Container, Droplets, Fuel, Gauge, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
@@ -43,11 +48,33 @@ export default function OilFillingStationPage() {
   const [isTankerDeleteDialogOpen, setIsTankerDeleteDialogOpen] = useState(false)
   const [tankerToDelete, setTankerToDelete] = useState<Tanker | null>(null)
 
+  // Dispensers State
+  const [selectedDispenser, setSelectedDispenser] = useState<Dispenser | null>(null)
+  const [isDispenserDialogOpen, setIsDispenserDialogOpen] = useState(false)
+  const [isDispenserDeleteDialogOpen, setIsDispenserDeleteDialogOpen] = useState(false)
+  const [dispenserToDelete, setDispenserToDelete] = useState<Dispenser | null>(null)
+
+  // Readings State
+  const [isReadingDialogOpen, setIsReadingDialogOpen] = useState(false)
+  const [isReadingDeleteDialogOpen, setIsReadingDeleteDialogOpen] = useState(false)
+  const [readingToDelete, setReadingToDelete] = useState<DispenserReading | null>(null)
+
   const { data: fuelTypesData, isLoading: isLoadingFuelTypes } = useFuelTypes()
   const { data: tankersData, isLoading: isLoadingTankers } = useTankers()
+  const { data: dispensersData, isLoading: isLoadingDispensers } = useDispensers()
+  const { data: readingsData, isLoading: isLoadingReadings } = useDispenserReadings()
+  const { data: branchesData } = useBranches()
   
   const deleteFuelMutation = useDeleteFuelType()
   const deleteTankerMutation = useDeleteTanker()
+  const deleteDispenserMutation = useDeleteDispenser()
+  const deleteReadingMutation = useDeleteDispenserReading()
+
+  const branches = useMemo(() => {
+    if (!branchesData) return []
+    const items = Array.isArray(branchesData) ? branchesData : (branchesData as any)?.items || []
+    return items.map((b: any) => ({ id: b.id, name: b.name }))
+  }, [branchesData])
 
   // Check if user has access to oil-filling-station module
   useEffect(() => {
@@ -183,6 +210,128 @@ export default function OilFillingStationPage() {
     }
   ], [])
 
+  const dispenserColumns: Column<Dispenser>[] = useMemo(() => [
+    {
+      id: "name",
+      header: "Name",
+      accessorKey: "name",
+      sortable: true,
+    },
+    {
+      id: "tanker",
+      header: "Tanker",
+      cell: (row) => row.tanker?.name || "-",
+    },
+    {
+      id: "fuelType",
+      header: "Fuel Type",
+      cell: (row) => (row.tanker as any)?.fuelType?.name || "-",
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (row) => {
+        const variant = row.status === "ACTIVE" ? "default" : row.status === "MAINTENANCE" ? "outline" : "secondary"
+        return <Badge variant={variant}>{row.status}</Badge>
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => {
+              setSelectedDispenser(row)
+              setIsDispenserDialogOpen(true)
+            }}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                setDispenserToDelete(row)
+                setIsDispenserDeleteDialogOpen(true)
+              }}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    }
+  ], [])
+
+  const readingColumns: Column<DispenserReading>[] = useMemo(() => [
+    {
+      id: "dispenser",
+      header: "Dispenser",
+      cell: (row) => row.dispenser?.name || "-",
+    },
+    {
+      id: "tanker",
+      header: "Tanker",
+      cell: (row) => row.tanker?.name || "-",
+    },
+    {
+      id: "fuelType",
+      header: "Fuel Type",
+      cell: (row) => (row.tanker as any)?.fuelType?.name || "-",
+    },
+    {
+      id: "openingReading",
+      header: "Opening",
+      cell: (row) => row.openingReading.toFixed(2),
+    },
+    {
+      id: "closingReading",
+      header: "Closing",
+      cell: (row) => row.closingReading.toFixed(2),
+    },
+    {
+      id: "volumeDispensed",
+      header: "Volume (L)",
+      cell: (row) => (
+        <span className="font-medium">{row.volumeDispensed.toFixed(2)}</span>
+      ),
+    },
+    {
+      id: "readingDate",
+      header: "Date",
+      cell: (row) => new Date(row.readingDate).toLocaleDateString(),
+      sortable: true,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => {
+                setReadingToDelete(row)
+                setIsReadingDeleteDialogOpen(true)
+              }}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    }
+  ], [])
+
   if (!currentBusiness?.modules?.includes("oil-filling-station")) {
     return (
       <PageLayout title="Access Denied" description="You don't have access to this module">
@@ -200,7 +349,7 @@ export default function OilFillingStationPage() {
   return (
     <PageLayout
       title="Oil Filling Station"
-      description="Manage fuel sales, tankers, and types"
+      description="Manage fuel sales, tankers, dispensers, and readings"
       maxWidth="full"
     >
       <Tabs defaultValue="dashboard" className="space-y-4" onValueChange={setActiveTab}>
@@ -209,6 +358,9 @@ export default function OilFillingStationPage() {
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="fuel-types">Fuel Types</TabsTrigger>
             <TabsTrigger value="tankers">Tankers</TabsTrigger>
+            <TabsTrigger value="dispensers">Dispensers</TabsTrigger>
+            {/* TODO: Re-enable when readings feature is ready */}
+            {/* <TabsTrigger value="readings">Readings</TabsTrigger> */}
           </TabsList>
           
           <div className="flex items-center gap-2">
@@ -228,6 +380,20 @@ export default function OilFillingStationPage() {
                 <Plus className="mr-2 h-4 w-4" /> Add Tanker
               </Button>
             )}
+            {activeTab === "dispensers" && (
+              <Button onClick={() => {
+                setSelectedDispenser(null)
+                setIsDispenserDialogOpen(true)
+              }}>
+                <Plus className="mr-2 h-4 w-4" /> Add Dispenser
+              </Button>
+            )}
+            {/* TODO: Re-enable when readings feature is ready */}
+            {/* {activeTab === "readings" && (
+              <Button onClick={() => setIsReadingDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Record Reading
+              </Button>
+            )} */}
           </div>
         </div>
 
@@ -251,6 +417,24 @@ export default function OilFillingStationPage() {
                 <div className="text-2xl font-bold">{fuelTypesData?.meta.total || 0}</div>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Dispensers</CardTitle>
+                <Fuel className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{dispensersData?.meta.total || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
+                <Gauge className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{readingsData?.meta.total || 0}</div>
+              </CardContent>
+            </Card>
           </div>
           <Card>
             <CardHeader>
@@ -269,23 +453,37 @@ export default function OilFillingStationPage() {
             <CardContent>
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Welcome to the Petrol Pump management dashboard. Here you can configure your tankers and fuel types used in the POS.
+                  Welcome to the Petrol Pump management dashboard. Here you can configure your tankers, dispensers, and track fuel readings.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
                   <div className="p-4 border rounded-lg space-y-2">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Droplets className="h-4 w-4" /> Fuel Types
                     </h3>
-                    <p className="text-sm text-muted-foreground">Define fuels like Diesel, Octane, or Petrol and set their current market price.</p>
+                    <p className="text-sm text-muted-foreground">Define fuels like Diesel, Octane, or Petrol and set their price.</p>
                     <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("fuel-types")}>Manage Fuel Types &rarr;</Button>
                   </div>
                   <div className="p-4 border rounded-lg space-y-2">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Container className="h-4 w-4" /> Tankers
                     </h3>
-                    <p className="text-sm text-muted-foreground">Track underground tanks, their capacity, current fuel level, and sensor data.</p>
+                    <p className="text-sm text-muted-foreground">Track underground tanks, capacity, and fuel levels.</p>
                     <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("tankers")}>Manage Tankers &rarr;</Button>
                   </div>
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Fuel className="h-4 w-4" /> Dispensers
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Manage fuel pumps connected to your tankers.</p>
+                    <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("dispensers")}>Manage Dispensers &rarr;</Button>
+                  </div>
+                  {/* <div className="p-4 border rounded-lg space-y-2">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Gauge className="h-4 w-4" /> Readings
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Record and track daily meter readings per dispenser.</p>
+                    <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("readings")}>View Readings &rarr;</Button>
+                  </div> */}
                 </div>
               </div>
             </CardContent>
@@ -317,6 +515,33 @@ export default function OilFillingStationPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="dispensers">
+          <Card>
+            <CardContent className="pt-6">
+              <DataTable
+                columns={dispenserColumns}
+                data={dispensersData?.items || []}
+                isLoading={isLoadingDispensers}
+                emptyMessage="No dispensers found. Add your first dispenser to start."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TODO: Re-enable when readings feature is ready */}
+        {/* <TabsContent value="readings">
+          <Card>
+            <CardContent className="pt-6">
+              <DataTable
+                columns={readingColumns}
+                data={readingsData?.items || []}
+                isLoading={isLoadingReadings}
+                emptyMessage="No readings found. Record your first dispenser reading."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent> */}
       </Tabs>
 
       <FuelTypeDialog
@@ -329,6 +554,18 @@ export default function OilFillingStationPage() {
         tanker={selectedTanker}
         open={isTankerDialogOpen}
         onOpenChange={setIsTankerDialogOpen}
+      />
+
+      <DispenserDialog
+        dispenser={selectedDispenser}
+        open={isDispenserDialogOpen}
+        onOpenChange={setIsDispenserDialogOpen}
+        branches={branches}
+      />
+
+      <DispenserReadingDialog
+        open={isReadingDialogOpen}
+        onOpenChange={setIsReadingDialogOpen}
       />
 
       <DeleteConfirmationDialog
@@ -359,6 +596,36 @@ export default function OilFillingStationPage() {
         title="Delete Tanker"
         description={`Are you sure you want to delete ${tankerToDelete?.name}? this action cannot be undone.`}
         isLoading={deleteTankerMutation.isPending}
+      />
+
+      <DeleteConfirmationDialog
+        open={isDispenserDeleteDialogOpen}
+        onOpenChange={setIsDispenserDeleteDialogOpen}
+        onConfirm={() => {
+          if (dispenserToDelete) {
+            deleteDispenserMutation.mutate(dispenserToDelete.id, {
+              onSuccess: () => setIsDispenserDeleteDialogOpen(false)
+            })
+          }
+        }}
+        title="Delete Dispenser"
+        description={`Are you sure you want to delete ${dispenserToDelete?.name}? this action cannot be undone.`}
+        isLoading={deleteDispenserMutation.isPending}
+      />
+
+      <DeleteConfirmationDialog
+        open={isReadingDeleteDialogOpen}
+        onOpenChange={setIsReadingDeleteDialogOpen}
+        onConfirm={() => {
+          if (readingToDelete) {
+            deleteReadingMutation.mutate(readingToDelete.id, {
+              onSuccess: () => setIsReadingDeleteDialogOpen(false)
+            })
+          }
+        }}
+        title="Delete Reading"
+        description="Are you sure you want to delete this reading? The fuel volume will be restored to the tanker."
+        isLoading={deleteReadingMutation.isPending}
       />
     </PageLayout>
   )

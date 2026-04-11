@@ -121,29 +121,6 @@ export default function AccountingPage() {
 
   const updateAccountMutation = useUpdateAccount()
 
-  // Show loading while checking permissions
-  if (isCheckingAccess) {
-    return (
-      <PageLayout title="Accounting" description="Manage accounts and transactions">
-        <SkeletonList count={5} />
-      </PageLayout>
-    )
-  }
-
-  if (!hasAccess) {
-    return (
-      <PageLayout title="Access Denied" description="You don't have access to this module">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              You don't have access to the Accounting module. Please contact your administrator.
-            </p>
-          </CardContent>
-        </Card>
-      </PageLayout>
-    )
-  }
-
   const handleCreateAccount = () => {
     setSelectedAccount(null)
     setIsAccountDialogOpen(true)
@@ -291,6 +268,29 @@ export default function AccountingPage() {
       return matchesSearch && matchesType
     })
   }, [accounts, search, typeFilter])
+
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title="Accounting" description="Manage accounts and transactions">
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
+    return (
+      <PageLayout title="Access Denied" description="You don't have access to this module">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">
+              You don't have access to the Accounting module. Please contact your administrator.
+            </p>
+          </CardContent>
+        </Card>
+      </PageLayout>
+    )
+  }
 
   return (
     <PageLayout
