@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -26,6 +27,17 @@ export function Sidebar() {
   const { toggleSidebar, sidebarOpen } = useUIStore()
   const t = useTranslations()
 
+  const [currentHash, setCurrentHash] = useState("")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentHash(window.location.hash)
+      const handleHashChange = () => setCurrentHash(window.location.hash)
+      window.addEventListener("hashchange", handleHashChange)
+      return () => window.removeEventListener("hashchange", handleHashChange)
+    }
+  }, [])
+
   const navItems = [
     {
       id: "dashboard-top",
@@ -33,6 +45,7 @@ export function Sidebar() {
       icon: LayoutDashboard,
       color: "text-blue-500",
       hash: "#dashboard-top",
+      activePrefixes: [],
     },
     {
       id: "management-section",
@@ -40,6 +53,7 @@ export function Sidebar() {
       icon: Users,
       color: "text-cyan-400",
       hash: "#management-section",
+      activePrefixes: ["/crm", "/contacts"],
     },
     {
       id: "inventory-section",
@@ -47,6 +61,7 @@ export function Sidebar() {
       icon: Box,
       color: "text-emerald-400",
       hash: "#inventory-section",
+      activePrefixes: ["/products", "/stocks", "/categories", "/units", "/brands", "/attributes", "/inventory"],
     },
     {
       id: "accounting-section",
@@ -54,6 +69,7 @@ export function Sidebar() {
       icon: Wallet,
       color: "text-indigo-400",
       hash: "#accounting-section",
+      activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale"],
     },
     {
       id: "reports-section",
@@ -61,6 +77,7 @@ export function Sidebar() {
       icon: BarChart2,
       color: "text-purple-400",
       hash: "#reports-section",
+      activePrefixes: ["/reports"],
     },
     {
       id: "modules-section",
@@ -68,6 +85,7 @@ export function Sidebar() {
       icon: Grid,
       color: "text-orange-400",
       hash: "#modules-section",
+      activePrefixes: ["/oil-filling-station"],
     },
     {
       id: "my-business-section",
@@ -75,6 +93,7 @@ export function Sidebar() {
       icon: Building2,
       color: "text-rose-400",
       hash: "#my-business-section",
+      activePrefixes: ["/settings", "/roles", "/branches"],
     },
     {
       id: "settings-section",
@@ -83,6 +102,7 @@ export function Sidebar() {
       color: "text-slate-400",
       hash: "#settings-section",
       marginTop: true,
+      activePrefixes: ["/settings"],
     },
   ]
 
@@ -94,7 +114,7 @@ export function Sidebar() {
     <aside
       id="sidebar"
       className={cn(
-        "flex flex-col py-6 bg-slate-800 z-20 shadow-xl transition-all duration-300 relative",
+        "flex flex-col py-6 bg-slate-800 z-20 shadow-xl transition-all duration-300 relative shrink-0",
         sidebarOpen ? "w-64 min-w-[256px]" : "w-[80px] min-w-[80px]"
       )}
     >
@@ -130,13 +150,19 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon
           
-          // Determine activity logic
-          // Simple heuristic: For now we do not explicitly set dark/light active background, 
-          // but we can listen to hash changes or route logic.
-          // In the layout, active link should probably just map to the dashboard root for now.
-          const isItemActive = isDashboardRoot && typeof window !== "undefined" && window.location.hash === item.hash
-          // Or if we don't have a hash, assume dashboard-top is active
-          const isActuallyActive = isItemActive || (!window?.location?.hash && item.id === "dashboard-top" && isDashboardRoot)
+          let isActuallyActive = false
+
+          if (!isDashboardRoot) {
+            // Check if current pathname matches any of the activePrefixes
+            const subPath = pathname.replace(`/${locale}/dashboard`, "")
+            isActuallyActive = item.activePrefixes?.some(p => subPath.startsWith(p)) || false
+          } else {
+            if (currentHash) {
+              isActuallyActive = currentHash === item.hash
+            } else {
+              isActuallyActive = item.id === "dashboard-top"
+            }
+          }
 
           const href = isDashboardRoot ? item.hash : `/${locale}/dashboard${item.hash}`
 

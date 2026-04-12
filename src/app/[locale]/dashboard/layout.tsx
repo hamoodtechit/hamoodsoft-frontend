@@ -152,13 +152,13 @@ export default function DashboardLayout({
   return (
     <PermissionsProvider>
       <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
-        {!isPOS && <Sidebar />}
-        <main className="flex-1 flex flex-col overflow-hidden relative" id="layout-main-area">
+        <Sidebar />
+        <main className="flex-1 flex flex-col overflow-hidden relative min-w-0" id="layout-main-area">
           {!isPOS && <DashboardHeader />}
           <div 
              id="main-scroll" 
              className={cn(
-               "flex-1 overflow-y-auto scroll-smooth", 
+               "flex-1 overflow-auto scroll-smooth", 
                !isPOS && "p-8 md:p-10 lg:p-12"
              )}
           >
