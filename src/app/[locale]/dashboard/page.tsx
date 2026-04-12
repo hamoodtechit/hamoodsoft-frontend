@@ -3,6 +3,8 @@
 import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-card"
 import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { useUpdatePreferences } from "@/lib/hooks/use-users"
+import { useAuthStore } from "@/store"
 import {
   DndContext,
   closestCenter,
@@ -55,8 +57,6 @@ interface DashboardItem {
   originalId?: string
 }
 
-const STORAGE_KEY = "dashboard-item-order"
-
 export default function DashboardPage() {
   const t = useTranslations()
   const router = useRouter()
@@ -69,23 +69,28 @@ export default function DashboardPage() {
   // State for "See More" functionality
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   
-  // Load saved order from localStorage
-  const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      return saved ? JSON.parse(saved) : {}
-    }
-    return {}
-  })
+  const { user } = useAuthStore()
+  const { mutate: updatePreferences } = useUpdatePreferences()
+
+  // Load saved order from user preferences
+  const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(
+    user?.preferences?.dashboardOrder || {}
+  )
 
   // Load pinned items
-  const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("dashboard-pinned-items")
-      return saved ? JSON.parse(saved) : []
+  const [pinnedItems, setPinnedItems] = useState<string[]>(
+    user?.preferences?.dashboardPinned || []
+  )
+
+  // Sync state if user preferences load or change from elsewhere
+  useEffect(() => {
+    if (user?.preferences?.dashboardOrder) {
+      setSavedOrder(user.preferences.dashboardOrder)
     }
-    return []
-  })
+    if (user?.preferences?.dashboardPinned) {
+      setPinnedItems(user.preferences.dashboardPinned)
+    }
+  }, [user?.preferences])
 
   const togglePin = (originalId: string) => {
     setPinnedItems(prev => {
@@ -95,7 +100,7 @@ export default function DashboardPage() {
       } else {
         next = [...prev, originalId];
       }
-      localStorage.setItem("dashboard-pinned-items", JSON.stringify(next));
+      updatePreferences({ dashboardPinned: next })
       return next;
     });
   }
@@ -389,10 +394,10 @@ export default function DashboardPage() {
     const newOrder = newItems.map((item) => item.id)
 
     if (category === "favourites") {
-       // Favourites ordering is decoupled from STORAGE_KEY since it relies strictly on pinnedItems state
+       // Favourites ordering is now synced via preferences hook
        const newPinned = newOrder.map(id => id.replace("fav-", ""));
        setPinnedItems(newPinned);
-       localStorage.setItem("dashboard-pinned-items", JSON.stringify(newPinned));
+       updatePreferences({ dashboardPinned: newPinned });
        return;
     }
 
@@ -402,7 +407,7 @@ export default function DashboardPage() {
       [category]: newOrder,
     }
     setSavedOrder(updatedOrder)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrder))
+    updatePreferences({ dashboardOrder: updatedOrder })
   }
 
   const handleItemClick = (href: string) => {

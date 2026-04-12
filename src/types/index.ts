@@ -7,6 +7,7 @@ export interface User {
   avatar?: string
   roleId?: string | null
   currentBusinessId?: string | null
+  preferences?: Record<string, any> | null
   createdAt?: string
   updatedAt?: string
 }

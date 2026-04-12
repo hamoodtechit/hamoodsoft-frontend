@@ -8,6 +8,7 @@ export const endpoints = {
     profile: "/auth/profile",
     requestPasswordReset: "/auth/request-password-reset",
     resetPassword: "/auth/reset-password",
+    preferences: "/auth/profile/preferences",
   },
   users: {
     list: "/users",

@@ -16,10 +16,13 @@ export const usersApi = {
 
   updateUser: async (id: string, data: UpdateUserInput): Promise<User> => {
     const url = endpoints.users.update(id)
-    const fullUrl = `${config.api.baseUrl}${url}`
-    
-    
     const response = await apiClient.patch<ApiResponse<User>>(url, data)
     return response.data.data
+  },
+
+  updatePreferences: async (preferences: Record<string, any>): Promise<any> => {
+    const response = await apiClient.patch<ApiResponse<any>>(endpoints.auth.preferences, preferences)
+    // we return the full response or just data
+    return response.data
   },
 }
