@@ -114,7 +114,7 @@ export function Sidebar() {
     <aside
       id="sidebar"
       className={cn(
-        "flex flex-col py-6 bg-slate-800 z-20 shadow-xl transition-all duration-300 relative shrink-0",
+        "flex flex-col py-6 bg-white border-r dark:border-r-0 dark:bg-slate-800 z-20 shadow-xl transition-all duration-300 relative shrink-0",
         sidebarOpen ? "w-64 min-w-[256px]" : "w-[80px] min-w-[80px]"
       )}
     >
@@ -122,7 +122,7 @@ export function Sidebar() {
       <button
         id="sidebar-toggle"
         onClick={toggleSidebar}
-        className="absolute -right-3.5 top-8 w-7 h-7 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 rounded-full flex items-center justify-center shadow-md transition-colors z-50"
+        className="absolute -right-3.5 top-8 w-7 h-7 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full flex items-center justify-center shadow-md transition-colors z-50"
       >
         {sidebarOpen ? (
           <ChevronLeft className="w-4 h-4" />
@@ -138,7 +138,7 @@ export function Sidebar() {
         </div>
         <span
           className={cn(
-            "text-white font-bold text-xl tracking-wide whitespace-nowrap overflow-hidden transition-all duration-100",
+            "text-slate-900 dark:text-white font-bold text-xl tracking-wide whitespace-nowrap overflow-hidden transition-all duration-100",
             !sidebarOpen && "hidden"
           )}
         >
@@ -174,10 +174,10 @@ export function Sidebar() {
                 "nav-item flex items-center gap-4 px-4 py-3.5 rounded-l-2xl transition-colors cursor-pointer overflow-hidden",
                 item.marginTop && "mt-2",
                 // Active State (bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white)
-                // Inactive State (text-slate-400 hover:text-slate-200 hover:bg-slate-700/50)
+                // Inactive State (text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50)
                 isActuallyActive
                   ? "bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
               )}
               onClick={() => {
                 if (isDashboardRoot) {
