@@ -26,7 +26,7 @@ export const createProductSchema = z.object({
   unitId: z.string().min(1, "Unit is required"),
   categoryIds: z.array(z.string()).optional(),
   branchIds: z.array(z.string()).optional(),
-  brandId: z.string().optional(),
+  brandId: z.string().min(1, "Brand is required"),
   variants: z.array(productVariantSchema).optional(),
   alertQuantity: z.number().min(0, "Alert quantity must be 0 or greater").nullable().optional(),
   barcode: z.string().nullable().optional(),
@@ -47,10 +47,10 @@ export const updateProductSchema = z.object({
     .number({ invalid_type_error: "Price must be a number" })
     .min(0, "Price must be 0 or greater")
     .optional(),
-  unitId: z.string().min(1, "Unit is required").optional(),
+  unitId: z.string().min(1, "Unit is required"),
   categoryIds: z.array(z.string()).optional(),
   branchIds: z.array(z.string()).optional(),
-  brandId: z.string().optional(),
+  brandId: z.string().min(1, "Brand is required"),
   variants: z.array(productVariantSchema).optional(),
   alertQuantity: z.number().min(0, "Alert quantity must be 0 or greater").nullable().optional(),
   barcode: z.string().nullable().optional(),

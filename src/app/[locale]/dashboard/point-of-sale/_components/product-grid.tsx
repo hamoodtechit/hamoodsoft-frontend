@@ -35,7 +35,7 @@ export function ProductGrid() {
             ) : (
               <>
                 <Container className="h-4 w-4" />
-                Select Tanker / Fuel
+                Select Dispenser
               </>
             )}
           </CardTitle>
