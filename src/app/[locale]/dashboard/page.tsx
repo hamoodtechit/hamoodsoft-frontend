@@ -52,6 +52,7 @@ interface DashboardItem {
   enabled: boolean
   category?: string
   order?: number
+  originalId?: string
 }
 
 const STORAGE_KEY = "dashboard-item-order"
@@ -76,6 +77,28 @@ export default function DashboardPage() {
     }
     return {}
   })
+
+  // Load pinned items
+  const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dashboard-pinned-items")
+      return saved ? JSON.parse(saved) : []
+    }
+    return []
+  })
+
+  const togglePin = (originalId: string) => {
+    setPinnedItems(prev => {
+      let next;
+      if (prev.includes(originalId)) {
+        next = prev.filter(id => id !== originalId);
+      } else {
+        next = [...prev, originalId];
+      }
+      localStorage.setItem("dashboard-pinned-items", JSON.stringify(next));
+      return next;
+    });
+  }
 
   // Items to show initially per category
   const initialItemsToShow: Record<string, number> = {
@@ -305,8 +328,22 @@ export default function DashboardPage() {
       {} as Record<string, DashboardItem[]>
     )
 
+    // Create favourites group mapped from pinnedItems
+    // Order is strictly defined by pinnedItems array itself
+    grouped["favourites"] = pinnedItems.map((originalId) => {
+      const item = enabledItems.find(i => i.id === originalId);
+      if (!item) return null;
+      return {
+        ...item,
+        id: `fav-${item.id}`,
+        originalId: item.id
+      };
+    }).filter(Boolean) as DashboardItem[];
+
     // Sort each category by order
     Object.keys(grouped).forEach((category) => {
+      if (category === "favourites") return; // Favourites is already sorted by pinnedItems array
+
       grouped[category].sort((a, b) => {
         const orderA = a.order ?? Infinity
         const orderB = b.order ?? Infinity
@@ -315,7 +352,7 @@ export default function DashboardPage() {
     })
 
     return grouped
-  }, [orderedItems])
+  }, [orderedItems, pinnedItems, enabledItems])
 
   // Simulate loading
   useEffect(() => {
@@ -350,6 +387,14 @@ export default function DashboardPage() {
 
     const newItems = arrayMove(items, oldIndex, newIndex)
     const newOrder = newItems.map((item) => item.id)
+
+    if (category === "favourites") {
+       // Favourites ordering is decoupled from STORAGE_KEY since it relies strictly on pinnedItems state
+       const newPinned = newOrder.map(id => id.replace("fav-", ""));
+       setPinnedItems(newPinned);
+       localStorage.setItem("dashboard-pinned-items", JSON.stringify(newPinned));
+       return;
+    }
 
     // Update saved order
     const updatedOrder = {
@@ -429,6 +474,11 @@ export default function DashboardPage() {
                       key={item.id}
                       id={item.id}
                       title={item.title}
+                      isPinned={pinnedItems.includes(item.originalId || item.id)}
+                      onPin={(e) => {
+                        e.stopPropagation()
+                        togglePin(item.originalId || item.id)
+                      }}
                       href={item.href}
                       icon={Icon}
                       color={item.color}
@@ -465,9 +515,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Favourites Grid */}
+      {groupedItems.favourites && groupedItems.favourites.length > 0 &&
+        renderCategoryGrid(groupedItems.favourites, "favourites", t("sidebar.favourites") || "Favourites")
+      }
+
       {/* Main Modules Grid */}
       {groupedItems.main && groupedItems.main.length > 0 &&
-        renderCategoryGrid(groupedItems.main, "management", t("sidebar.management"))
+        renderCategoryGrid(groupedItems.main, "main", t("sidebar.management"))
       }
 
       {/* Inventory Grid */}
@@ -482,7 +537,7 @@ export default function DashboardPage() {
 
       {/* Business Management Grid */}
       {groupedItems.business && groupedItems.business.length > 0 &&
-        renderCategoryGrid(groupedItems.business, "my-business", t("sidebar.myBusiness"))
+        renderCategoryGrid(groupedItems.business, "business", t("sidebar.myBusiness"))
       }
 
       {/* Special Modules Grid */}
