@@ -3,7 +3,6 @@
 import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-card"
 import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { cn } from "@/lib/utils"
 import {
   DndContext,
   closestCenter,
@@ -29,7 +28,6 @@ import {
   FileText,
   FolderTree,
   Package,
-  Plus,
   Ruler,
   Settings,
   Shield,
@@ -48,7 +46,7 @@ interface DashboardItem {
   id: string
   title: string
   href: string
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   color: string
   bgColor: string
   enabled: boolean
@@ -377,8 +375,7 @@ export default function DashboardPage() {
   const renderCategoryGrid = (
     items: DashboardItem[],
     category: string,
-    title: string,
-    gridCols: string = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+    title: string
   ) => {
     const isExpanded = expandedCategories[category] || false
     const initialCount = initialItemsToShow[category] || items.length
@@ -390,13 +387,16 @@ export default function DashboardPage() {
     const itemIds = itemsToShow.map((item) => item.id)
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{title}</h2>
+      <div 
+        id={`${category}-section`}
+        className="mb-8 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-100/60 dark:border-slate-700/50 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300"
+      >
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
           {hasMore && (
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1 text-sm text-primary hover:underline transition-colors"
+              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
             >
               {isExpanded ? (
                 <>
@@ -421,7 +421,7 @@ export default function DashboardPage() {
             onDragEnd={(event) => handleDragEnd(event, category)}
           >
             <SortableContext items={itemIds} strategy={rectSortingStrategy}>
-              <div className={cn("grid gap-2 sm:gap-2.5 md:gap-3", gridCols)}>
+              <div className="flex flex-wrap gap-x-8 gap-y-10 md:gap-x-12">
                 {itemsToShow.map((item) => {
                   const Icon = item.icon
                   return (
@@ -446,25 +446,33 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("sidebar.dashboard")}</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          {currentBusiness?.name
-            ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
-            : "Welcome back! Here's what's happening with your business today."}
-        </p>
+    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6 pb-10">
+      {/* Header Text */}
+      <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4" id="dashboard-top">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors">
+            {t("sidebar.dashboard")}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors">
+            {currentBusiness?.name
+              ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
+              : "Welcome back! Here's what's happening with your business today."}
+          </p>
+        </div>
+        <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-300 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          System Online
+        </div>
       </div>
 
       {/* Main Modules Grid */}
       {groupedItems.main && groupedItems.main.length > 0 &&
-        renderCategoryGrid(groupedItems.main, "main", t("sidebar.management"))
+        renderCategoryGrid(groupedItems.main, "management", t("sidebar.management"))
       }
 
       {/* Inventory Grid */}
       {groupedItems.inventory && groupedItems.inventory.length > 0 &&
-        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"), "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6")
+        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"))
       }
 
       {/* Accounting Grid */}
@@ -474,7 +482,7 @@ export default function DashboardPage() {
 
       {/* Business Management Grid */}
       {groupedItems.business && groupedItems.business.length > 0 &&
-        renderCategoryGrid(groupedItems.business, "business", t("sidebar.myBusiness"))
+        renderCategoryGrid(groupedItems.business, "my-business", t("sidebar.myBusiness"))
       }
 
       {/* Special Modules Grid */}

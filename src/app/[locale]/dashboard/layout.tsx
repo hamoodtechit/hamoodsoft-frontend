@@ -8,6 +8,8 @@ import { useAuthStore } from "@/store"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
+import { Sidebar } from "@/components/layout/sidebar"
+
 export default function DashboardLayout({
   children,
 }: {
@@ -50,7 +52,7 @@ export default function DashboardLayout({
           const storedUser = parsed?.state?.user
           hasAuth = !!(storedToken && storedUser && storedUser.id)
         }
-      } catch (e) {
+      } catch {
         // Ignore parsing errors
       }
     }
@@ -121,7 +123,7 @@ export default function DashboardLayout({
         const storedUser = parsed?.state?.user
         hasAuth = !!(storedToken && storedUser && storedUser.id)
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
   }
@@ -149,13 +151,20 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
-      <div className="flex h-screen overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden transition-all duration-300">
+      <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
+        {!isPOS && <Sidebar />}
+        <main className="flex-1 flex flex-col overflow-hidden relative" id="layout-main-area">
           {!isPOS && <DashboardHeader />}
-          <main className={cn("flex-1 overflow-hidden flex flex-col", !isPOS && "p-4 md:p-6 overflow-y-auto")}>
+          <div 
+             id="main-scroll" 
+             className={cn(
+               "flex-1 overflow-y-auto scroll-smooth", 
+               !isPOS && "p-8 md:p-10 lg:p-12"
+             )}
+          >
             {children}
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </PermissionsProvider>
   )

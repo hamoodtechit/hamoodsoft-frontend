@@ -1,578 +1,188 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
-import { useBusinesses } from "@/lib/hooks/use-business"
-import { usePOSSession } from "@/lib/hooks/use-pos-sessions"
+import { useUIStore } from "@/store"
 import { cn } from "@/lib/utils"
-import { useAuthStore, useUIStore } from "@/store"
-import { useQueryClient } from "@tanstack/react-query"
 import {
-    BookOpen,
-    Building2,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    CreditCard,
-    FolderTree,
-    Fuel,
-    LayoutDashboard,
-    Package,
-    Plus,
-    Ruler,
-    Settings,
-    Shield,
-    ShoppingCart,
-    Users,
-    Wallet
+  BarChart2,
+  Box,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Grid,
+  Layers,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Wallet
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
-import { useMemo, useState } from "react"
 
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  badge?: string
-}
-
-interface NavItemWithSubmenu extends NavItem {
-  submenu?: NavItem[]
-}
-
-interface NavSection {
-  title?: string
-  items: (NavItem | NavItemWithSubmenu)[]
-}
-
-interface SidebarProps {
-  isOpen?: boolean
-}
-
-// Module to sidebar item mapping - will be translated in component
-const moduleSidebarMap: Record<string, (t: any) => NavItem> = {
-  'inventory': (t) => ({
-    title: t("sidebar.inventory"),
-    href: "/dashboard/inventory",
-    icon: Package,
-  }),
-  'sales': (t) => ({
-    title: t("sidebar.sales"),
-    href: "/dashboard/sales",
-    icon: ShoppingCart,
-  }),
-  'purchases': (t) => ({
-    title: t("sidebar.purchase"),
-    href: "/dashboard/purchase",
-    icon: Package,
-  }),
-  'accounting': (t) => ({
-    title: t("sidebar.accounting"),
-    href: "/dashboard/accounting",
-    icon: BookOpen,
-  }),
-  'point-of-sale': (t) => ({
-    title: t("sidebar.pointOfSale"),
-    href: "/dashboard/point-of-sale",
-    icon: CreditCard,
-  }),
-  'crm': (t) => ({
-    title: t("sidebar.crm"),
-    href: "/dashboard/crm",
-    icon: Users,
-  }),
-  'oil-filling-station': (t) => ({
-    title: t("sidebar.oilFillingStation"),
-    href: "/dashboard/oil-filling-station",
-    icon: Fuel,
-  }),
-}
-
-export function Sidebar({ isOpen = true }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname()
   const params = useParams()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
-  const { toggleSidebar } = useUIStore()
-  const { user: storeUser, businesses: storeBusinesses } = useAuthStore()
-  const { data: apiBusinesses, isLoading: isLoadingBusinesses } = useBusinesses()
+  const { toggleSidebar, sidebarOpen } = useUIStore()
   const t = useTranslations()
-  const queryClient = useQueryClient()
-  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
-    inventory: true,
-    accounting: true,
-    myBusiness: false,
-  })
-  
-  const { selectedBranchId } = useBranchSelection()
-  const { data: activeSession } = usePOSSession(selectedBranchId || undefined)
-  const isPOSOpen = !!activeSession
 
-  // Use businesses from multiple sources in priority order
-  const businesses = useMemo(() => {
-    if (storeBusinesses.length > 0) return storeBusinesses
-    const cachedBusinesses = queryClient.getQueryData<any>(["businesses"])
-    if (cachedBusinesses && Array.isArray(cachedBusinesses) && cachedBusinesses.length > 0) {
-      return cachedBusinesses
-    }
-    if (apiBusinesses && apiBusinesses.length > 0) return apiBusinesses
-    return []
-  }, [storeBusinesses, apiBusinesses, queryClient])
-
-  // Get current business
-  const currentBusiness = useMemo(() => {
-    if (!storeUser?.currentBusinessId || !businesses || businesses.length === 0) return null
-    return businesses.find((b) => b.id === storeUser.currentBusinessId)
-  }, [storeUser?.currentBusinessId, businesses])
-
-  const isLoading = isLoadingBusinesses && businesses.length === 0 && !storeBusinesses.length && !queryClient.getQueryData<any>(["businesses"])
-
-  // Get enabled modules from current business
-  const enabledModules = currentBusiness?.modules || []
-
-  // Build sidebar sections
-  const navSections: NavSection[] = useMemo(() => {
-    const sections: NavSection[] = [
-      {
-        items: [
-          {
-            title: t("sidebar.dashboard"),
-            href: "/dashboard",
-            icon: LayoutDashboard,
-          },
-        ],
-      },
-    ]
-
-    // Management modules
-    const managementItems: (NavItem | NavItemWithSubmenu)[] = []
-    
-    // Inventory with submenu (no main page, only submenu items)
-    if (enabledModules.includes('inventory')) {
-      const inventorySubmenu: NavItem[] = [
-        {
-          title: t("sidebar.products"),
-          href: "/dashboard/products",
-          icon: Package,
-        },
-        {
-          title: t("sidebar.stocks"),
-          href: "/dashboard/stocks",
-          icon: Package,
-        },
-        {
-          title: t("sidebar.categories"),
-          href: "/dashboard/categories",
-          icon: FolderTree,
-        },
-        {
-          title: t("sidebar.unit"),
-          href: "/dashboard/units",
-          icon: Ruler,
-        },
-        {
-          title: t("sidebar.brands"),
-          href: "/dashboard/brands",
-          icon: Package,
-        },
-        {
-          title: t("sidebar.attributes"),
-          href: "/dashboard/attributes",
-          icon: Package,
-        },
-      ]
-      managementItems.push({
-        title: t("sidebar.inventory"),
-        href: "#",
-        icon: Package,
-        submenu: inventorySubmenu,
-      })
-    }
-
-    // Accounting
-    if (enabledModules.includes('accounting')) {
-      managementItems.push({
-        title: t("sidebar.accounts"),
-        href: "/dashboard/accounting",
-        icon: Wallet,
-      })
-    }
-
-    // Other management modules
-    const otherModules = ['sales', 'purchases', 'point-of-sale', 'crm']
-    otherModules.forEach((moduleId) => {
-      if (enabledModules.includes(moduleId)) {
-        managementItems.push(moduleSidebarMap[moduleId](t))
-      }
-    })
-
-    // My Business dropdown (always available when user has a business)
-    if (currentBusiness) {
-      const myBusinessSubmenu: NavItem[] = [
-        {
-          title: t("sidebar.businessSettings"),
-          href: "/dashboard/settings",
-          icon: Settings,
-        },
-        {
-          title: t("sidebar.rolesPermissions"),
-          href: "/dashboard/roles",
-          icon: Shield,
-        },
-        {
-          title: t("sidebar.createBusiness"),
-          href: "/register-business",
-          icon: Plus,
-        },
-        {
-          title: t("sidebar.branches"),
-          href: "/dashboard/branches",
-          icon: Building2,
-        },
-      ]
-      managementItems.push({
-        title: t("sidebar.myBusiness"),
-        href: "#",
-        icon: Building2,
-        submenu: myBusinessSubmenu,
-      })
-    }
-
-    // Contacts (always available, not module-based) - appears after My Business dropdown
-    managementItems.push({
-      title: t("sidebar.contacts"),
-      href: "/dashboard/contacts",
+  const navItems = [
+    {
+      id: "dashboard-top",
+      title: t("sidebar.dashboard"),
+      icon: LayoutDashboard,
+      color: "text-blue-500",
+      hash: "#dashboard-top",
+    },
+    {
+      id: "management-section",
+      title: t("sidebar.management"),
       icon: Users,
-    })
+      color: "text-cyan-400",
+      hash: "#management-section",
+    },
+    {
+      id: "inventory-section",
+      title: t("sidebar.inventory"),
+      icon: Box,
+      color: "text-emerald-400",
+      hash: "#inventory-section",
+    },
+    {
+      id: "accounting-section",
+      title: t("sidebar.accounting"),
+      icon: Wallet,
+      color: "text-indigo-400",
+      hash: "#accounting-section",
+    },
+    {
+      id: "reports-section",
+      title: "Reports", // Keeping literal if no translation key
+      icon: BarChart2,
+      color: "text-purple-400",
+      hash: "#reports-section",
+    },
+    {
+      id: "modules-section",
+      title: t("sidebar.modules"),
+      icon: Grid,
+      color: "text-orange-400",
+      hash: "#modules-section",
+    },
+    {
+      id: "my-business-section",
+      title: t("sidebar.myBusiness"),
+      icon: Building2,
+      color: "text-rose-400",
+      hash: "#my-business-section",
+    },
+    {
+      id: "settings-section",
+      title: t("sidebar.settings"),
+      icon: Settings,
+      color: "text-slate-400",
+      hash: "#settings-section",
+      marginTop: true,
+    },
+  ]
 
-    if (managementItems.length > 0) {
-      sections.push({
-        title: t("sidebar.management"),
-        items: managementItems,
-      })
-    }
-
-    // Special modules
-    const specialModules = ['oil-filling-station']
-    const specialItems = specialModules
-      .filter((moduleId) => enabledModules.includes(moduleId))
-      .map((moduleId) => moduleSidebarMap[moduleId](t))
-      .filter(Boolean)
-
-    if (specialItems.length > 0) {
-      sections.push({
-        title: t("sidebar.modules"),
-        items: specialItems,
-      })
-    }
-
-    return sections
-  }, [enabledModules, currentBusiness])
-
-  const toggleSubmenu = (key: string) => {
-    setOpenSubmenus((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
-
-  const renderNavItem = (item: NavItem | NavItemWithSubmenu, itemKey: string) => {
-    const Icon = item.icon
-    const fullHref = item.href === "#" ? "#" : `/${locale}${item.href}`
-    const isActive = item.href !== "#" && pathname?.startsWith(fullHref)
-    const hasSubmenu = 'submenu' in item && item.submenu && item.submenu.length > 0
-    const isSubmenuOpen = openSubmenus[itemKey] || false
-
-    // Check if any submenu item is active
-    const isSubmenuActive = hasSubmenu && item.submenu?.some(
-      (subItem) => pathname?.startsWith(`/${locale}${subItem.href}`)
-    )
-
-    if (!isOpen) {
-      // Collapsed sidebar - show tooltip
-      if (hasSubmenu) {
-        return (
-          <TooltipProvider key={itemKey}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isSubmenuActive ? "secondary" : "ghost"}
-                  size="icon"
-                  className={cn(
-                    "w-full h-10",
-                    isSubmenuActive && "bg-secondary font-medium"
-                  )}
-                  onClick={() => toggleSubmenu(itemKey)}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="sr-only">{item.title}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{item.title}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )
-      }
-
-      return (
-        <TooltipProvider key={itemKey}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link href={fullHref} className="block">
-                <Button
-                  variant={isActive ? "secondary" : "ghost"}
-                  size="icon"
-                  className={cn(
-                    "w-full h-10",
-                    isActive && "bg-secondary font-medium"
-                  )}
-                >
-                  <div className="relative">
-                    <Icon className="h-4 w-4" />
-                    {item.href === "/dashboard/point-of-sale" && isPOSOpen && (
-                      <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                    )}
-                  </div>
-                  <span className="sr-only">{item.title}</span>
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{item.title}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )
-    }
-
-    // Expanded sidebar
-    if (hasSubmenu) {
-      return (
-        <Collapsible
-          key={itemKey}
-          open={isSubmenuOpen}
-          onOpenChange={() => toggleSubmenu(itemKey)}
-        >
-          <CollapsibleTrigger asChild>
-            <Button
-              variant={isSubmenuActive ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-between gap-3 h-10 px-3",
-                isSubmenuActive && "bg-secondary font-medium"
-              )}
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 text-left text-sm">{item.title}</span>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  isSubmenuOpen && "transform rotate-180"
-                )}
-              />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 mt-1 ml-4">
-            {item.submenu?.map((subItem) => {
-              const SubIcon = subItem.icon
-              const subFullHref = `/${locale}${subItem.href}`
-              const isSubActive = pathname?.startsWith(subFullHref)
-              
-              return (
-                <Link key={subItem.href} href={subFullHref}>
-                  <Button
-                    variant={isSubActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start gap-3 h-9 px-3 text-sm",
-                      isSubActive && "bg-secondary font-medium"
-                    )}
-                  >
-                    <SubIcon className="h-4 w-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">{subItem.title}</span>
-                  </Button>
-                </Link>
-              )
-            })}
-          </CollapsibleContent>
-        </Collapsible>
-      )
-    }
-
-    // Regular item without submenu
-    return (
-      <Link key={itemKey} href={fullHref}>
-        <Button
-          variant={isActive ? "secondary" : "ghost"}
-          className={cn(
-            "w-full justify-start gap-3 h-10 px-3",
-            isActive && "bg-secondary font-medium"
-          )}
-        >
-          <div className="relative">
-            <Icon className="h-4 w-4 flex-shrink-0" />
-            {item.href === "/dashboard/point-of-sale" && isPOSOpen && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-            )}
-          </div>
-          <span className="flex-1 text-left text-sm">{item.title}</span>
-          {item.badge && (
-            <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-              {item.badge}
-            </span>
-          )}
-          {isActive && (
-            <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
-          )}
-        </Button>
-      </Link>
-    )
-  }
-
-  // Settings menu item
-  const settingsItem: NavItem = {
-    title: t("sidebar.settings"),
-    href: "/dashboard/settings",
-    icon: Settings,
-  }
+  // If we are on exactly `/dashboard`, we can just hash-link. 
+  // If we are on `/dashboard/products`, we link to `/dashboard#inventory-section`.
+  const isDashboardRoot = pathname === `/${locale}/dashboard` || pathname === `/dashboard`
 
   return (
     <aside
+      id="sidebar"
       className={cn(
-        "hidden lg:flex lg:flex-col lg:border-r lg:bg-muted/40 transition-all duration-300 ease-in-out",
-        isOpen ? "lg:w-64" : "lg:w-16"
+        "flex flex-col py-6 bg-slate-800 z-20 shadow-xl transition-all duration-300 relative",
+        sidebarOpen ? "w-64 min-w-[256px]" : "w-[80px] min-w-[80px]"
       )}
     >
-      <div className="flex h-14 items-center border-b px-3 lg:px-4">
-        <div className="flex items-center justify-between w-full">
-          {isOpen ? (
-            <Link href={`/${locale}/dashboard`} className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <LayoutDashboard className="h-5 w-5" />
-              </div>
-              <span className="font-semibold whitespace-nowrap">Hamood ERP</span>
-            </Link>
-          ) : (
-            <Link href={`/${locale}/dashboard`} className="flex items-center justify-center w-full">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <LayoutDashboard className="h-5 w-5" />
-              </div>
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={toggleSidebar}
-          >
-            {isOpen ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            <span className="sr-only">Toggle sidebar</span>
-          </Button>
+      {/* Sidebar Toggle Button */}
+      <button
+        id="sidebar-toggle"
+        onClick={toggleSidebar}
+        className="absolute -right-3.5 top-8 w-7 h-7 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 rounded-full flex items-center justify-center shadow-md transition-colors z-50"
+      >
+        {sidebarOpen ? (
+          <ChevronLeft className="w-4 h-4" />
+        ) : (
+          <ChevronRight className="w-4 h-4" />
+        )}
+      </button>
+
+      {/* Logo */}
+      <div className="mb-8 px-6 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shrink-0">
+          <Layers className="text-white w-5 h-5 shrink-0" />
         </div>
-      </div>
-      <ScrollArea className="flex-1">
-        <nav className={cn("space-y-6", isOpen ? "p-4" : "p-2")}>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="animate-spin mb-2 text-muted-foreground">⏳</div>
-                {isOpen && (
-                  <p className="text-xs text-muted-foreground">Loading modules...</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            navSections.map((section, sectionIndex) => (
-              <div key={sectionIndex} className={cn("space-y-2", sectionIndex > 0 && "mt-6")}>
-                {section.title && isOpen && (
-                  <div className="px-3 py-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {section.title}
-                  </div>
-                )}
-                {!section.title && sectionIndex > 0 && isOpen && (
-                  <div className="h-4" />
-                )}
-                <div className="space-y-1">
-                  {section.items.map((item, itemIndex) => {
-                    const itemKey = `${sectionIndex}-${itemIndex}-${item.href}`
-                    return renderNavItem(item, itemKey)
-                  })}
-                </div>
-              </div>
-            ))
+        <span
+          className={cn(
+            "text-white font-bold text-xl tracking-wide whitespace-nowrap overflow-hidden transition-all duration-100",
+            !sidebarOpen && "hidden"
           )}
-        </nav>
-      </ScrollArea>
-      
-      {/* Settings at the bottom */}
-      <div className={cn("border-t", isOpen ? "p-4" : "p-2")}>
-        {(() => {
-          const SettingsIcon = settingsItem.icon
-          const settingsHref = `/${locale}${settingsItem.href}`
-          const isSettingsActive = pathname?.startsWith(settingsHref)
+        >
+          Hamood ERP
+        </span>
+      </div>
+
+      <nav className="flex flex-col gap-1 w-full pl-4 mt-4 flex-1 overflow-y-auto no-scrollbar" id="sidebar-nav">
+        {navItems.map((item) => {
+          const Icon = item.icon
           
-          if (!isOpen) {
-            return (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href={settingsHref} className="block">
-                      <Button
-                        variant={isSettingsActive ? "secondary" : "ghost"}
-                        size="icon"
-                        className={cn(
-                          "w-full h-10",
-                          isSettingsActive && "bg-secondary font-medium"
-                        )}
-                      >
-                        <SettingsIcon className="h-4 w-4" />
-                        <span className="sr-only">{settingsItem.title}</span>
-                      </Button>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>{settingsItem.title}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )
-          }
+          // Determine activity logic
+          // Simple heuristic: For now we do not explicitly set dark/light active background, 
+          // but we can listen to hash changes or route logic.
+          // In the layout, active link should probably just map to the dashboard root for now.
+          const isItemActive = isDashboardRoot && typeof window !== "undefined" && window.location.hash === item.hash
+          // Or if we don't have a hash, assume dashboard-top is active
+          const isActuallyActive = isItemActive || (!window?.location?.hash && item.id === "dashboard-top" && isDashboardRoot)
+
+          const href = isDashboardRoot ? item.hash : `/${locale}/dashboard${item.hash}`
 
           return (
-            <Link href={settingsHref}>
-              <Button
-                variant={isSettingsActive ? "secondary" : "ghost"}
+            <Link
+              key={item.id}
+              href={href}
+              className={cn(
+                "nav-item flex items-center gap-4 px-4 py-3.5 rounded-l-2xl transition-colors cursor-pointer overflow-hidden",
+                item.marginTop && "mt-2",
+                // Active State (bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white)
+                // Inactive State (text-slate-400 hover:text-slate-200 hover:bg-slate-700/50)
+                isActuallyActive
+                  ? "bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+              )}
+              onClick={() => {
+                if (isDashboardRoot) {
+                  // Smooth scroll manual trigger (optional, standard target hash handles it if css scroll-behavior smooth is set)
+                  const targetEl = document.getElementById(item.id)
+                  const mainScroll = document.getElementById("main-scroll")
+                  if (targetEl && mainScroll) {
+                    const scrollPos = targetEl.getBoundingClientRect().top + mainScroll.scrollTop - mainScroll.getBoundingClientRect().top
+                    mainScroll.scrollTo({
+                      top: scrollPos - 24,
+                      behavior: "smooth",
+                    })
+                  }
+                }
+              }}
+            >
+              <Icon className={cn("w-5 h-5 shrink-0", item.color)} />
+              <span
                 className={cn(
-                  "w-full justify-start gap-3 h-10 px-3",
-                  isSettingsActive && "bg-secondary font-medium"
+                  "whitespace-nowrap transition-all duration-100",
+                  isActuallyActive ? "font-semibold" : "font-medium",
+                  "text-[15px]",
+                  !sidebarOpen && "hidden"
                 )}
               >
-                <SettingsIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 text-left text-sm">{settingsItem.title}</span>
-                {isSettingsActive && (
-                  <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
-                )}
-              </Button>
+                {item.title}
+              </span>
             </Link>
           )
-        })()}
-      </div>
+        })}
+      </nav>
     </aside>
   )
 }

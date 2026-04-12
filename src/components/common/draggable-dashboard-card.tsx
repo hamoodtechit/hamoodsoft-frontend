@@ -4,7 +4,6 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import { GripVertical } from "lucide-react"
-import { useState } from "react"
 
 interface DraggableDashboardCardProps {
   id: string
@@ -20,7 +19,6 @@ interface DraggableDashboardCardProps {
 export function DraggableDashboardCard({
   id,
   title,
-  href,
   icon: Icon,
   color,
   bgColor,
@@ -35,8 +33,6 @@ export function DraggableDashboardCard({
     isDragging,
   } = useSortable({ id })
 
-  const [isHovered, setIsHovered] = useState(false)
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -48,16 +44,9 @@ export function DraggableDashboardCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border-2 border-transparent px-1.5 py-2 sm:px-2 sm:py-3 md:px-3 md:py-4 transition-all duration-300",
-        "hover:scale-105 hover:shadow-lg hover:shadow-primary/10",
-        "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
-        "active:scale-95",
-        bgColor,
-        isDragging && "z-50 cursor-grabbing",
-        !isDragging && "cursor-pointer"
+        "flex flex-col items-center gap-3 cursor-pointer group w-24 relative",
+        isDragging && "z-50 cursor-grabbing"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
       {/* Drag Handle */}
@@ -65,39 +54,30 @@ export function DraggableDashboardCard({
         {...attributes}
         {...listeners}
         className={cn(
-          "absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200",
-          "hover:bg-background/50 active:bg-background/70",
-          "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
+          "absolute -top-1 -right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10",
+          "hover:bg-slate-200/50 active:bg-slate-300/50 dark:hover:bg-slate-700/50",
+          "focus:opacity-100 focus:outline-none"
         )}
         onClick={(e) => {
           e.stopPropagation()
         }}
         aria-label="Drag to reorder"
       >
-        <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+        <GripVertical className="h-4 w-4 text-slate-400" />
       </button>
 
-      {/* Icon Container */}
       <div
         className={cn(
-          "flex h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 items-center justify-center rounded-full transition-all duration-300",
-          "group-hover:scale-110 group-hover:rotate-3",
-          bgColor,
-          "border-2 border-current/20 group-hover:border-current/40"
+          "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
+          "group-hover:-translate-y-1.5 group-hover:shadow-md shadow-sm border border-white/50 dark:border-slate-700",
+          bgColor
         )}
       >
-        <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 transition-transform duration-300", color)} />
+        <Icon className={cn("w-6 h-6 stroke-2 transition-transform duration-300 group-hover:scale-110", color)} />
       </div>
-
-      {/* Title */}
-      <span className="text-xs font-medium text-foreground text-center px-1 leading-tight transition-colors duration-200">
+      <span className="text-sm text-slate-500 dark:text-slate-400 font-medium text-center leading-tight group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors">
         {title}
       </span>
-
-      {/* Hover Effect Overlay */}
-      {isHovered && (
-        <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-primary/5 pointer-events-none animate-in fade-in duration-200" />
-      )}
     </div>
   )
 }
