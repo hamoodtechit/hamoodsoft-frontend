@@ -320,13 +320,6 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     mode: "onChange", // Enable validation on change
   })
 
-  // Debug form errors (only in development)
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development" && Object.keys(form.formState.errors).length > 0) {
-      console.error("Form validation errors:", form.formState.errors)
-    }
-  }, [form.formState.errors])
-
   const { fields, replace } = useFieldArray({
     control: form.control,
     name: "variants",
@@ -677,10 +670,6 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }, [selectedAttributeIds, selectedAttributeValues, availableAttributes])
 
   const onSubmit = (data: CreateProductInput | UpdateProductInput) => {
-    // Clean up empty brandId
-    if (data.brandId === "" || data.brandId === null) {
-      data.brandId = undefined
-    }
 
     // Clean up empty strings - convert to undefined for optional fields
     if (data.description === "" || data.description === null) {
@@ -939,7 +928,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("name")}</FormLabel>
+                  <FormLabel>{t("name")} <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -972,14 +961,14 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("price")}</FormLabel>
+                    <FormLabel>{t("price")} <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={typeof field.value === "number" ? field.value : 0}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        value={field.value !== undefined && field.value !== null ? field.value : ""}
+                        onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                         placeholder={t("pricePlaceholder")}
                         disabled={isLoading}
                       />
@@ -992,16 +981,17 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
               <FormField
                 control={form.control}
                 name="unitId"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>{t("unit")}</FormLabel>
+                    <FormLabel>{t("unit")} <span className="text-destructive">*</span></FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
                         <select
                           className={cn(
                             "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            "disabled:cursor-not-allowed disabled:opacity-50"
+                            "disabled:cursor-not-allowed disabled:opacity-50",
+                            fieldState.error && "border-destructive focus-visible:ring-destructive"
                           )}
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value)}
@@ -1037,16 +1027,17 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
             <FormField
               control={form.control}
               name="brandId"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel>{t("brand")}</FormLabel>
+                  <FormLabel>{t("brand")} <span className="text-destructive">*</span></FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
                       <select
                         className={cn(
                           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          "disabled:cursor-not-allowed disabled:opacity-50"
+                          "disabled:cursor-not-allowed disabled:opacity-50",
+                          fieldState.error && "border-destructive focus-visible:ring-destructive"
                         )}
                         value={field.value || ""}
                         onChange={(e) => {
@@ -1771,7 +1762,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                             name={`variants.${index}.variantName`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs">{t("variantName")}</FormLabel>
+                                <FormLabel className="text-xs">{t("variantName")} <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}

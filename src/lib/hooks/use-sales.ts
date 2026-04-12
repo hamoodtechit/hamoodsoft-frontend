@@ -25,6 +25,7 @@ export function useSales(params?: SalesListParams) {
     queryFn: () => salesApi.getSales(params),
     refetchOnWindowFocus: true,
     staleTime: 0,
+    enabled: !!branchId,
   })
 }
 

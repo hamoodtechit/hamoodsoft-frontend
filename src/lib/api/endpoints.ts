@@ -165,4 +165,17 @@ export const endpoints = {
     update: (id: string) => `/tankers/${id}`,
     delete: (id: string) => `/tankers/${id}`,
   },
+  dispensers: {
+    create: "/dispensers",
+    list: "/dispensers",
+    getById: (id: string) => `/dispensers/${id}`,
+    update: (id: string) => `/dispensers/${id}`,
+    delete: (id: string) => `/dispensers/${id}`,
+  },
+  dispenserReadings: {
+    create: "/dispenser-readings",
+    list: "/dispenser-readings",
+    getById: (id: string) => `/dispenser-readings/${id}`,
+    delete: (id: string) => `/dispenser-readings/${id}`,
+  },
 } as const
