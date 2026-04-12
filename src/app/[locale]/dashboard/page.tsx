@@ -3,7 +3,8 @@
 import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-card"
 import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { cn } from "@/lib/utils"
+import { useUpdatePreferences } from "@/lib/hooks/use-users"
+import { useAuthStore } from "@/store"
 import {
   DndContext,
   closestCenter,
@@ -29,7 +30,6 @@ import {
   FileText,
   FolderTree,
   Package,
-  Plus,
   Ruler,
   Settings,
   Shield,
@@ -48,15 +48,14 @@ interface DashboardItem {
   id: string
   title: string
   href: string
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   color: string
   bgColor: string
   enabled: boolean
   category?: string
   order?: number
+  originalId?: string
 }
-
-const STORAGE_KEY = "dashboard-item-order"
 
 export default function DashboardPage() {
   const t = useTranslations()
@@ -70,14 +69,41 @@ export default function DashboardPage() {
   // State for "See More" functionality
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   
-  // Load saved order from localStorage
-  const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      return saved ? JSON.parse(saved) : {}
+  const { user } = useAuthStore()
+  const { mutate: updatePreferences } = useUpdatePreferences()
+
+  // Load saved order from user preferences
+  const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(
+    user?.preferences?.dashboardOrder || {}
+  )
+
+  // Load pinned items
+  const [pinnedItems, setPinnedItems] = useState<string[]>(
+    user?.preferences?.dashboardPinned || []
+  )
+
+  // Sync state if user preferences load or change from elsewhere
+  useEffect(() => {
+    if (user?.preferences?.dashboardOrder) {
+      setSavedOrder(user.preferences.dashboardOrder)
     }
-    return {}
-  })
+    if (user?.preferences?.dashboardPinned) {
+      setPinnedItems(user.preferences.dashboardPinned)
+    }
+  }, [user?.preferences])
+
+  const togglePin = (originalId: string) => {
+    setPinnedItems(prev => {
+      let next;
+      if (prev.includes(originalId)) {
+        next = prev.filter(id => id !== originalId);
+      } else {
+        next = [...prev, originalId];
+      }
+      updatePreferences({ dashboardPinned: next })
+      return next;
+    });
+  }
 
   // Items to show initially per category
   const initialItemsToShow: Record<string, number> = {
@@ -307,8 +333,22 @@ export default function DashboardPage() {
       {} as Record<string, DashboardItem[]>
     )
 
+    // Create favourites group mapped from pinnedItems
+    // Order is strictly defined by pinnedItems array itself
+    grouped["favourites"] = pinnedItems.map((originalId) => {
+      const item = enabledItems.find(i => i.id === originalId);
+      if (!item) return null;
+      return {
+        ...item,
+        id: `fav-${item.id}`,
+        originalId: item.id
+      };
+    }).filter(Boolean) as DashboardItem[];
+
     // Sort each category by order
     Object.keys(grouped).forEach((category) => {
+      if (category === "favourites") return; // Favourites is already sorted by pinnedItems array
+
       grouped[category].sort((a, b) => {
         const orderA = a.order ?? Infinity
         const orderB = b.order ?? Infinity
@@ -317,7 +357,7 @@ export default function DashboardPage() {
     })
 
     return grouped
-  }, [orderedItems])
+  }, [orderedItems, pinnedItems, enabledItems])
 
   // Simulate loading
   useEffect(() => {
@@ -353,13 +393,21 @@ export default function DashboardPage() {
     const newItems = arrayMove(items, oldIndex, newIndex)
     const newOrder = newItems.map((item) => item.id)
 
+    if (category === "favourites") {
+       // Favourites ordering is now synced via preferences hook
+       const newPinned = newOrder.map(id => id.replace("fav-", ""));
+       setPinnedItems(newPinned);
+       updatePreferences({ dashboardPinned: newPinned });
+       return;
+    }
+
     // Update saved order
     const updatedOrder = {
       ...savedOrder,
       [category]: newOrder,
     }
     setSavedOrder(updatedOrder)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrder))
+    updatePreferences({ dashboardOrder: updatedOrder })
   }
 
   const handleItemClick = (href: string) => {
@@ -377,8 +425,7 @@ export default function DashboardPage() {
   const renderCategoryGrid = (
     items: DashboardItem[],
     category: string,
-    title: string,
-    gridCols: string = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+    title: string
   ) => {
     const isExpanded = expandedCategories[category] || false
     const initialCount = initialItemsToShow[category] || items.length
@@ -390,13 +437,16 @@ export default function DashboardPage() {
     const itemIds = itemsToShow.map((item) => item.id)
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{title}</h2>
+      <div 
+        id={`${category}-section`}
+        className="mb-8 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300"
+      >
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
           {hasMore && (
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1 text-sm text-primary hover:underline transition-colors"
+              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
             >
               {isExpanded ? (
                 <>
@@ -421,7 +471,7 @@ export default function DashboardPage() {
             onDragEnd={(event) => handleDragEnd(event, category)}
           >
             <SortableContext items={itemIds} strategy={rectSortingStrategy}>
-              <div className={cn("grid gap-2 sm:gap-2.5 md:gap-3", gridCols)}>
+              <div className="flex flex-wrap gap-x-8 gap-y-10 md:gap-x-12">
                 {itemsToShow.map((item) => {
                   const Icon = item.icon
                   return (
@@ -429,6 +479,11 @@ export default function DashboardPage() {
                       key={item.id}
                       id={item.id}
                       title={item.title}
+                      isPinned={pinnedItems.includes(item.originalId || item.id)}
+                      onPin={(e) => {
+                        e.stopPropagation()
+                        togglePin(item.originalId || item.id)
+                      }}
                       href={item.href}
                       icon={Icon}
                       color={item.color}
@@ -446,16 +501,29 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("sidebar.dashboard")}</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          {currentBusiness?.name
-            ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
-            : "Welcome back! Here's what's happening with your business today."}
-        </p>
+    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6 pb-10">
+      {/* Header Text */}
+      <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4" id="dashboard-top">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors">
+            {t("sidebar.dashboard")}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors">
+            {currentBusiness?.name
+              ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
+              : "Welcome back! Here's what's happening with your business today."}
+          </p>
+        </div>
+        <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-300 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          System Online
+        </div>
       </div>
+
+      {/* Favourites Grid */}
+      {groupedItems.favourites && groupedItems.favourites.length > 0 &&
+        renderCategoryGrid(groupedItems.favourites, "favourites", t("sidebar.favourites") || "Favourites")
+      }
 
       {/* Main Modules Grid */}
       {groupedItems.main && groupedItems.main.length > 0 &&
@@ -464,7 +532,7 @@ export default function DashboardPage() {
 
       {/* Inventory Grid */}
       {groupedItems.inventory && groupedItems.inventory.length > 0 &&
-        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"), "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6")
+        renderCategoryGrid(groupedItems.inventory, "inventory", t("sidebar.inventory"))
       }
 
       {/* Accounting Grid */}

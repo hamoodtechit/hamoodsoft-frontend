@@ -758,7 +758,8 @@
     "createBusiness": "Create Business",
     "branches": "Branches",
     "contacts": "Contacts",
-    "settings": "Settings"
+    "settings": "Settings",
+    "favourites": "Favourites"
   },
   "header": {
     "search": "Search...",

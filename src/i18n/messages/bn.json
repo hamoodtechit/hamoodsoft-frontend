@@ -658,7 +658,8 @@
     "createBusiness": "ব্যবসা তৈরি করুন",
     "branches": "শাখা",
     "contacts": "যোগাযোগ",
-    "settings": "সেটিংস"
+    "settings": "সেটিংস",
+    "favourites": "পছন্দনীয় সমূহ"
   },
   "header": {
     "search": "খুঁজুন...",

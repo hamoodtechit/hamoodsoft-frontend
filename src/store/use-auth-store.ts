@@ -12,6 +12,7 @@ interface AuthState {
   setToken: (token: string | null) => void
   setRefreshToken: (refreshToken: string | null) => void
   setBusinesses: (businesses: Business[]) => void
+  updateUserPreferences: (preferences: Record<string, any>) => void
   logout: () => void
 }
 
@@ -47,6 +48,20 @@ export const useAuthStore = create<AuthState>()(
         },
         setRefreshToken: (refreshToken) => set({ refreshToken }),
         setBusinesses: (businesses) => set({ businesses }),
+        updateUserPreferences: (preferences) => {
+          const { user } = get()
+          if (user) {
+            set({
+              user: {
+                ...user,
+                preferences: {
+                  ...user.preferences,
+                  ...preferences
+                }
+              }
+            })
+          }
+        },
         logout: () => set({ 
           user: null, 
           token: null, 

@@ -74,8 +74,8 @@ function POSContent() {
       <POSHeader />
 
       {/* Main Content */}
-      <div className="flex-1 p-4 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+      <div className="flex-1 p-8 md:p-10 lg:p-12 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Left Panel - Filters and Products */}
           <div className="lg:col-span-8 flex flex-col space-y-4 min-h-0">
             <POSToolbar />

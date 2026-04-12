@@ -48,3 +48,28 @@ export function useUpdateUser() {
     },
   })
 }
+
+export function useUpdatePreferences() {
+  const queryClient = useQueryClient()
+  const { user: storeUser, updateUserPreferences } = useAuthStore()
+
+  return useMutation({
+    mutationFn: (preferences: Record<string, any>) => {
+      return usersApi.updatePreferences(preferences)
+    },
+    onMutate: async (newPreferences) => {
+      // Optimistic upate (handled in UI or in store via updateUserPreferences if exported)
+      if (updateUserPreferences) {
+        updateUserPreferences(newPreferences)
+      }
+    },
+    onSuccess: (data) => {
+      // Refresh profile data or let it be
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] })
+    },
+    onError: (error: any) => {
+      console.error("Update preferences error:", error)
+      toast.error("Failed to save layout preferences")
+    },
+  })
+}
