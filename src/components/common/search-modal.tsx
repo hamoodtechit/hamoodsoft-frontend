@@ -1,16 +1,19 @@
 "use client"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Command, Search } from "lucide-react"
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { Building2, Calculator, LayoutDashboard, Package, Settings, ShoppingCart, Users, Droplets } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 interface SearchModalProps {
   open: boolean
@@ -19,86 +22,100 @@ interface SearchModalProps {
 
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const t = useTranslations("common")
-  const [searchQuery, setSearchQuery] = useState("")
+  const router = useRouter()
+  const params = useParams()
+  const locale = params?.locale || "en"
+  const currentBusiness = useCurrentBusiness()
 
-  // Focus input when modal opens
-  useEffect(() => {
-    if (open) {
-      // Small delay to ensure dialog is fully rendered
-      setTimeout(() => {
-        const input = document.querySelector<HTMLInputElement>('[data-search-input]')
-        if (input) {
-          input.focus()
-        }
-      }, 100)
-    } else {
-      setSearchQuery("")
-    }
-  }, [open])
-
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts (Cmd/Ctrl + K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K to open search
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault()
         onOpenChange(true)
-      }
-      // Escape to close
-      if (e.key === "Escape" && open) {
-        onOpenChange(false)
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, onOpenChange])
+  }, [onOpenChange])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Implement search functionality
-  
-    // For now, just close the modal
+  const runCommand = (command: () => void) => {
     onOpenChange(false)
+    command()
   }
 
+  const navigateTo = (path: string) => {
+    router.push(`/${locale}/dashboard${path}`)
+  }
+
+  const hasPos = currentBusiness?.modules?.includes("point-of-sale")
+  const hasInventory = currentBusiness?.modules?.includes("inventory")
+  const hasAccounting = currentBusiness?.modules?.includes("accounting")
+  const hasCrm = currentBusiness?.modules?.includes("crm")
+  const hasPetrol = currentBusiness?.modules?.includes("oil-filling-station")
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Search</DialogTitle>
-          <DialogDescription>Search across your application</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSearch} className="w-full">
-          <div className="flex items-center border-b px-4 py-2">
-            <Search className="h-5 w-5 text-muted-foreground mr-3 flex-shrink-0" />
-            <Input
-              data-search-input
-              type="search"
-              placeholder="Search... (Press Cmd+K to open)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
-              autoFocus
-            />
-            <div className="hidden sm:flex items-center gap-1 ml-4 px-2 py-1 rounded border bg-muted text-xs text-muted-foreground">
-              <Command className="h-3 w-3" />
-              <span>K</span>
-            </div>
-          </div>
-          <div className="p-6">
-            {searchQuery ? (
-              <div className="text-sm text-muted-foreground">
-                Search results for &quot;{searchQuery}&quot; will appear here...
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-12">
-                Start typing to search across your application
-              </div>
-            )}
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <CommandInput placeholder="Type a command or search..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        
+        <CommandGroup heading="General">
+          <CommandItem onSelect={() => runCommand(() => navigateTo(""))}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            <span>Dashboard</span>
+          </CommandItem>
+          {hasPos && (
+            <CommandItem onSelect={() => runCommand(() => navigateTo("/point-of-sale"))}>
+              <Calculator className="mr-2 h-4 w-4" />
+              <span>Point of Sale</span>
+            </CommandItem>
+          )}
+        </CommandGroup>
+        
+        <CommandSeparator />
+
+        <CommandGroup heading="Modules">
+          {hasInventory && (
+            <CommandItem onSelect={() => runCommand(() => navigateTo("/products"))}>
+              <Package className="mr-2 h-4 w-4" />
+              <span>Inventory & Products</span>
+            </CommandItem>
+          )}
+          {hasAccounting && (
+            <CommandItem onSelect={() => runCommand(() => navigateTo("/sales"))}>
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              <span>Sales & Accounting</span>
+            </CommandItem>
+          )}
+          {hasCrm && (
+            <CommandItem onSelect={() => runCommand(() => navigateTo("/crm"))}>
+              <Users className="mr-2 h-4 w-4" />
+              <span>CRM & Contacts</span>
+            </CommandItem>
+          )}
+          {hasPetrol && (
+            <CommandItem onSelect={() => runCommand(() => navigateTo("/oil-filling-station"))}>
+              <Droplets className="mr-2 h-4 w-4" />
+              <span>Petrol Pump Details</span>
+            </CommandItem>
+          )}
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        <CommandGroup heading="Settings">
+          <CommandItem onSelect={() => runCommand(() => navigateTo("/settings"))}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Business Settings</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => navigateTo("/profile"))}>
+            <Building2 className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
   )
 }
