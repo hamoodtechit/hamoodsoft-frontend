@@ -434,7 +434,7 @@ export default function DashboardPage() {
     return (
       <div 
         id={`${category}-section`}
-        className="mb-8 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-100/60 dark:border-slate-700/50 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300"
+        className="mb-8 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300"
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>

@@ -58,7 +58,7 @@ export function DraggableDashboardCard({
       <div
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative",
-          "group-hover:-translate-y-1.5 group-hover:shadow-md shadow-sm border border-white/50 dark:border-slate-700",
+          "group-hover:-translate-y-1.5 group-hover:shadow-md shadow-sm border border-slate-200 dark:border-slate-700",
           bgColor
         )}
       >
