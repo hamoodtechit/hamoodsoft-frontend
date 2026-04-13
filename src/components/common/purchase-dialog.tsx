@@ -604,7 +604,10 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                 min={0}
                                 {...field}
                                 value={field.value || 0}
-                                onValueChange={field.onChange}
+                                onValueChange={(val) => {
+                                  const currentTotal = isEdit && purchase ? (purchase.totalPrice || purchase.totalAmount || 0) : (total || 0);
+                                  field.onChange(Math.min(val, currentTotal));
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -1140,7 +1143,10 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                           min={0}
                                           {...field}
                                           value={field.value || 0}
-                                          onValueChange={field.onChange}
+                                          onValueChange={(val) => {
+                                            const currentTotal = total || 0;
+                                            field.onChange(Math.min(val, currentTotal));
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
