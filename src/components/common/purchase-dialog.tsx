@@ -61,6 +61,7 @@ import { Check, ChevronsUpDown, Package, Plus, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
+import { ModalWrapper } from "@/components/common/modal-wrapper"
 
 interface PurchaseDialogProps {
   purchase: Purchase | null
@@ -75,7 +76,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
   const { selectedBranchId } = useBranchSelection()
   const { data: units = [] } = useUnits(selectedBranchId || undefined)
   const { data: contactsData } = useContacts()
-  const contacts = contactsData?.items || []
+  const contacts = contactsData?.items?.filter(c => c.type === "SUPPLIER") || []
   const { data: accountsData } = useAccounts({ limit: 1000 })
   const accounts = accountsData?.items?.filter(acc => acc.isActive) || []
   const createMutation = useCreatePurchase()
@@ -104,7 +105,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
             totalPrice: 0,
           },
         ],
-        status: "ORDERED" as const,
+        status: "PENDING" as const,
         paymentStatus: "DUE" as const,
         paidAmount: 0,
         totalPrice: 0,
@@ -203,15 +204,6 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
     }
   }, [open, defaultValues, form, isEdit, selectedBranchId])
 
-  // Auto-calculate dueAmount when paidAmount changes in edit mode
-  useEffect(() => {
-    if (isEdit && purchase && paidAmount !== undefined) {
-      const totalAmount = purchase.totalPrice || purchase.totalAmount || 0
-      const newPaidAmount = paidAmount || 0
-      const newDueAmount = Math.max(0, totalAmount - newPaidAmount)
-      form.setValue("dueAmount" as any, newDueAmount, { shouldValidate: false })
-    }
-  }, [paidAmount, isEdit, purchase, form])
 
   const onSubmit = (data: CreatePurchaseInput | UpdatePurchaseInput) => {
     console.log("Purchase form submitted", data)
@@ -292,11 +284,12 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
       note?: string
     }> = []
     const totalAmount = purchaseTotal
+    const paymentAmountToUse = (data as any).paidAmount !== undefined ? Number((data as any).paidAmount) : totalAmount;
     
     if (paymentMethod === "CASH" && cashAccountId) {
       payments.push({
         accountId: cashAccountId,
-        amount: totalAmount,
+        amount: paymentAmountToUse,
         type: "PURCHASE_PAYMENT",
         branchId: (data as CreatePurchaseInput).branchId,
         contactId: (data as CreatePurchaseInput).contactId,
@@ -304,7 +297,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
     } else if (paymentMethod === "CARD" && bankAccountId) {
       payments.push({
         accountId: bankAccountId,
-        amount: totalAmount,
+        amount: paymentAmountToUse,
         type: "PURCHASE_PAYMENT",
         branchId: (data as CreatePurchaseInput).branchId,
         contactId: (data as CreatePurchaseInput).contactId,
@@ -462,6 +455,14 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
 
   const total = calculateTotal()
 
+  // Auto-calculate dueAmount when paidAmount changes
+  useEffect(() => {
+    const totalAmount = isEdit && purchase ? (purchase.totalPrice || purchase.totalAmount || 0) : (total || 0)
+    const newPaidAmount = paidAmount || 0
+    const newDueAmount = Math.max(0, totalAmount - newPaidAmount)
+    form.setValue("dueAmount" as any, newDueAmount, { shouldValidate: false })
+  }, [paidAmount, isEdit, purchase, total, form])
+
   // Watch items to update totalPrice
   const watchedItems = form.watch("items" as any) || []
   const watchedDiscountType = form.watch("discountType" as any) || "NONE"
@@ -485,9 +486,13 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
   }, [total, form, isEdit])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+    <ModalWrapper 
+      open={open} 
+      onOpenChange={onOpenChange}
+      size="5xl"
+      contentClassName="max-h-[90vh] flex flex-col p-0 overflow-hidden"
+    >
+      <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             {isEdit ? t("editPurchase") : t("createPurchase")}
@@ -506,7 +511,7 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
           >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="branchId"
@@ -556,37 +561,38 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("status")}</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || "PENDING"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ORDERED">{t("statusOrdered") || "Ordered"}</SelectItem>
+                            <SelectItem value="PENDING">{t("statusPending") || "Pending"}</SelectItem>
+                            <SelectItem value="COMPLETED">{t("statusCompleted") || "Completed"}</SelectItem>
+                            <SelectItem value="CANCELLED">{t("statusCancelled") || "Cancelled"}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {isEdit && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("status")}</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || "PENDING"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="PENDING">{t("statusPending")}</SelectItem>
-                              <SelectItem value="COMPLETED">{t("statusCompleted")}</SelectItem>
-                              <SelectItem value="CANCELLED">{t("statusCancelled")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-4 mt-4 border rounded-lg bg-muted/50">
+                    <div className="w-[150px] sm:w-[250px]">
                       <FormField
                         control={form.control}
                         name="paidAmount"
@@ -605,38 +611,24 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                           </FormItem>
                         )}
                       />
-
-                      <FormField
-                        control={form.control}
-                        name="dueAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("dueAmount")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
-                                {...field}
-                                value={field.value || ""}
-                                readOnly
-                                className="bg-muted cursor-not-allowed"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                            <p className="text-xs text-muted-foreground">
-                              {t("dueAmountAutoCalculated")}
-                            </p>
-                          </FormItem>
-                        )}
-                      />
                     </div>
-                  </>
+
+                    <div className="flex flex-col items-end justify-center space-y-1">
+                      <Label className="text-muted-foreground">{t("dueAmount")}</Label>
+                      <div className="text-2xl font-bold pt-1">
+                        <span className={Number(form.watch("dueAmount") || 0) > 0 ? "text-destructive" : "text-emerald-600"}>
+                          {Number(form.watch("dueAmount") || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("dueAmountAutoCalculated") || "Auto-calculated"}
+                      </p>
+                    </div>
+                  </div>
                 )}
 
                 {!isEdit && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-base font-medium">{t("items")}</Label>
                       <Button type="button" variant="outline" size="sm" onClick={addItem}>
@@ -716,6 +708,8 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                                                 form.setValue(`items.${index}.price` as any, product.price ?? 0)
                                                 form.setValue(`items.${index}.discountType` as any, "NONE")
                                                 form.setValue(`items.${index}.discountAmount` as any, 0)
+                                                form.setValue(`items.${index}.productId` as any, product.id)
+                                                form.setValue(`items.${index}.itemType` as any, "PRODUCT")
                                                 
                                                 setComboboxOpen((prev) => ({ ...prev, [index]: false }))
                                               }}
@@ -1126,11 +1120,45 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
                           )}
                         </div>
 
-                        <div className="p-4 border rounded-lg bg-primary/5">
+                        <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
                           <div className="flex items-center justify-between text-lg font-semibold">
                             <span>{t("total")}:</span>
                             <span>{total.toFixed(2)}</span>
                           </div>
+
+                          {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
+                            <div className="flex items-center justify-between pt-4 border-t border-border">
+                              <div className="w-[150px] sm:w-[250px]">
+                                <FormField
+                                  control={form.control}
+                                  name="paidAmount"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>{t("paidAmount")}</FormLabel>
+                                      <FormControl>
+                                        <NumericInput
+                                          min={0}
+                                          {...field}
+                                          value={field.value || 0}
+                                          onValueChange={field.onChange}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              <div className="flex flex-col items-end justify-center space-y-1">
+                                <Label className="text-muted-foreground">{t("dueAmount")}</Label>
+                                <div className="text-2xl font-bold pt-1">
+                                  <span className={Number(form.watch("dueAmount") || 0) > 0 ? "text-destructive" : "text-emerald-600"}>
+                                    {Number(form.watch("dueAmount") || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </>
                     )}
@@ -1161,7 +1189,6 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </ModalWrapper>
   )
 }

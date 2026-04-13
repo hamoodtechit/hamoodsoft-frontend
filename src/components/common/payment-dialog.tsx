@@ -112,7 +112,11 @@ export function PaymentDialog({
 
   const onSubmit = async (data: CreatePaymentInput) => {
     try {
-      await createMutation.mutateAsync(data)
+      const payload = {
+        ...data,
+        occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
+      }
+      await createMutation.mutateAsync(payload)
       onOpenChange(false)
       form.reset()
     } catch (error) {
