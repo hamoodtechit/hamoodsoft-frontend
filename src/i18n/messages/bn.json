@@ -290,6 +290,7 @@
     "contact": "যোগাযোগ/সরবরাহকারী",
     "contactPlaceholder": "যোগাযোগ ID লিখুন",
     "status": "অবস্থা",
+    "statusOrdered": "অর্ডার করা হয়েছে",
     "statusPending": "বিচারাধীন",
     "statusCompleted": "সম্পন্ন",
     "statusCancelled": "বাতিল",

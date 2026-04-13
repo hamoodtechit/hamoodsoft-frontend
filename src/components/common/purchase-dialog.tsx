@@ -62,6 +62,7 @@ import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { ModalWrapper } from "@/components/common/modal-wrapper"
+import { toast } from "sonner"
 
 interface PurchaseDialogProps {
   purchase: Purchase | null
@@ -167,6 +168,13 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
     control: form.control,
     name: "paidAmount" as any,
   })
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+      if (!cashAccountId) setCashAccountId(accounts[0].id)
+      if (!bankAccountId) setBankAccountId(accounts[0].id)
+    }
+  }, [accounts, cashAccountId, bankAccountId])
 
   useEffect(() => {
     if (open) {
@@ -286,6 +294,21 @@ export function PurchaseDialog({ purchase, open, onOpenChange }: PurchaseDialogP
     const totalAmount = purchaseTotal
     const paymentAmountToUse = (data as any).paidAmount !== undefined ? Number((data as any).paidAmount) : totalAmount;
     
+    if (paymentAmountToUse > 0) {
+      if (paymentMethod === "CASH" && !cashAccountId) {
+        toast.error(tCommon("error") + ": Please select an account for cash payment")
+        return
+      }
+      if (paymentMethod === "CARD" && !bankAccountId) {
+        toast.error(tCommon("error") + ": Please select an account for card payment")
+        return
+      }
+      if (paymentMethod === "MIXED" && (!paymentSplits || paymentSplits.length === 0)) {
+        toast.error(tCommon("error") + ": Please distribute the payment amount among accounts")
+        return
+      }
+    }
+
     if (paymentMethod === "CASH" && cashAccountId) {
       payments.push({
         accountId: cashAccountId,

@@ -79,7 +79,7 @@ export default function StocksPage() {
   )
   const stocks = stocksData?.items || []
 
-  const { data: productsData } = useProducts()
+  const { data: productsData } = useProducts({ limit: 1000 })
   const products = productsData?.items || []
   const productMap = new Map(products.map((p) => [p.id, p]))
 
