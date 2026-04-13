@@ -334,6 +334,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     limit: 50,
     search: searchQuery.trim() || undefined,
     branchId: selectedBranchId || undefined,
+    status: "ACTIVE",
   })
 
   const dispensers = useMemo(() => {

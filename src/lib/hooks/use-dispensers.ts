@@ -3,16 +3,16 @@ import { CreateDispenserInput, UpdateDispenserInput } from "@/types"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export function useDispensers(params?: { page?: number; limit?: number; search?: string; branchId?: string }) {
+export function useDispensers(params?: { page?: number; limit?: number; search?: string; branchId?: string; status?: string }) {
   return useQuery({
-    queryKey: ["dispensers", params?.search ?? "", params?.branchId ?? "", params?.page ?? 1, params?.limit ?? 10],
+    queryKey: ["dispensers", params?.search ?? "", params?.branchId ?? "", params?.status ?? "", params?.page ?? 1, params?.limit ?? 10],
     queryFn: () => dispensersApi.list(params),
   })
 }
 
-export function useInfiniteDispensers(params?: { limit?: number; search?: string; branchId?: string }) {
+export function useInfiniteDispensers(params?: { limit?: number; search?: string; branchId?: string; status?: string }) {
   return useInfiniteQuery({
-    queryKey: ["dispensers", "infinite", params?.search ?? "", params?.branchId ?? "", params?.limit ?? 10],
+    queryKey: ["dispensers", "infinite", params?.search ?? "", params?.branchId ?? "", params?.status ?? "", params?.limit ?? 10],
     queryFn: ({ pageParam = 1 }) => dispensersApi.list({ ...params, page: pageParam }),
     getNextPageParam: (lastPage, allPages) => {
       const morePagesExist = lastPage.items.length === (params?.limit ?? 10)
