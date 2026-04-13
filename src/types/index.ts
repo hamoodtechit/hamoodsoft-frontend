@@ -176,12 +176,17 @@ export interface Brand {
   updatedAt?: string
 }
 
+export type ItemType = "PRODUCT" | "FUEL" | "SERVICE"
+
 export interface Stock {
   id: string
   businessId?: string
   branchId: string
-  productId: string
-  unitId: string
+  productId?: string | null
+  unitId?: string | null
+  fuelTypeId?: string | null
+  tankerId?: string | null
+  itemType?: ItemType | null
   quantity: number
   sku?: string // SKU field from stock
   variantId?: string | null // Variant ID for variant-specific stock
@@ -200,8 +205,11 @@ export interface StockHistory {
   id: string
   stockId: string
   branchId: string
-  productId: string
-  unitId: string
+  productId?: string | null
+  fuelTypeId?: string | null
+  tankerId?: string | null
+  itemType?: ItemType | null
+  unitId?: string | null
   transactionType: "IN" | "OUT"
   quantity: number
   quantityChange?: number
@@ -217,7 +225,7 @@ export interface StockAdjustment {
   businessId?: string
   branchId: string
   stockId: string
-  productId: string
+  productId?: string | null
   stockHistoryId: string
   reason: string
   branch?: Branch
@@ -522,7 +530,6 @@ export interface FuelType {
   businessId: string
   name: string
   price: number
-  isActive: boolean
   createdAt: string
   updatedAt: string
 }
@@ -547,7 +554,11 @@ export interface Tanker {
 export interface CreateFuelTypeInput {
   name: string
   price: number
-  isActive?: boolean
+}
+
+export interface UpdateFuelTypeInput {
+  name?: string
+  price?: number
 }
 
 export interface CreateTankerInput {

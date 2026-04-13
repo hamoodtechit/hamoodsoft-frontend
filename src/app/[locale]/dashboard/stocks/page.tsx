@@ -75,7 +75,7 @@ export default function StocksPage() {
   }, [viewMode])
 
   const { data: stocksData, isLoading } = useStocks(
-    selectedBranchId ? { branchId: selectedBranchId } : undefined
+    selectedBranchId ? { branchId: selectedBranchId, itemType: 'PRODUCT' } : undefined
   )
   const stocks = stocksData?.items || []
 
@@ -93,7 +93,7 @@ export default function StocksPage() {
   const filteredStocks = stocks.filter((stock) => {
     if (!search.trim()) return true
     const searchLower = search.toLowerCase()
-    const product = stock.product || productMap.get(stock.productId)
+    const product = stock.product || productMap.get(stock.productId ?? '')
     const productName = product?.name || ""
     return (
       productName.toLowerCase().includes(searchLower) ||
@@ -108,8 +108,8 @@ export default function StocksPage() {
       id: "product",
       header: t("product"),
       cell: (row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.name || row.productId
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.name || row.productId || '-'
       },
       sortable: false,
     },
@@ -162,8 +162,8 @@ export default function StocksPage() {
       header: "Product Name",
       width: 25,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.name || row.productId
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.name || row.productId || '-'
       },
     },
     {
@@ -171,8 +171,8 @@ export default function StocksPage() {
       header: "Product Description",
       width: 40,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.description || "-"
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.description || '-'
       },
     },
     {
@@ -221,7 +221,7 @@ export default function StocksPage() {
       header: "Product Categories",
       width: 30,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
+        const product = row.product || productMap.get(row.productId ?? '')
         return product?.categories?.map((c) => c.name).join(", ") || "-"
       },
     },
@@ -384,8 +384,8 @@ export default function StocksPage() {
           ) : (
             <div className="space-y-3">
               {filteredStocks.map((stock) => {
-                const productHistory = getStockHistoryForProduct(stock.productId)
-                const product = stock.product || productMap.get(stock.productId)
+                const productHistory = getStockHistoryForProduct(stock.productId ?? '')
+                const product = stock.product || productMap.get(stock.productId ?? '')
                 return (
                   <Card key={stock.id} className="relative">
                     <CardContent className="py-4">
@@ -393,7 +393,7 @@ export default function StocksPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold truncate">
-                              {product?.name || stock.productId}
+                              {product?.name || stock.productId || 'Unknown Product'}
                             </h4>
                             <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
                               {t("quantity")}: {stock.quantity}
@@ -456,7 +456,7 @@ export default function StocksPage() {
         open={isAdjustDialogOpen}
         onOpenChange={setIsAdjustDialogOpen}
         defaultBranchId={selectedStock?.branchId}
-        defaultProductId={selectedStock?.productId}
+        defaultProductId={selectedStock?.productId ?? undefined}
       />
 
       <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
@@ -475,13 +475,13 @@ export default function StocksPage() {
             <div className="space-y-4 mt-4">
               {historyLoading ? (
                 <SkeletonList count={3} />
-              ) : getStockHistoryForProduct(historyStock.productId).length === 0 ? (
+              ) : getStockHistoryForProduct(historyStock.productId ?? '').length === 0 ? (
                 <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
                   {t("noHistory")}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getStockHistoryForProduct(historyStock.productId).map((h: StockHistory) => {
+                  {getStockHistoryForProduct(historyStock.productId ?? '').map((h: StockHistory) => {
                     const quantityChange = h.quantityChange ?? h.quantity
                     const stockQuantity = h.stock?.quantity
                     return (

@@ -1,4 +1,4 @@
-import { ApiResponse, CreateFuelTypeInput, FuelType, PaginatedResult } from "@/types";
+import { ApiResponse, CreateFuelTypeInput, UpdateFuelTypeInput, FuelType, PaginatedResult } from "@/types";
 import apiClient from "./client";
 import { endpoints } from "./endpoints";
 
@@ -11,6 +11,11 @@ export const fuelTypesApi = {
 
   create: async (data: CreateFuelTypeInput): Promise<FuelType> => {
     const response = await apiClient.post<ApiResponse<FuelType>>(endpoints.fuelTypes.create, data)
+    return response.data.data
+  },
+
+  update: async (id: string, data: UpdateFuelTypeInput): Promise<FuelType> => {
+    const response = await apiClient.put<ApiResponse<FuelType>>(endpoints.fuelTypes.update(id), data)
     return response.data.data
   },
 

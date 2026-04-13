@@ -1,5 +1,5 @@
 import { fuelTypesApi } from "@/lib/api/fuel-types";
-import { CreateFuelTypeInput } from "@/types";
+import { CreateFuelTypeInput, UpdateFuelTypeInput } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -20,6 +20,20 @@ export function useCreateFuelType() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create fuel type")
+    },
+  })
+}
+
+export function useUpdateFuelType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateFuelTypeInput }) => fuelTypesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
+      toast.success("Fuel type updated successfully")
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update fuel type")
     },
   })
 }

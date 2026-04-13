@@ -11,6 +11,9 @@ export type StocksListParams = {
   productId?: string
   sku?: string
   unitId?: string
+  fuelTypeId?: string
+  tankerId?: string
+  itemType?: "PRODUCT" | "FUEL"
 }
 
 export type StockHistoryListParams = {
@@ -20,6 +23,9 @@ export type StockHistoryListParams = {
   branchId?: string
   productId?: string
   stockId?: string
+  fuelTypeId?: string
+  tankerId?: string
+  itemType?: "PRODUCT" | "FUEL"
 }
 
 export type StockAdjustmentsListParams = {

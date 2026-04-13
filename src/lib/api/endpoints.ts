@@ -157,6 +157,7 @@ export const endpoints = {
   fuelTypes: {
     create: "/fuel-types",
     list: "/fuel-types",
+    update: (id: string) => `/fuel-types/${id}`,
     delete: (id: string) => `/fuel-types/${id}`,
   },
   tankers: {
