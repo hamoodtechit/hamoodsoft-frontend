@@ -112,6 +112,7 @@ export interface ProductVariantInput {
 
 export interface Product {
   id: string
+  sku?: string
   businessId?: string
   branchIds?: string[]
   name: string

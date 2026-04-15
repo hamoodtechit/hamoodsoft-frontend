@@ -114,6 +114,13 @@ export default function StocksPage() {
       sortable: false,
     },
     {
+      id: "sku",
+      header: t("sku") || "SKU",
+      cell: (row) => row.sku || row.product?.sku || '-',
+      sortable: true,
+      accessorKey: "sku",
+    },
+    {
       id: "quantity",
       header: t("quantity"),
       accessorKey: "quantity",
@@ -165,6 +172,12 @@ export default function StocksPage() {
         const product = row.product || productMap.get(row.productId ?? '')
         return product?.name || row.productId || '-'
       },
+    },
+    {
+      key: "sku",
+      header: "SKU",
+      width: 20,
+      format: (value, row) => row.sku || row.product?.sku || '-',
     },
     {
       key: "productDescription",
@@ -393,7 +406,8 @@ export default function StocksPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold truncate">
-                              {product?.name || stock.productId || 'Unknown Product'}
+                              {product?.name || stock.productId || 'Unknown Product'} 
+                              {(stock.sku || product?.sku) ? ` (SKU: ${stock.sku || product?.sku})` : ""}
                             </h4>
                             <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
                               {t("quantity")}: {stock.quantity}
