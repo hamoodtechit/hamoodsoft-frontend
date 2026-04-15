@@ -1,63 +1,68 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { useCreateContact, useUpdateContact } from "@/lib/hooks/use-contacts"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCreateContact, useUpdateContact } from "@/lib/hooks/use-contacts";
 import {
-    createContactSchema,
-    updateContactSchema,
-    type CreateContactInput,
-    type UpdateContactInput,
-} from "@/lib/validations/contacts"
-import { Contact } from "@/types"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { User } from "lucide-react"
-import { useTranslations } from "next-intl"
-import { useEffect, useMemo } from "react"
-import { useForm, useWatch } from "react-hook-form"
+  createContactSchema,
+  updateContactSchema,
+  type CreateContactInput,
+  type UpdateContactInput,
+} from "@/lib/validations/contacts";
+import { Contact } from "@/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { User } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
 interface ContactDialogProps {
-  contact: Contact | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess?: (contact: Contact) => void
+  contact: Contact | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: (contact: Contact) => void;
 }
 
-export function ContactDialog({ contact, open, onOpenChange, onSuccess }: ContactDialogProps) {
-  const t = useTranslations("contacts")
-  const tCommon = useTranslations("common")
-  const createMutation = useCreateContact()
-  const updateMutation = useUpdateContact()
+export function ContactDialog({
+  contact,
+  open,
+  onOpenChange,
+  onSuccess,
+}: ContactDialogProps) {
+  const t = useTranslations("contacts");
+  const tCommon = useTranslations("common");
+  const createMutation = useCreateContact();
+  const updateMutation = useUpdateContact();
 
-  const isEdit = !!contact
-  const isLoading = createMutation.isPending || updateMutation.isPending
+  const isEdit = !!contact;
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
-  const schema = isEdit ? updateContactSchema : createContactSchema
+  const schema = isEdit ? updateContactSchema : createContactSchema;
 
   const defaultValues = useMemo(() => {
     if (!contact) {
@@ -73,7 +78,7 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
         companyPhone: "",
         balance: 0,
         creditLimit: 0,
-      }
+      };
     }
     return {
       type: contact.type || ("CUSTOMER" as const),
@@ -87,35 +92,35 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
       companyPhone: contact.companyPhone || "",
       balance: contact.balance || 0,
       creditLimit: contact.creditLimit || 0,
-    }
-  }, [contact])
+    };
+  }, [contact]);
 
   const form = useForm<CreateContactInput | UpdateContactInput>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues,
-  })
+  });
 
   // Watch isIndividual to conditionally show/hide company fields
   const isIndividual = useWatch({
     control: form.control,
-    name: "isIndividual" as any,
+    name: "isIndividual",
     defaultValue: defaultValues.isIndividual,
-  })
+  });
 
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues)
+      form.reset(defaultValues);
     }
-  }, [open, defaultValues, form])
+  }, [open, defaultValues, form]);
 
   // Clear company fields when isIndividual is true
   useEffect(() => {
     if (isIndividual) {
-      form.setValue("companyName" as any, "")
-      form.setValue("companyAddress" as any, "")
-      form.setValue("companyPhone" as any, "")
+      form.setValue("companyName", "");
+      form.setValue("companyAddress", "");
+      form.setValue("companyPhone", "");
     }
-  }, [isIndividual, form])
+  }, [isIndividual, form]);
 
   const onSubmit = (data: CreateContactInput | UpdateContactInput) => {
     if (isEdit && contact) {
@@ -123,22 +128,22 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
         { id: contact.id, data: data as UpdateContactInput },
         {
           onSuccess: (updatedContact) => {
-            onOpenChange(false)
-            onSuccess?.(updatedContact)
+            onOpenChange(false);
+            onSuccess?.(updatedContact);
           },
-        }
-      )
-      return
+        },
+      );
+      return;
     }
 
     createMutation.mutate(data as CreateContactInput, {
       onSuccess: (newContact) => {
-        onOpenChange(false)
-        form.reset(defaultValues)
-        onSuccess?.(newContact)
+        onOpenChange(false);
+        form.reset(defaultValues);
+        onSuccess?.(newContact);
       },
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,7 +159,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 min-h-0"
+          >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -164,15 +172,22 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("type")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="CUSTOMER">{t("typeCustomer")}</SelectItem>
-                            <SelectItem value="SUPPLIER">{t("typeSupplier")}</SelectItem>
+                            <SelectItem value="CUSTOMER">
+                              {t("typeCustomer")}
+                            </SelectItem>
+                            <SelectItem value="SUPPLIER">
+                              {t("typeSupplier")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -187,7 +202,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                       <FormItem>
                         <FormLabel>{t("name")}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t("namePlaceholder")} {...field} />
+                          <Input
+                            placeholder={t("namePlaceholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -203,7 +221,11 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                       <FormItem>
                         <FormLabel>{t("email")}</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder={t("emailPlaceholder")} {...field} />
+                          <Input
+                            type="email"
+                            placeholder={t("emailPlaceholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -217,7 +239,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                       <FormItem>
                         <FormLabel>{t("phone")}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t("phonePlaceholder")} {...field} />
+                          <Input
+                            placeholder={t("phonePlaceholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -232,7 +257,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                     <FormItem>
                       <FormLabel>{t("address")}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t("addressPlaceholder")} {...field} />
+                        <Input
+                          placeholder={t("addressPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -265,7 +293,9 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                 {!isIndividual && (
                   <>
                     <div className="border-t pt-4">
-                      <h4 className="font-medium mb-4">{t("companyInformation")}</h4>
+                      <h4 className="font-medium mb-4">
+                        {t("companyInformation")}
+                      </h4>
                     </div>
 
                     <FormField
@@ -275,7 +305,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                         <FormItem>
                           <FormLabel>{t("companyName")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("companyNamePlaceholder")} {...field} />
+                            <Input
+                              placeholder={t("companyNamePlaceholder")}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -289,7 +322,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                         <FormItem>
                           <FormLabel>{t("companyAddress")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("companyAddressPlaceholder")} {...field} />
+                            <Input
+                              placeholder={t("companyAddressPlaceholder")}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -303,7 +339,10 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                         <FormItem>
                           <FormLabel>{t("companyPhone")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("companyPhonePlaceholder")} {...field} />
+                            <Input
+                              placeholder={t("companyPhonePlaceholder")}
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -320,15 +359,41 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                       <FormItem>
                         <FormLabel>{t("balance")}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) =>
+                                field.onChange(parseFloat(e.target.value) || 0)
+                              }
+                              disabled={isEdit}
+                              className={
+                                isEdit && (field.value || 0) < 0
+                                  ? "text-destructive border-destructive"
+                                  : ""
+                              }
+                            />
+                            {isEdit && (field.value || 0) < 0 && (
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-destructive">
+                                (Owes)
+                              </span>
+                            )}
+                            {isEdit && (field.value || 0) > 0 && (
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">
+                                (Advance)
+                              </span>
+                            )}
+                          </div>
                         </FormControl>
+                        {isEdit && (
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Balance is system-managed based on sales and
+                            payments.
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -347,7 +412,9 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
                             placeholder="0.00"
                             {...field}
                             value={field.value || ""}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value) || 0)
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -382,5 +449,5 @@ export function ContactDialog({ contact, open, onOpenChange, onSuccess }: Contac
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
