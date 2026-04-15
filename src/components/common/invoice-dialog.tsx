@@ -144,6 +144,7 @@ export function InvoiceDialog({
             <title>${isPurchase ? "Receipt" : "Invoice"} ${transaction?.id}</title>
             <style>
               @page { size: ${invoiceLayout === "pos-a4" ? "A4" : "auto"}; margin: 0; }
+              * { box-sizing: border-box; }
               body { 
                 font-family: Arial, sans-serif; 
                 padding: ${invoiceLayout === "pos-a4" ? "20px" : "10px"}; 
@@ -197,13 +198,12 @@ export function InvoiceDialog({
         </DialogHeader>
         <div
           id="invoice-content"
-          className={`p-6 print:p-0 ${
-            invoiceLayout === "pos-a4"
+          className={`p-6 print:p-0 ${invoiceLayout === "pos-a4"
               ? ""
               : invoiceLayout === "pos-80mm"
                 ? "text-sm"
                 : "text-xs"
-          }`}
+            }`}
         >
           {/* Invoice Header */}
           <div

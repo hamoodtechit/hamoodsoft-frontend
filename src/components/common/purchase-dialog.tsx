@@ -328,7 +328,7 @@ export function PurchaseDialog({
       ) {
         toast.error(
           tCommon("error") +
-            ": Please distribute the payment amount among accounts",
+          ": Please distribute the payment amount among accounts",
         );
         return;
       }
@@ -523,7 +523,7 @@ export function PurchaseDialog({
 
   // Compute how much is unpaid
   const dueAmount = isEdit
-    ? Number(form.watch("dueAmount") || 0)
+    ? Number(form.watch("dueAmount" as any) || 0)
     : total !== null
       ? Math.max(0, total - (Number(paidAmount) || 0))
       : 0;
@@ -531,7 +531,7 @@ export function PurchaseDialog({
     ? (selectedContact.balance || 0) + (selectedContact.creditLimit || 0)
     : 0;
   const isCreditExceeded =
-    dueAmount > 0 && selectedContact && dueAmount > availableCredit;
+    !isEdit && dueAmount > 0 && selectedContact && dueAmount > availableCredit;
 
   // Update item totalPrice when item fields change
   useEffect(() => {
@@ -632,7 +632,7 @@ export function PurchaseDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      {selectedContact && (
+                      {selectedContact && !isEdit && (
                         <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
                           <div className="flex justify-between text-muted-foreground mb-1">
                             <span>Deposit Balance:</span>
@@ -707,63 +707,7 @@ export function PurchaseDialog({
                 />
               </div>
 
-              {isEdit && (
-                <div className="flex items-center justify-between p-4 mt-4 border rounded-lg bg-muted/50">
-                  <div className="w-[150px] sm:w-[250px]">
-                    <FormField
-                      control={form.control}
-                      name="paidAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("paidAmount")}</FormLabel>
-                          <FormControl>
-                            <NumericInput
-                              min={0}
-                              {...field}
-                              value={field.value || 0}
-                              onValueChange={(val) => {
-                                const currentTotal =
-                                  isEdit && purchase
-                                    ? purchase.totalPrice ||
-                                      purchase.totalAmount ||
-                                      0
-                                    : total || 0;
-                                field.onChange(Math.min(val, currentTotal));
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
 
-                  <div className="flex flex-col items-end justify-center space-y-1">
-                    <Label className="text-muted-foreground">
-                      {t("dueAmount")}
-                    </Label>
-                    <div className="text-2xl font-bold pt-1">
-                      <span
-                        className={
-                          Number(form.watch("dueAmount") || 0) > 0
-                            ? "text-destructive"
-                            : "text-emerald-600"
-                        }
-                      >
-                        {Number(form.watch("dueAmount") || 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {t("dueAmountAutoCalculated") || "Auto-calculated"}
-                    </p>
-                    {dueAmount > 0 && selectedContact && isCreditExceeded && (
-                      <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20 mt-2">
-                        Exceeds available credit of {availableCredit.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {!isEdit && (
                 <div className="space-y-4 pt-2">
@@ -831,7 +775,7 @@ export function PurchaseDialog({
                                       {field.value
                                         ? field.value
                                         : t("selectProduct") ||
-                                          "Select product..."}
+                                        "Select product..."}
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                   </FormControl>
@@ -1085,20 +1029,20 @@ export function PurchaseDialog({
                               {(form.watch("discountType" as any) ===
                                 "PERCENTAGE" ||
                                 form.watch("discountType" as any) ===
-                                  "FIXED") && (
-                                <FormField
-                                  control={form.control}
-                                  name="discountAmount"
-                                  render={({ field }) => (
-                                    <NumericInput
-                                      className="flex-1"
-                                      {...field}
-                                      value={field.value || 0}
-                                      onValueChange={field.onChange}
-                                    />
-                                  )}
-                                />
-                              )}
+                                "FIXED") && (
+                                  <FormField
+                                    control={form.control}
+                                    name="discountAmount"
+                                    render={({ field }) => (
+                                      <NumericInput
+                                        className="flex-1"
+                                        {...field}
+                                        value={field.value || 0}
+                                        onValueChange={field.onChange}
+                                      />
+                                    )}
+                                  />
+                                )}
                             </div>
                           </div>
 
@@ -1131,19 +1075,19 @@ export function PurchaseDialog({
                               />
                               {form.watch("taxType" as any) ===
                                 "PERCENTAGE" && (
-                                <FormField
-                                  control={form.control}
-                                  name="taxRate"
-                                  render={({ field }) => (
-                                    <NumericInput
-                                      className="flex-1"
-                                      {...field}
-                                      value={field.value || 0}
-                                      onValueChange={field.onChange}
-                                    />
-                                  )}
-                                />
-                              )}
+                                  <FormField
+                                    control={form.control}
+                                    name="taxRate"
+                                    render={({ field }) => (
+                                      <NumericInput
+                                        className="flex-1"
+                                        {...field}
+                                        value={field.value || 0}
+                                        onValueChange={field.onChange}
+                                      />
+                                    )}
+                                  />
+                                )}
                               {form.watch("taxType" as any) === "FIXED" && (
                                 <FormField
                                   control={form.control}
@@ -1164,324 +1108,346 @@ export function PurchaseDialog({
                       </div>
 
                       {/* Payment Method Selection */}
-                      <div className="space-y-4 pt-4 border-t">
-                        <Label className="text-base font-medium">
-                          {t("paymentMethod")}
-                        </Label>
-                        <div className="flex gap-2 flex-wrap">
-                          <Button
-                            type="button"
-                            variant={
-                              paymentMethod === "CASH" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setPaymentMethod("CASH")}
-                            className="text-xs"
-                          >
-                            Cash
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={
-                              paymentMethod === "CARD" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setPaymentMethod("CARD")}
-                            className="text-xs"
-                          >
-                            Card
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={
-                              paymentMethod === "CREDIT" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setPaymentMethod("CREDIT")}
-                            className="text-xs"
-                          >
-                            Credit
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={
-                              paymentMethod === "MIXED" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setPaymentMethod("MIXED")}
-                            className="text-xs"
-                          >
-                            Mixed
-                          </Button>
-                        </div>
-
-                        {/* Account Selection for CASH */}
-                        {paymentMethod === "CASH" && accounts.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-sm">{t("account")}</Label>
-                            <Select
-                              value={cashAccountId}
-                              onValueChange={setCashAccountId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("selectAccount")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {accounts.map((account) => (
-                                  <SelectItem
-                                    key={account.id}
-                                    value={account.id}
-                                  >
-                                    {account.name} ({account.type})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        {/* Account Selection for CARD */}
-                        {paymentMethod === "CARD" && accounts.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-sm">{t("account")}</Label>
-                            <Select
-                              value={bankAccountId}
-                              onValueChange={setBankAccountId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={t("selectAccount")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {accounts.map((account) => (
-                                  <SelectItem
-                                    key={account.id}
-                                    value={account.id}
-                                  >
-                                    {account.name} ({account.type})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        {/* Payment Splits for MIXED */}
-                        {paymentMethod === "MIXED" && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm">
-                                {t("paymentSplit")}
-                              </Label>
+                      {!isEdit && (
+                        <>
+                          <div className="space-y-4 pt-4 border-t">
+                            <Label className="text-base font-medium">
+                              {t("paymentMethod")}
+                            </Label>
+                            <div className="flex gap-2 flex-wrap">
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant={
+                                  paymentMethod === "CASH"
+                                    ? "default"
+                                    : "outline"
+                                }
                                 size="sm"
-                                onClick={() => {
-                                  setPaymentSplits([
-                                    ...paymentSplits,
-                                    {
-                                      id: `split-${Date.now()}-${Math.random()}`,
-                                      accountId: "",
-                                      amount: 0,
-                                    },
-                                  ]);
-                                }}
-                                className="h-7 text-xs"
+                                onClick={() => setPaymentMethod("CASH")}
+                                className="text-xs"
                               >
-                                <Plus className="h-3 w-3 mr-1" />
-                                {t("addAccount")}
+                                Cash
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={
+                                  paymentMethod === "CARD"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setPaymentMethod("CARD")}
+                                className="text-xs"
+                              >
+                                Card
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={
+                                  paymentMethod === "CREDIT"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setPaymentMethod("CREDIT")}
+                                className="text-xs"
+                              >
+                                Credit
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={
+                                  paymentMethod === "MIXED"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setPaymentMethod("MIXED")}
+                                className="text-xs"
+                              >
+                                Mixed
                               </Button>
                             </div>
 
-                            {paymentSplits.length === 0 && (
-                              <p className="text-xs text-muted-foreground text-center py-2">
-                                {t("noPaymentSplits")}
-                              </p>
-                            )}
+                            {/* Account Selection for CASH */}
+                            {paymentMethod === "CASH" &&
+                              accounts.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    {t("account")}
+                                  </Label>
+                                  <Select
+                                    value={cashAccountId}
+                                    onValueChange={setCashAccountId}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue
+                                        placeholder={t("selectAccount")}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.map((account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name} ({account.type})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
 
-                            {paymentSplits.map((split, index) => {
-                              const totalAllocated = paymentSplits.reduce(
-                                (sum, s) => sum + (s.amount || 0),
-                                0,
-                              );
-                              return (
-                                <div
-                                  key={split.id}
-                                  className="flex gap-2 items-start"
-                                >
-                                  <div className="flex-1 space-y-1">
-                                    <Select
-                                      value={split.accountId}
-                                      onValueChange={(value) => {
-                                        const updated = [...paymentSplits];
-                                        updated[index].accountId = value;
-                                        setPaymentSplits(updated);
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-9 text-xs">
-                                        <SelectValue
-                                          placeholder={t("selectAccount")}
-                                        />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {accounts.map((account) => (
-                                          <SelectItem
-                                            key={account.id}
-                                            value={account.id}
-                                          >
-                                            {account.name} ({account.type})
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <NumericInput
-                                      value={split.amount || 0}
-                                      onValueChange={(value) => {
-                                        const updated = [...paymentSplits];
-                                        const amount = Math.max(
-                                          0,
-                                          Math.min(value, total),
-                                        );
-                                        updated[index].amount = amount;
-                                        setPaymentSplits(updated);
-                                      }}
-                                      className="h-9 text-xs"
-                                      min={0}
-                                    />
-                                  </div>
+                            {/* Account Selection for CARD */}
+                            {paymentMethod === "CARD" &&
+                              accounts.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    {t("account")}
+                                  </Label>
+                                  <Select
+                                    value={bankAccountId}
+                                    onValueChange={setBankAccountId}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue
+                                        placeholder={t("selectAccount")}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.map((account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name} ({account.type})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                            {/* Payment Splits for MIXED */}
+                            {paymentMethod === "MIXED" && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-sm">
+                                    {t("paymentSplit")}
+                                  </Label>
                                   <Button
                                     type="button"
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      setPaymentSplits(
-                                        paymentSplits.filter(
-                                          (_, i) => i !== index,
-                                        ),
-                                      );
+                                      setPaymentSplits([
+                                        ...paymentSplits,
+                                        {
+                                          id: `split-${Date.now()}-${Math.random()}`,
+                                          accountId: "",
+                                          amount: 0,
+                                        },
+                                      ]);
                                     }}
-                                    className="h-9 w-9 p-0"
+                                    className="h-7 text-xs"
                                   >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    {t("addAccount")}
                                   </Button>
                                 </div>
-                              );
-                            })}
 
-                            {paymentSplits.length > 0 && (
-                              <div className="pt-2 border-t space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-muted-foreground">
-                                    {t("totalAllocated")}:
-                                  </span>
-                                  <span className="font-medium">
-                                    {paymentSplits
-                                      .reduce(
-                                        (sum, s) => sum + (s.amount || 0),
-                                        0,
-                                      )
-                                      .toFixed(2)}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-muted-foreground">
-                                    {t("remaining")}:
-                                  </span>
-                                  <span
-                                    className={
-                                      total -
-                                        paymentSplits.reduce(
-                                          (sum, s) => sum + (s.amount || 0),
-                                          0,
-                                        ) <
-                                      0
-                                        ? "text-destructive font-medium"
-                                        : "font-medium"
-                                    }
-                                  >
-                                    {(
-                                      total -
-                                      paymentSplits.reduce(
-                                        (sum, s) => sum + (s.amount || 0),
-                                        0,
-                                      )
-                                    ).toFixed(2)}
-                                  </span>
-                                </div>
+                                {paymentSplits.length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                    {t("noPaymentSplits")}
+                                  </p>
+                                )}
+
+                                {paymentSplits.map((split, index) => {
+                                  const totalAllocated = paymentSplits.reduce(
+                                    (sum, s) => sum + (s.amount || 0),
+                                    0,
+                                  );
+                                  return (
+                                    <div
+                                      key={split.id}
+                                      className="flex gap-2 items-start"
+                                    >
+                                      <div className="flex-1 space-y-1">
+                                        <Select
+                                          value={split.accountId}
+                                          onValueChange={(value) => {
+                                            const updated = [...paymentSplits];
+                                            updated[index].accountId = value;
+                                            setPaymentSplits(updated);
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-9 text-xs">
+                                            <SelectValue
+                                              placeholder={t("selectAccount")}
+                                            />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {accounts.map((account) => (
+                                              <SelectItem
+                                                key={account.id}
+                                                value={account.id}
+                                              >
+                                                {account.name} ({account.type})
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <NumericInput
+                                          value={split.amount || 0}
+                                          onValueChange={(value) => {
+                                            const updated = [...paymentSplits];
+                                            const amount = Math.max(
+                                              0,
+                                              Math.min(value, total),
+                                            );
+                                            updated[index].amount = amount;
+                                            setPaymentSplits(updated);
+                                          }}
+                                          className="h-9 text-xs"
+                                          min={0}
+                                        />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setPaymentSplits(
+                                            paymentSplits.filter(
+                                              (_, i) => i !== index,
+                                            ),
+                                          );
+                                        }}
+                                        className="h-9 w-9 p-0"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+
+                                {paymentSplits.length > 0 && (
+                                  <div className="pt-2 border-t space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">
+                                        {t("totalAllocated")}:
+                                      </span>
+                                      <span className="font-medium">
+                                        {paymentSplits
+                                          .reduce(
+                                            (sum, s) => sum + (s.amount || 0),
+                                            0,
+                                          )
+                                          .toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-muted-foreground">
+                                        {t("remaining")}:
+                                      </span>
+                                      <span
+                                        className={
+                                          total -
+                                            paymentSplits.reduce(
+                                              (sum, s) => sum + (s.amount || 0),
+                                              0,
+                                            ) <
+                                            0
+                                            ? "text-destructive font-medium"
+                                            : "font-medium"
+                                        }
+                                      >
+                                        {(
+                                          total -
+                                          paymentSplits.reduce(
+                                            (sum, s) => sum + (s.amount || 0),
+                                            0,
+                                          )
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
 
-                      <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                        <div className="flex items-center justify-between text-lg font-semibold">
-                          <span>{t("total")}:</span>
-                          <span>{total.toFixed(2)}</span>
-                        </div>
-
-                        {(paymentMethod === "CASH" ||
-                          paymentMethod === "CARD") && (
-                          <div className="flex items-center justify-between pt-4 border-t border-border">
-                            <div className="w-[150px] sm:w-[250px]">
-                              <FormField
-                                control={form.control}
-                                name="paidAmount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>{t("paidAmount")}</FormLabel>
-                                    <FormControl>
-                                      <NumericInput
-                                        min={0}
-                                        {...field}
-                                        value={field.value || 0}
-                                        onValueChange={(val) => {
-                                          const currentTotal = total || 0;
-                                          field.onChange(
-                                            Math.min(val, currentTotal),
-                                          );
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                          <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                            <div className="flex items-center justify-between text-lg font-semibold">
+                              <span>{t("total")}:</span>
+                              <span>{total.toFixed(2)}</span>
                             </div>
 
-                            <div className="flex flex-col items-end justify-center space-y-1">
-                              <Label className="text-muted-foreground">
-                                {t("dueAmount")}
-                              </Label>
-                              <div className="text-2xl font-bold pt-1">
-                                <span
-                                  className={
-                                    Number(form.watch("dueAmount") || 0) > 0
-                                      ? "text-destructive"
-                                      : "text-emerald-600"
-                                  }
-                                >
-                                  {Number(form.watch("dueAmount") || 0).toFixed(
-                                    2,
-                                  )}
-                                </span>
-                              </div>
-                            </div>
+                            {(paymentMethod === "CASH" ||
+                              paymentMethod === "CARD") && (
+                                <div className="flex items-center justify-between pt-4 border-t border-border">
+                                  <div className="w-[150px] sm:w-[250px]">
+                                    <FormField
+                                      control={form.control}
+                                      name="paidAmount"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>{t("paidAmount")}</FormLabel>
+                                          <FormControl>
+                                            <NumericInput
+                                              min={0}
+                                              {...field}
+                                              value={field.value || 0}
+                                              onValueChange={(val) => {
+                                                const currentTotal = total || 0;
+                                                field.onChange(
+                                                  Math.min(val, currentTotal),
+                                                );
+                                              }}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  <div className="flex flex-col items-end justify-center space-y-1">
+                                    <Label className="text-muted-foreground">
+                                      {t("dueAmount")}
+                                    </Label>
+                                    <div className="text-2xl font-bold pt-1">
+                                      <span
+                                        className={
+                                          Number(form.watch("dueAmount" as any) || 0) > 0
+                                            ? "text-destructive"
+                                            : "text-emerald-600"
+                                        }
+                                      >
+                                        {Number(
+                                          form.watch("dueAmount" as any) || 0,
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                            {!isEdit &&
+                              dueAmount > 0 &&
+                              selectedContact &&
+                              isCreditExceeded && (
+                                <div className="flex justify-end pt-2">
+                                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20">
+                                    Exceeds available credit of{" "}
+                                    {availableCredit.toFixed(2)}
+                                  </p>
+                                </div>
+                              )}
                           </div>
-                        )}
-
-                        {!isEdit &&
-                          dueAmount > 0 &&
-                          selectedContact &&
-                          isCreditExceeded && (
-                            <div className="flex justify-end pt-2">
-                              <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20">
-                                Exceeds available credit of{" "}
-                                {availableCredit.toFixed(2)}
-                              </p>
-                            </div>
-                          )}
-                      </div>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
