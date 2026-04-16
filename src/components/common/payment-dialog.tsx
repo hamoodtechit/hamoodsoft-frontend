@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useAccounts } from "@/lib/hooks/use-accounts"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCreatePayment } from "@/lib/hooks/use-payments"
 import { usePurchases } from "@/lib/hooks/use-purchases"
 import { useSales } from "@/lib/hooks/use-sales"
@@ -64,6 +65,7 @@ export function PaymentDialog({
   const t = useTranslations("payments")
   const tCommon = useTranslations("common")
   const createMutation = useCreatePayment()
+  const { selectedBranchId } = useBranchSelection()
   const { data: accountsData } = useAccounts({ limit: 1000 })
   const accounts = accountsData?.items ?? []
   const { generalSettings } = useAppSettings()
@@ -99,6 +101,7 @@ export function PaymentDialog({
   const { data: purchasesData } = usePurchases({
     limit: 100,
     status: "COMPLETED", // Only show completed purchases
+    branchId: selectedBranchId || undefined,
   })
   const purchases = purchasesData?.items ?? []
 

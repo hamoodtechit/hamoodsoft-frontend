@@ -22,6 +22,7 @@ export function usePurchases(params?: PurchasesListParams) {
   return useQuery({
     queryKey,
     queryFn: () => purchasesApi.getPurchases(params),
+    enabled: !!branchId,
     refetchOnWindowFocus: true,
     staleTime: 0,
   })
