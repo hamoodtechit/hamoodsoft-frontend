@@ -46,6 +46,8 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection";
 import { useBranches } from "@/lib/hooks/use-branches";
 import { useContacts } from "@/lib/hooks/use-contacts";
 import { useProducts } from "@/lib/hooks/use-products";
+import { useFuelTypes } from "@/lib/hooks/use-fuel-types";
+import { useTankers } from "@/lib/hooks/use-tankers";
 import {
   useCreatePurchase,
   useUpdatePurchase,
@@ -58,14 +60,38 @@ import {
   type CreatePurchaseInput,
   type UpdatePurchaseInput,
 } from "@/lib/validations/purchases";
-import { Purchase } from "@/types";
+import { Purchase, FuelType, Tanker } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronsUpDown, Package, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Droplets, Package, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { ModalWrapper } from "@/components/common/modal-wrapper";
 import { toast } from "sonner";
+
+// ─── Fuel item state type (client-side only, not sent to API directly) ───
+interface FuelItemState {
+  id: string;
+  fuelTypeId: string;
+  fuelTypeName: string;
+  costPrice: number;
+  quantity: number; // total quantity (liters)
+  tankerAllocations: {
+    id: string;
+    tankerId: string;
+    tankerName: string;
+    quantity: number;
+  }[];
+}
+
+// ─── Validation error tracking for fuel items ───
+interface FuelItemErrors {
+  fuelTypeId?: string;
+  costPrice?: string;
+  quantity?: string;
+  tankerAllocations?: string;
+  allocations?: Record<number, { tankerId?: string; quantity?: string }>;
+}
 
 interface PurchaseDialogProps {
   purchase: Purchase | null;
@@ -91,14 +117,28 @@ export function PurchaseDialog({
   const createMutation = useCreatePurchase();
   const updateMutation = useUpdatePurchase();
 
+  // Fuel data hooks
+  const { data: fuelTypesData } = useFuelTypes();
+  const fuelTypes: FuelType[] = fuelTypesData?.items || [];
+  const { data: tankersData } = useTankers({ limit: 1000 });
+  const tankers: Tanker[] = tankersData?.items || [];
+
   const isEdit = !!purchase;
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   const schema = isEdit ? updatePurchaseSchema : createPurchaseSchema;
 
+  // ─── Purchase type toggle (Product vs Fuel) ───
+  const [purchaseType, setPurchaseType] = useState<"PRODUCT" | "FUEL">("PRODUCT");
+
+  // ─── Fuel items state (managed outside react-hook-form for flexibility) ───
+  const [fuelItems, setFuelItems] = useState<FuelItemState[]>([]);
+  const [fuelErrors, setFuelErrors] = useState<Record<number, FuelItemErrors>>({});
+
   const defaultValues = useMemo(() => {
     if (!purchase) {
       return {
+        purchaseType: "PRODUCT" as const,
         branchId: selectedBranchId || "",
         contactId: "",
         items: [
@@ -144,7 +184,7 @@ export function PurchaseDialog({
   const branchId = useWatch({ control: form.control, name: "branchId" });
   const { data: productsData } = useProducts({
     branchId: branchId || selectedBranchId || undefined,
-    limit: 1000, // Get all products for selection
+    limit: 1000,
   });
   const products = productsData?.items || [];
 
@@ -190,7 +230,9 @@ export function PurchaseDialog({
     if (open) {
       form.reset(defaultValues);
       if (!isEdit) {
-        // Reset items array for create with all required fields
+        setPurchaseType("PRODUCT");
+        setFuelItems([]);
+        setFuelErrors({});
         form.setValue("items" as any, [
           {
             sku: "",
@@ -222,6 +264,172 @@ export function PurchaseDialog({
     }
   }, [open, defaultValues, form, isEdit, selectedBranchId]);
 
+  // ─── Fuel helpers ───
+
+  const addFuelItem = () => {
+    setFuelItems((prev) => [
+      ...prev,
+      {
+        id: `fuel-${Date.now()}-${Math.random()}`,
+        fuelTypeId: "",
+        fuelTypeName: "",
+        costPrice: 0,
+        quantity: 0,
+        tankerAllocations: [],
+      },
+    ]);
+  };
+
+  const removeFuelItem = (index: number) => {
+    if (fuelItems.length > 1) {
+      setFuelItems((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateFuelItem = (index: number, updates: Partial<FuelItemState>) => {
+    setFuelItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, ...updates } : item))
+    );
+  };
+
+  const addTankerAllocation = (fuelIndex: number) => {
+    setFuelItems((prev) =>
+      prev.map((item, i) =>
+        i === fuelIndex
+          ? {
+              ...item,
+              tankerAllocations: [
+                ...item.tankerAllocations,
+                {
+                  id: `alloc-${Date.now()}-${Math.random()}`,
+                  tankerId: "",
+                  tankerName: "",
+                  quantity: 0,
+                },
+              ],
+            }
+          : item
+      )
+    );
+  };
+
+  const removeTankerAllocation = (fuelIndex: number, allocIndex: number) => {
+    setFuelItems((prev) =>
+      prev.map((item, i) =>
+        i === fuelIndex
+          ? {
+              ...item,
+              tankerAllocations: item.tankerAllocations.filter(
+                (_, ai) => ai !== allocIndex
+              ),
+            }
+          : item
+      )
+    );
+  };
+
+  const updateTankerAllocation = (
+    fuelIndex: number,
+    allocIndex: number,
+    updates: { tankerId?: string; tankerName?: string; quantity?: number }
+  ) => {
+    setFuelItems((prev) =>
+      prev.map((item, i) =>
+        i === fuelIndex
+          ? {
+              ...item,
+              tankerAllocations: item.tankerAllocations.map((alloc, ai) =>
+                ai === allocIndex ? { ...alloc, ...updates } : alloc
+              ),
+            }
+          : item
+      )
+    );
+  };
+
+  // Get tankers that carry a specific fuel type
+  const getTankersForFuelType = (fuelTypeId: string) => {
+    return tankers.filter((t) => t.fuelTypeId === fuelTypeId);
+  };
+
+  // Calculate fuel items total
+  const fuelTotal = useMemo(() => {
+    return fuelItems.reduce((sum, item) => {
+      return sum + (item.quantity || 0) * (item.costPrice || 0);
+    }, 0);
+  }, [fuelItems]);
+
+  // ─── Fuel validation ───
+  const validateFuelItems = (status: string): boolean => {
+    const errors: Record<number, FuelItemErrors> = {};
+    let hasError = false;
+    const isCompleted = status === "COMPLETED";
+
+    for (let i = 0; i < fuelItems.length; i++) {
+      const item = fuelItems[i];
+      const itemErrors: FuelItemErrors = {};
+
+      if (!item.fuelTypeId) {
+        itemErrors.fuelTypeId = "Fuel type is required";
+        hasError = true;
+      }
+
+      if (!item.costPrice || item.costPrice <= 0) {
+        itemErrors.costPrice = "Cost price must be greater than 0";
+        hasError = true;
+      }
+
+      if (!item.quantity || item.quantity <= 0) {
+        itemErrors.quantity = "Quantity must be greater than 0";
+        hasError = true;
+      }
+
+      // If COMPLETED, tanker allocations are required
+      if (isCompleted) {
+        if (item.tankerAllocations.length === 0) {
+          itemErrors.tankerAllocations = "At least one tanker allocation is required for completed purchases";
+          hasError = true;
+        } else {
+          const allocErrors: Record<number, { tankerId?: string; quantity?: string }> = {};
+          let totalAllocQty = 0;
+          for (let j = 0; j < item.tankerAllocations.length; j++) {
+            const alloc = item.tankerAllocations[j];
+            const aErr: { tankerId?: string; quantity?: string } = {};
+            if (!alloc.tankerId) {
+              aErr.tankerId = "Tanker is required";
+              hasError = true;
+            }
+            if (!alloc.quantity || alloc.quantity <= 0) {
+              aErr.quantity = "Quantity must be > 0";
+              hasError = true;
+            }
+            totalAllocQty += (alloc.quantity || 0);
+            if (Object.keys(aErr).length > 0) {
+              allocErrors[j] = aErr;
+            }
+          }
+          // Check total allocation matches fuel quantity
+          if (item.quantity > 0 && Math.abs(totalAllocQty - item.quantity) > 0.01) {
+            itemErrors.tankerAllocations = `Tanker allocations total (${totalAllocQty.toFixed(2)} L) must equal quantity (${item.quantity.toFixed(2)} L)`;
+            hasError = true;
+          }
+          if (Object.keys(allocErrors).length > 0) {
+            itemErrors.allocations = allocErrors;
+          }
+        }
+      }
+
+      if (Object.keys(itemErrors).length > 0) {
+        errors[i] = itemErrors;
+      }
+    }
+
+    setFuelErrors(errors);
+    return !hasError;
+  };
+
+  // ─── Product submission logic (existing) ───
+
   const onSubmit = (data: CreatePurchaseInput | UpdatePurchaseInput) => {
     console.log("Purchase form submitted", data);
 
@@ -237,15 +445,121 @@ export function PurchaseDialog({
       return;
     }
 
-    // Calculate item totals and purchase total (same as sales)
+    // ─── FUEL PURCHASE ───
+    if (purchaseType === "FUEL") {
+      const status = (data as any).status || "PENDING";
+
+      // Run inline validation
+      if (!validateFuelItems(status)) {
+        return;
+      }
+
+      // Build purchase items from fuel items (one PurchaseItem per tanker allocation)
+      const purchaseItems: any[] = [];
+      for (const fuelItem of fuelItems) {
+        if (status === "COMPLETED" && fuelItem.tankerAllocations.length > 0) {
+          // COMPLETED: one item per tanker allocation
+          for (const alloc of fuelItem.tankerAllocations) {
+            if (!alloc.tankerId || alloc.quantity <= 0) continue;
+            purchaseItems.push({
+              sku: `FUEL-${fuelItem.fuelTypeId}-${alloc.tankerId}-${Date.now()}`,
+              itemName: fuelItem.fuelTypeName || "Fuel",
+              itemDescription: alloc.tankerName
+                ? `Tanker: ${alloc.tankerName}`
+                : "",
+              unit: "L",
+              price: fuelItem.costPrice,
+              quantity: alloc.quantity,
+              totalPrice: alloc.quantity * fuelItem.costPrice,
+              fuelTypeId: fuelItem.fuelTypeId,
+              tankerId: alloc.tankerId,
+              itemType: "FUEL",
+              discountType: "NONE",
+              discountAmount: 0,
+            });
+          }
+        } else {
+          // Non-completed: single item using the total quantity (no tanker required)
+          purchaseItems.push({
+            sku: `FUEL-${fuelItem.fuelTypeId}-${Date.now()}`,
+            itemName: fuelItem.fuelTypeName || "Fuel",
+            itemDescription: "",
+            unit: "L",
+            price: fuelItem.costPrice,
+            quantity: fuelItem.quantity,
+            totalPrice: fuelItem.quantity * fuelItem.costPrice,
+            fuelTypeId: fuelItem.fuelTypeId,
+            itemType: "FUEL",
+            discountType: "NONE",
+            discountAmount: 0,
+          });
+        }
+      }
+
+      if (purchaseItems.length === 0) {
+        toast.error("Please add at least one fuel item with quantity");
+        return;
+      }
+
+      // Calculate totals
+      const itemsTotal = purchaseItems.reduce(
+        (sum, item) => sum + (item.totalPrice || 0),
+        0
+      );
+      
+      const taxType = (data as any).taxType || "NONE";
+      const taxRate = (data as any).taxRate || 0;
+      const taxAmount = (data as any).taxAmount || 0;
+
+      let tax = 0;
+      if (taxType === "PERCENTAGE" && taxRate) {
+        tax = (itemsTotal * taxRate) / 100;
+      } else if (taxType === "FIXED" && taxAmount) {
+        tax = taxAmount;
+      }
+
+      const grandTotal = itemsTotal + tax;
+
+      // Build payments (same logic as product)
+      const payments = buildPayments(data, grandTotal);
+      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      let paymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
+      if (totalPaid >= grandTotal) paymentStatus = "PAID";
+      else if (totalPaid > 0) paymentStatus = "PARTIAL";
+
+      const purchaseData: any = {
+        purchaseType: "FUEL",
+        branchId: (data as CreatePurchaseInput).branchId,
+        contactId: (data as CreatePurchaseInput).contactId,
+        status,
+        items: purchaseItems,
+        payments: payments.length > 0 ? payments : undefined,
+        totalPrice: grandTotal,
+        taxType,
+        taxRate: taxType === "PERCENTAGE" ? taxRate : undefined,
+        taxAmount: taxType === "FIXED" ? taxAmount : tax,
+        paidAmount: totalPaid,
+        paymentStatus,
+      };
+
+      createMutation.mutate(purchaseData, {
+        onSuccess: () => {
+          onOpenChange(false);
+          form.reset(defaultValues);
+          setFuelItems([]);
+          setFuelErrors({});
+        },
+      });
+      return;
+    }
+
+    // ─── PRODUCT PURCHASE (existing logic) ───
     const items = (data as CreatePurchaseInput).items || [];
     const calculatedItems = items.map((item: any, index: number) => {
-      // Ensure SKU is set (required field)
       if (!item.sku || item.sku.trim() === "") {
         item.sku = `SKU-${Date.now()}-${index}`;
       }
 
-      // Ensure discount fields have defaults
       const discountType = item.discountType || "NONE";
       const discountAmount = item.discountAmount || 0;
 
@@ -294,82 +608,11 @@ export function PurchaseDialog({
 
     purchaseTotal = purchaseTotal + tax;
 
-    // Build payments array based on payment method (same as sales)
-    const payments: Array<{
-      type: "PURCHASE_PAYMENT";
-      accountId: string;
-      amount: number;
-      branchId?: string;
-      contactId?: string;
-      note?: string;
-    }> = [];
-    const totalAmount = purchaseTotal;
-    const paymentAmountToUse =
-      (data as any).paidAmount !== undefined
-        ? Number((data as any).paidAmount)
-        : totalAmount;
-
-    if (paymentAmountToUse > 0) {
-      if (paymentMethod === "CASH" && !cashAccountId) {
-        toast.error(
-          tCommon("error") + ": Please select an account for cash payment",
-        );
-        return;
-      }
-      if (paymentMethod === "CARD" && !bankAccountId) {
-        toast.error(
-          tCommon("error") + ": Please select an account for card payment",
-        );
-        return;
-      }
-      if (
-        paymentMethod === "MIXED" &&
-        (!paymentSplits || paymentSplits.length === 0)
-      ) {
-        toast.error(
-          tCommon("error") +
-          ": Please distribute the payment amount among accounts",
-        );
-        return;
-      }
-    }
-
-    if (paymentMethod === "CASH" && cashAccountId) {
-      payments.push({
-        accountId: cashAccountId,
-        amount: paymentAmountToUse,
-        type: "PURCHASE_PAYMENT",
-        branchId: (data as CreatePurchaseInput).branchId,
-        contactId: (data as CreatePurchaseInput).contactId,
-      });
-    } else if (paymentMethod === "CARD" && bankAccountId) {
-      payments.push({
-        accountId: bankAccountId,
-        amount: paymentAmountToUse,
-        type: "PURCHASE_PAYMENT",
-        branchId: (data as CreatePurchaseInput).branchId,
-        contactId: (data as CreatePurchaseInput).contactId,
-      });
-    } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
-      // Use payment splits
-      paymentSplits.forEach((split) => {
-        if (split.accountId && split.amount > 0) {
-          payments.push({
-            accountId: split.accountId,
-            amount: split.amount,
-            type: "PURCHASE_PAYMENT",
-            branchId: (data as CreatePurchaseInput).branchId,
-            contactId: (data as CreatePurchaseInput).contactId,
-          });
-        }
-      });
-    }
-    // CREDIT payment method doesn't add any payment (paymentStatus will be DUE)
-
-    // Determine payment status and paid amount
+    // Build payments
+    const payments = buildPayments(data, purchaseTotal);
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     let paymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
-    if (totalPaid >= totalAmount) {
+    if (totalPaid >= purchaseTotal) {
       paymentStatus = "PAID";
     } else if (totalPaid > 0) {
       paymentStatus = "PARTIAL";
@@ -377,6 +620,7 @@ export function PurchaseDialog({
 
     const purchaseData: any = {
       ...(data as CreatePurchaseInput),
+      purchaseType: "PRODUCT",
       items: calculatedItems,
       payments: payments.length > 0 ? payments : undefined,
       totalPrice: purchaseTotal,
@@ -394,6 +638,80 @@ export function PurchaseDialog({
       },
     });
   };
+
+  // ─── Build payments array (shared between product and fuel) ───
+  function buildPayments(data: any, totalAmount: number) {
+    const payments: Array<{
+      type: "PURCHASE_PAYMENT";
+      accountId: string;
+      amount: number;
+      branchId?: string;
+      contactId?: string;
+      note?: string;
+    }> = [];
+
+    const paymentAmountToUse =
+      data.paidAmount !== undefined
+        ? Number(data.paidAmount)
+        : totalAmount;
+
+    if (paymentAmountToUse > 0) {
+      if (paymentMethod === "CASH" && !cashAccountId) {
+        toast.error(
+          tCommon("error") + ": Please select an account for cash payment",
+        );
+        return [];
+      }
+      if (paymentMethod === "CARD" && !bankAccountId) {
+        toast.error(
+          tCommon("error") + ": Please select an account for card payment",
+        );
+        return [];
+      }
+      if (
+        paymentMethod === "MIXED" &&
+        (!paymentSplits || paymentSplits.length === 0)
+      ) {
+        toast.error(
+          tCommon("error") +
+          ": Please distribute the payment amount among accounts",
+        );
+        return [];
+      }
+    }
+
+    if (paymentMethod === "CASH" && cashAccountId) {
+      payments.push({
+        accountId: cashAccountId,
+        amount: paymentAmountToUse,
+        type: "PURCHASE_PAYMENT",
+        branchId: data.branchId,
+        contactId: data.contactId,
+      });
+    } else if (paymentMethod === "CARD" && bankAccountId) {
+      payments.push({
+        accountId: bankAccountId,
+        amount: paymentAmountToUse,
+        type: "PURCHASE_PAYMENT",
+        branchId: data.branchId,
+        contactId: data.contactId,
+      });
+    } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
+      paymentSplits.forEach((split) => {
+        if (split.accountId && split.amount > 0) {
+          payments.push({
+            accountId: split.accountId,
+            amount: split.amount,
+            type: "PURCHASE_PAYMENT",
+            branchId: data.branchId,
+            contactId: data.contactId,
+          });
+        }
+      });
+    }
+
+    return payments;
+  }
 
   const addItem = () => {
     const newIndex = fields.length;
@@ -415,11 +733,9 @@ export function PurchaseDialog({
   const removeItem = (index: number) => {
     if (fields.length > 1) {
       remove(index);
-      // Clean up state for removed item
       setSelectedProducts((prev) => {
         const updated = { ...prev };
         delete updated[index];
-        // Reindex remaining items
         const reindexed: Record<number, any> = {};
         Object.keys(updated).forEach((key) => {
           const oldIndex = parseInt(key);
@@ -450,26 +766,38 @@ export function PurchaseDialog({
 
   // Calculate item total price (price * quantity - discount)
   const calculateItemTotal = (item: any) => {
-    if (!item || typeof item !== "object") {
-      return 0;
-    }
-
+    if (!item || typeof item !== "object") return 0;
     const subtotal = (item.price || 0) * (item.quantity || 0);
     const discountType = item.discountType || "NONE";
     const discountAmount = item.discountAmount || 0;
-
     let discount = 0;
     if (discountType === "PERCENTAGE") {
       discount = (subtotal * discountAmount) / 100;
     } else if (discountType === "FIXED") {
       discount = discountAmount;
     }
-
     return Math.max(0, subtotal - discount);
   };
 
   const calculateTotal = () => {
     if (isEdit) return null;
+
+    // For fuel purchases, use fuel total
+    if (purchaseType === "FUEL") {
+      const taxType = form.watch("taxType" as any) || "NONE";
+      const taxRate = form.watch("taxRate" as any) || 0;
+      const taxAmountVal = form.watch("taxAmount" as any) || 0;
+
+      let tax = 0;
+      if (taxType === "PERCENTAGE") {
+        tax = (fuelTotal * taxRate) / 100;
+      } else if (taxType === "FIXED") {
+        tax = taxAmountVal;
+      }
+      return fuelTotal + tax;
+    }
+
+    // For product purchases
     const items = form.watch("items" as any) || [];
     const purchaseDiscountType = form.watch("discountType" as any) || "NONE";
     const purchaseDiscountAmount = form.watch("discountAmount" as any) || 0;
@@ -489,13 +817,13 @@ export function PurchaseDialog({
 
     const taxType = form.watch("taxType" as any) || "NONE";
     const taxRate = form.watch("taxRate" as any) || 0;
-    const taxAmount = form.watch("taxAmount" as any) || 0;
+    const taxAmountVal = form.watch("taxAmount" as any) || 0;
 
     let tax = 0;
     if (taxType === "PERCENTAGE") {
       tax = (purchaseSubtotal * taxRate) / 100;
     } else if (taxType === "FIXED") {
-      tax = taxAmount;
+      tax = taxAmountVal;
     }
 
     return purchaseSubtotal + tax;
@@ -535,7 +863,7 @@ export function PurchaseDialog({
 
   // Update item totalPrice when item fields change
   useEffect(() => {
-    if (!isEdit) {
+    if (!isEdit && purchaseType === "PRODUCT") {
       watchedItems.forEach((item: any, index: number) => {
         const itemTotal = calculateItemTotal(item);
         form.setValue(`items.${index}.totalPrice` as any, itemTotal, {
@@ -543,7 +871,7 @@ export function PurchaseDialog({
         });
       });
     }
-  }, [watchedItems, form, isEdit]);
+  }, [watchedItems, form, isEdit, purchaseType]);
 
   // Update purchase totalPrice when items or discount change
   useEffect(() => {
@@ -551,6 +879,13 @@ export function PurchaseDialog({
       form.setValue("totalPrice" as any, total, { shouldValidate: false });
     }
   }, [total, form, isEdit]);
+
+  // Initialize fuel items when switching to FUEL mode
+  useEffect(() => {
+    if (purchaseType === "FUEL" && fuelItems.length === 0) {
+      addFuelItem();
+    }
+  }, [purchaseType]);
 
   return (
     <ModalWrapper
@@ -561,7 +896,11 @@ export function PurchaseDialog({
     >
       <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
         <DialogTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
+          {purchaseType === "FUEL" ? (
+            <Droplets className="h-5 w-5" />
+          ) : (
+            <Package className="h-5 w-5" />
+          )}
           {isEdit ? t("editPurchase") : t("createPurchase")}
         </DialogTitle>
         <DialogDescription>
@@ -571,13 +910,78 @@ export function PurchaseDialog({
 
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit, (errors) => {
-            console.log("Form validation errors:", errors);
-          })}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            
+            if (!isEdit && purchaseType === "FUEL") {
+              // For fuel: validate only common fields, skip items validation
+              const commonFieldsValid = await form.trigger(["branchId", "contactId", "status"] as any);
+              if (!commonFieldsValid) return;
+              
+              // Get form values and run fuel-specific submission
+              const data = form.getValues();
+              onSubmit(data as any);
+            } else {
+              // For product/edit: use standard form submission with full Zod validation
+              form.handleSubmit(onSubmit, (errors) => {
+                console.log("Form validation errors:", errors);
+              })(e);
+            }
+          }}
           className="flex flex-col flex-1 min-h-0"
         >
           <ScrollArea className="h-[calc(90vh-220px)]">
             <div className="px-6 pb-6 space-y-4">
+              {/* ─── Purchase Type Toggle (create mode only) ─── */}
+              {!isEdit && (
+                <div className="flex items-center gap-2 p-1 rounded-lg bg-muted w-fit">
+                  <Button
+                    type="button"
+                    variant={purchaseType === "PRODUCT" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      setPurchaseType("PRODUCT");
+                      // Restore default product item when switching back
+                      form.setValue("items" as any, [
+                        {
+                          sku: "",
+                          itemName: "",
+                          itemDescription: "",
+                          unit: "",
+                          price: 0,
+                          quantity: 1,
+                          discountType: "NONE" as const,
+                          discountAmount: 0,
+                          totalPrice: 0,
+                        },
+                      ]);
+                      form.clearErrors("items" as any);
+                    }}
+                    className="gap-2"
+                  >
+                    <Package className="h-4 w-4" />
+                    {t("productPurchase")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={purchaseType === "FUEL" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      setPurchaseType("FUEL");
+                      // Clear product items so Zod doesn't validate them
+                      form.setValue("items" as any, []);
+                      form.clearErrors("items" as any);
+                      setFuelErrors({});
+                    }}
+                    className="gap-2"
+                  >
+                    <Droplets className="h-4 w-4" />
+                    {t("fuelPurchase")}
+                  </Button>
+                </div>
+              )}
+
+              {/* ─── Common Fields: Branch, Contact, Status ─── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -707,9 +1111,351 @@ export function PurchaseDialog({
                 />
               </div>
 
+              {/* ─── FUEL ITEMS SECTION ─── */}
+              {!isEdit && purchaseType === "FUEL" && (
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-medium">
+                      {t("fuelItems")}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addFuelItem}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t("addFuelItem")}
+                    </Button>
+                  </div>
 
+                  {fuelItems.map((fuelItem, fuelIndex) => {
+                    const matchingTankers = getTankersForFuelType(
+                      fuelItem.fuelTypeId
+                    );
+                    const itemErrors = fuelErrors[fuelIndex];
+                    const watchedStatus = form.watch("status" as any) || "PENDING";
+                    const isCompleted = watchedStatus === "COMPLETED";
+                    const allocTotalQty = fuelItem.tankerAllocations.reduce(
+                      (s, a) => s + (a.quantity || 0),
+                      0
+                    );
 
-              {!isEdit && (
+                    return (
+                      <div
+                        key={fuelItem.id}
+                        className={cn(
+                          "p-4 border rounded-lg space-y-4 bg-muted/50 relative",
+                          itemErrors && "border-destructive/50"
+                        )}
+                      >
+                        <div className="absolute top-2 right-2">
+                          {fuelItems.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeFuelItem(fuelIndex)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Row 1: Fuel Type + Cost Price + Quantity */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
+                          {/* Fuel Type */}
+                          <div className="space-y-2">
+                            <Label className="text-sm">
+                              {t("fuelType")} <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={fuelItem.fuelTypeId}
+                              onValueChange={(val) => {
+                                const ft = fuelTypes.find((f) => f.id === val);
+                                updateFuelItem(fuelIndex, {
+                                  fuelTypeId: val,
+                                  fuelTypeName: ft?.name || "",
+                                  tankerAllocations: [],
+                                });
+                                // Clear this field's error
+                                setFuelErrors((prev) => {
+                                  const updated = { ...prev };
+                                  if (updated[fuelIndex]) {
+                                    delete updated[fuelIndex].fuelTypeId;
+                                  }
+                                  return updated;
+                                });
+                              }}
+                            >
+                              <SelectTrigger
+                                className={cn(
+                                  itemErrors?.fuelTypeId && "border-destructive ring-destructive"
+                                )}
+                              >
+                                <SelectValue
+                                  placeholder={t("selectFuelType")}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {fuelTypes.map((ft) => (
+                                  <SelectItem key={ft.id} value={ft.id}>
+                                    {ft.name} — ৳{ft.price}/L (sell)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {itemErrors?.fuelTypeId && (
+                              <p className="text-[0.8rem] font-medium text-destructive">
+                                {itemErrors.fuelTypeId}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Cost Price */}
+                          <div className="space-y-2">
+                            <Label className="text-sm">
+                              {t("costPrice")} <span className="text-destructive">*</span>
+                            </Label>
+                            <NumericInput
+                              value={fuelItem.costPrice}
+                              onValueChange={(val) => {
+                                updateFuelItem(fuelIndex, { costPrice: val });
+                                setFuelErrors((prev) => {
+                                  const updated = { ...prev };
+                                  if (updated[fuelIndex]) {
+                                    delete updated[fuelIndex].costPrice;
+                                  }
+                                  return updated;
+                                });
+                              }}
+                              min={0}
+                              className={cn(
+                                itemErrors?.costPrice && "border-destructive ring-destructive"
+                              )}
+                            />
+                            {itemErrors?.costPrice && (
+                              <p className="text-[0.8rem] font-medium text-destructive">
+                                {itemErrors.costPrice}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Quantity (Liters) */}
+                          <div className="space-y-2">
+                            <Label className="text-sm">
+                              {t("quantity")} ({t("liters")}) <span className="text-destructive">*</span>
+                            </Label>
+                            <NumericInput
+                              value={fuelItem.quantity}
+                              onValueChange={(val) => {
+                                updateFuelItem(fuelIndex, { quantity: val });
+                                setFuelErrors((prev) => {
+                                  const updated = { ...prev };
+                                  if (updated[fuelIndex]) {
+                                    delete updated[fuelIndex].quantity;
+                                  }
+                                  return updated;
+                                });
+                              }}
+                              min={0}
+                              className={cn(
+                                itemErrors?.quantity && "border-destructive ring-destructive"
+                              )}
+                            />
+                            {itemErrors?.quantity && (
+                              <p className="text-[0.8rem] font-medium text-destructive">
+                                {itemErrors.quantity}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Subtotal row */}
+                        {fuelItem.quantity > 0 && fuelItem.costPrice > 0 && (
+                          <div className="flex justify-end items-center text-sm">
+                            <span className="text-muted-foreground mr-2">
+                              {t("subtotal")}:
+                            </span>
+                            <span className="font-bold text-base">
+                              {(fuelItem.quantity * fuelItem.costPrice).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Tanker Allocations (always visible when fuel type is selected) */}
+                        {fuelItem.fuelTypeId && (
+                          <div className="space-y-3 border-t pt-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium">
+                                {t("tankerAllocations")}
+                                {isCompleted && (
+                                  <span className="text-destructive ml-1">*</span>
+                                )}
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addTankerAllocation(fuelIndex)}
+                                disabled={matchingTankers.length === 0}
+                                className="h-7 text-xs"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                {t("addTankerAllocation")}
+                              </Button>
+                            </div>
+
+                            {matchingTankers.length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center py-2">
+                                No tankers found for this fuel type. Create a
+                                tanker first.
+                              </p>
+                            )}
+
+                            {fuelItem.tankerAllocations.length === 0 &&
+                              matchingTankers.length > 0 && (
+                                <p className={cn(
+                                  "text-xs text-center py-2",
+                                  itemErrors?.tankerAllocations
+                                    ? "text-destructive font-medium"
+                                    : "text-muted-foreground"
+                                )}>
+                                  {itemErrors?.tankerAllocations || t("noTankerAllocations")}
+                                </p>
+                              )}
+
+                            {fuelItem.tankerAllocations.map(
+                              (alloc, allocIndex) => {
+                                const allocError = itemErrors?.allocations?.[allocIndex];
+                                return (
+                                  <div
+                                    key={alloc.id}
+                                    className="flex gap-2 items-start"
+                                  >
+                                    <div className="flex-1 space-y-1">
+                                      <Label className="text-xs">
+                                        {t("tanker")} <span className="text-destructive">*</span>
+                                      </Label>
+                                      <Select
+                                        value={alloc.tankerId}
+                                        onValueChange={(val) => {
+                                          const tk = matchingTankers.find(
+                                            (t) => t.id === val
+                                          );
+                                          updateTankerAllocation(
+                                            fuelIndex,
+                                            allocIndex,
+                                            {
+                                              tankerId: val,
+                                              tankerName: tk?.name || "",
+                                            }
+                                          );
+                                        }}
+                                      >
+                                        <SelectTrigger
+                                          className={cn(
+                                            "h-9 text-xs",
+                                            allocError?.tankerId && "border-destructive ring-destructive"
+                                          )}
+                                        >
+                                          <SelectValue
+                                            placeholder={t("selectTanker")}
+                                          />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {matchingTankers.map((tk) => (
+                                            <SelectItem
+                                              key={tk.id}
+                                              value={tk.id}
+                                            >
+                                              {tk.name} ({tk.currentFuel}/
+                                              {tk.capacity}L)
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      {allocError?.tankerId && (
+                                        <p className="text-[0.8rem] font-medium text-destructive">
+                                          {allocError.tankerId}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="w-[140px] space-y-1">
+                                      <Label className="text-xs">
+                                        {t("quantity")} (L) <span className="text-destructive">*</span>
+                                      </Label>
+                                      <NumericInput
+                                        value={alloc.quantity}
+                                        onValueChange={(val) =>
+                                          updateTankerAllocation(
+                                            fuelIndex,
+                                            allocIndex,
+                                            { quantity: val }
+                                          )
+                                        }
+                                        min={0}
+                                        className={cn(
+                                          "h-9 text-xs",
+                                          allocError?.quantity && "border-destructive ring-destructive"
+                                        )}
+                                      />
+                                      {allocError?.quantity && (
+                                        <p className="text-[0.8rem] font-medium text-destructive">
+                                          {allocError.quantity}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        removeTankerAllocation(
+                                          fuelIndex,
+                                          allocIndex
+                                        )
+                                      }
+                                      className="h-9 w-9 p-0 mt-5"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                );
+                              }
+                            )}
+
+                            {/* Tanker allocation summary + mismatch error */}
+                            {fuelItem.tankerAllocations.length > 0 && (
+                              <div className="pt-2 border-t space-y-1">
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-muted-foreground">
+                                    Allocated: {allocTotalQty.toFixed(2)} L / {(fuelItem.quantity || 0).toFixed(2)} L
+                                  </span>
+                                  {fuelItem.quantity > 0 && Math.abs(allocTotalQty - fuelItem.quantity) > 0.01 && (
+                                    <span className="text-xs text-destructive font-medium">
+                                      Mismatch: {(allocTotalQty - fuelItem.quantity).toFixed(2)} L
+                                    </span>
+                                  )}
+                                </div>
+                                {itemErrors?.tankerAllocations && (
+                                  <p className="text-[0.8rem] font-medium text-destructive">
+                                    {itemErrors.tankerAllocations}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ─── PRODUCT ITEMS SECTION (existing) ─── */}
+              {!isEdit && purchaseType === "PRODUCT" && (
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-base font-medium">
@@ -806,7 +1552,6 @@ export function PurchaseDialog({
                                                 [index]: product,
                                               }));
                                               field.onChange(product.name);
-                                              // auto-fill...
                                               const sku =
                                                 product.barcode ||
                                                 `SKU-${product.id}`;
@@ -1106,351 +1851,239 @@ export function PurchaseDialog({
                           </div>
                         </div>
                       </div>
-
-                      {/* Payment Method Selection */}
-                      {!isEdit && (
-                        <>
-                          <div className="space-y-4 pt-4 border-t">
-                            <Label className="text-base font-medium">
-                              {t("paymentMethod")}
-                            </Label>
-                            <div className="flex gap-2 flex-wrap">
-                              <Button
-                                type="button"
-                                variant={
-                                  paymentMethod === "CASH"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setPaymentMethod("CASH")}
-                                className="text-xs"
-                              >
-                                Cash
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  paymentMethod === "CARD"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setPaymentMethod("CARD")}
-                                className="text-xs"
-                              >
-                                Card
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  paymentMethod === "CREDIT"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setPaymentMethod("CREDIT")}
-                                className="text-xs"
-                              >
-                                Credit
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  paymentMethod === "MIXED"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setPaymentMethod("MIXED")}
-                                className="text-xs"
-                              >
-                                Mixed
-                              </Button>
-                            </div>
-
-                            {/* Account Selection for CASH */}
-                            {paymentMethod === "CASH" &&
-                              accounts.length > 0 && (
-                                <div className="space-y-2">
-                                  <Label className="text-sm">
-                                    {t("account")}
-                                  </Label>
-                                  <Select
-                                    value={cashAccountId}
-                                    onValueChange={setCashAccountId}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue
-                                        placeholder={t("selectAccount")}
-                                      />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {accounts.map((account) => (
-                                        <SelectItem
-                                          key={account.id}
-                                          value={account.id}
-                                        >
-                                          {account.name} ({account.type})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-
-                            {/* Account Selection for CARD */}
-                            {paymentMethod === "CARD" &&
-                              accounts.length > 0 && (
-                                <div className="space-y-2">
-                                  <Label className="text-sm">
-                                    {t("account")}
-                                  </Label>
-                                  <Select
-                                    value={bankAccountId}
-                                    onValueChange={setBankAccountId}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue
-                                        placeholder={t("selectAccount")}
-                                      />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {accounts.map((account) => (
-                                        <SelectItem
-                                          key={account.id}
-                                          value={account.id}
-                                        >
-                                          {account.name} ({account.type})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-
-                            {/* Payment Splits for MIXED */}
-                            {paymentMethod === "MIXED" && (
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-sm">
-                                    {t("paymentSplit")}
-                                  </Label>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setPaymentSplits([
-                                        ...paymentSplits,
-                                        {
-                                          id: `split-${Date.now()}-${Math.random()}`,
-                                          accountId: "",
-                                          amount: 0,
-                                        },
-                                      ]);
-                                    }}
-                                    className="h-7 text-xs"
-                                  >
-                                    <Plus className="h-3 w-3 mr-1" />
-                                    {t("addAccount")}
-                                  </Button>
-                                </div>
-
-                                {paymentSplits.length === 0 && (
-                                  <p className="text-xs text-muted-foreground text-center py-2">
-                                    {t("noPaymentSplits")}
-                                  </p>
-                                )}
-
-                                {paymentSplits.map((split, index) => {
-                                  const totalAllocated = paymentSplits.reduce(
-                                    (sum, s) => sum + (s.amount || 0),
-                                    0,
-                                  );
-                                  return (
-                                    <div
-                                      key={split.id}
-                                      className="flex gap-2 items-start"
-                                    >
-                                      <div className="flex-1 space-y-1">
-                                        <Select
-                                          value={split.accountId}
-                                          onValueChange={(value) => {
-                                            const updated = [...paymentSplits];
-                                            updated[index].accountId = value;
-                                            setPaymentSplits(updated);
-                                          }}
-                                        >
-                                          <SelectTrigger className="h-9 text-xs">
-                                            <SelectValue
-                                              placeholder={t("selectAccount")}
-                                            />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {accounts.map((account) => (
-                                              <SelectItem
-                                                key={account.id}
-                                                value={account.id}
-                                              >
-                                                {account.name} ({account.type})
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <NumericInput
-                                          value={split.amount || 0}
-                                          onValueChange={(value) => {
-                                            const updated = [...paymentSplits];
-                                            const amount = Math.max(
-                                              0,
-                                              Math.min(value, total),
-                                            );
-                                            updated[index].amount = amount;
-                                            setPaymentSplits(updated);
-                                          }}
-                                          className="h-9 text-xs"
-                                          min={0}
-                                        />
-                                      </div>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          setPaymentSplits(
-                                            paymentSplits.filter(
-                                              (_, i) => i !== index,
-                                            ),
-                                          );
-                                        }}
-                                        className="h-9 w-9 p-0"
-                                      >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
-
-                                {paymentSplits.length > 0 && (
-                                  <div className="pt-2 border-t space-y-1">
-                                    <div className="flex justify-between text-xs">
-                                      <span className="text-muted-foreground">
-                                        {t("totalAllocated")}:
-                                      </span>
-                                      <span className="font-medium">
-                                        {paymentSplits
-                                          .reduce(
-                                            (sum, s) => sum + (s.amount || 0),
-                                            0,
-                                          )
-                                          .toFixed(2)}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between text-xs">
-                                      <span className="text-muted-foreground">
-                                        {t("remaining")}:
-                                      </span>
-                                      <span
-                                        className={
-                                          total -
-                                            paymentSplits.reduce(
-                                              (sum, s) => sum + (s.amount || 0),
-                                              0,
-                                            ) <
-                                            0
-                                            ? "text-destructive font-medium"
-                                            : "font-medium"
-                                        }
-                                      >
-                                        {(
-                                          total -
-                                          paymentSplits.reduce(
-                                            (sum, s) => sum + (s.amount || 0),
-                                            0,
-                                          )
-                                        ).toFixed(2)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                            <div className="flex items-center justify-between text-lg font-semibold">
-                              <span>{t("total")}:</span>
-                              <span>{total.toFixed(2)}</span>
-                            </div>
-
-                            {(paymentMethod === "CASH" ||
-                              paymentMethod === "CARD") && (
-                                <div className="flex items-center justify-between pt-4 border-t border-border">
-                                  <div className="w-[150px] sm:w-[250px]">
-                                    <FormField
-                                      control={form.control}
-                                      name="paidAmount"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>{t("paidAmount")}</FormLabel>
-                                          <FormControl>
-                                            <NumericInput
-                                              min={0}
-                                              {...field}
-                                              value={field.value || 0}
-                                              onValueChange={(val) => {
-                                                const currentTotal = total || 0;
-                                                field.onChange(
-                                                  Math.min(val, currentTotal),
-                                                );
-                                              }}
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-
-                                  <div className="flex flex-col items-end justify-center space-y-1">
-                                    <Label className="text-muted-foreground">
-                                      {t("dueAmount")}
-                                    </Label>
-                                    <div className="text-2xl font-bold pt-1">
-                                      <span
-                                        className={
-                                          Number(form.watch("dueAmount" as any) || 0) > 0
-                                            ? "text-destructive"
-                                            : "text-emerald-600"
-                                        }
-                                      >
-                                        {Number(
-                                          form.watch("dueAmount" as any) || 0,
-                                        ).toFixed(2)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                            {!isEdit &&
-                              dueAmount > 0 &&
-                              selectedContact &&
-                              isCreditExceeded && (
-                                <div className="flex justify-end pt-2">
-                                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20">
-                                    Exceeds available credit of{" "}
-                                    {availableCredit.toFixed(2)}
-                                  </p>
-                                </div>
-                              )}
-                          </div>
-                        </>
-                      )}
                     </>
                   )}
                 </div>
+              )}
+
+              {/* ─── TAX SECTION FOR FUEL (shown outside product items block) ─── */}
+              {!isEdit && purchaseType === "FUEL" && fuelItems.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <Label className="text-base font-medium">
+                    Order Summary
+                  </Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Tax */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Tax</Label>
+                      <div className="flex gap-2">
+                        <FormField
+                          control={form.control}
+                          name="taxType"
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger className="w-[110px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="NONE">None</SelectItem>
+                                <SelectItem value="PERCENTAGE">
+                                  %
+                                </SelectItem>
+                                <SelectItem value="FIXED">
+                                  Fixed
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {form.watch("taxType" as any) ===
+                          "PERCENTAGE" && (
+                            <FormField
+                              control={form.control}
+                              name="taxRate"
+                              render={({ field }) => (
+                                <NumericInput
+                                  className="flex-1"
+                                  {...field}
+                                  value={field.value || 0}
+                                  onValueChange={field.onChange}
+                                />
+                              )}
+                            />
+                          )}
+                        {form.watch("taxType" as any) === "FIXED" && (
+                          <FormField
+                            control={form.control}
+                            name="taxAmount"
+                            render={({ field }) => (
+                              <NumericInput
+                                className="flex-1"
+                                {...field}
+                                value={field.value || 0}
+                                onValueChange={field.onChange}
+                              />
+                            )}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── PAYMENT & TOTAL SECTION (shared for both types) ─── */}
+              {!isEdit && total !== null && (
+                <>
+                  {/* Payment Method Selection */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <Label className="text-base font-medium">
+                      {t("paymentMethod")}
+                    </Label>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button type="button" variant={paymentMethod === "CASH" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CASH")} className="text-xs">Cash</Button>
+                      <Button type="button" variant={paymentMethod === "CARD" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CARD")} className="text-xs">Card</Button>
+                      <Button type="button" variant={paymentMethod === "CREDIT" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CREDIT")} className="text-xs">Credit</Button>
+                      <Button type="button" variant={paymentMethod === "MIXED" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("MIXED")} className="text-xs">Mixed</Button>
+                    </div>
+
+                    {/* Account Selection for CASH */}
+                    {paymentMethod === "CASH" && accounts.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t("account")}</Label>
+                        <Select value={cashAccountId} onValueChange={setCashAccountId}>
+                          <SelectTrigger><SelectValue placeholder={t("selectAccount")} /></SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>{account.name} ({account.type})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Account Selection for CARD */}
+                    {paymentMethod === "CARD" && accounts.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm">{t("account")}</Label>
+                        <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                          <SelectTrigger><SelectValue placeholder={t("selectAccount")} /></SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>{account.name} ({account.type})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Payment Splits for MIXED */}
+                    {paymentMethod === "MIXED" && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">{t("paymentSplit")}</Label>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setPaymentSplits([...paymentSplits, { id: `split-${Date.now()}-${Math.random()}`, accountId: "", amount: 0 }])} className="h-7 text-xs">
+                            <Plus className="h-3 w-3 mr-1" />{t("addAccount")}
+                          </Button>
+                        </div>
+                        {paymentSplits.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">{t("noPaymentSplits")}</p>
+                        )}
+                        {paymentSplits.map((split, index) => (
+                          <div key={split.id} className="flex gap-2 items-start">
+                            <div className="flex-1 space-y-1">
+                              <Select value={split.accountId} onValueChange={(value) => { const updated = [...paymentSplits]; updated[index].accountId = value; setPaymentSplits(updated); }}>
+                                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={t("selectAccount")} /></SelectTrigger>
+                                <SelectContent>
+                                  {accounts.map((account) => (
+                                    <SelectItem key={account.id} value={account.id}>{account.name} ({account.type})</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <NumericInput value={split.amount || 0} onValueChange={(value) => { const updated = [...paymentSplits]; updated[index].amount = Math.max(0, Math.min(value, total)); setPaymentSplits(updated); }} className="h-9 text-xs" min={0} />
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setPaymentSplits(paymentSplits.filter((_, i) => i !== index))} className="h-9 w-9 p-0">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                        {paymentSplits.length > 0 && (
+                          <div className="pt-2 border-t space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">{t("totalAllocated")}:</span>
+                              <span className="font-medium">{paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">{t("remaining")}:</span>
+                              <span className={(total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)) < 0 ? "text-destructive font-medium" : "font-medium"}>
+                                {(total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                    <div className="flex items-center justify-between text-lg font-semibold">
+                      <span>{t("total")}:</span>
+                      <span>{total.toFixed(2)}</span>
+                    </div>
+
+                    {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div className="w-[150px] sm:w-[250px]">
+                          <FormField
+                            control={form.control}
+                            name="paidAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("paidAmount")}</FormLabel>
+                                <FormControl>
+                                  <NumericInput
+                                    min={0}
+                                    {...field}
+                                    value={field.value || 0}
+                                    onValueChange={(val) => {
+                                      const currentTotal = total || 0;
+                                      field.onChange(Math.min(val, currentTotal));
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="flex flex-col items-end justify-center space-y-1">
+                          <Label className="text-muted-foreground">
+                            {t("dueAmount")}
+                          </Label>
+                          <div className="text-2xl font-bold pt-1">
+                            <span
+                              className={
+                                Number(form.watch("dueAmount" as any) || 0) > 0
+                                  ? "text-destructive"
+                                  : "text-emerald-600"
+                              }
+                            >
+                              {Number(
+                                form.watch("dueAmount" as any) || 0,
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isEdit &&
+                      dueAmount > 0 &&
+                      selectedContact &&
+                      isCreditExceeded && (
+                        <div className="flex justify-end pt-2">
+                          <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20">
+                            Exceeds available credit of{" "}
+                            {availableCredit.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                </>
               )}
             </div>
           </ScrollArea>

@@ -248,6 +248,10 @@ export interface PurchaseItem {
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount?: number
   totalPrice?: number
+  fuelTypeId?: string
+  tankerId?: string
+  itemType?: ItemType
+  productId?: string
 }
 
 export type PurchaseStatus = "PENDING" | "COMPLETED" | "CANCELLED"
@@ -257,6 +261,7 @@ export interface Purchase {
   businessId?: string
   branchId: string
   contactId: string
+  purchaseType?: "PRODUCT" | "FUEL"
   status: PurchaseStatus
   paidAmount: number
   dueAmount: number

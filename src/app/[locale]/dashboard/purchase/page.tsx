@@ -34,10 +34,17 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Purchase } from "@/types"
-import { CreditCard, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
+import { CreditCard, Droplets, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export default function PurchasePage() {
   const t = useTranslations("purchases")
@@ -54,6 +61,7 @@ export default function PurchasePage() {
 
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<"ALL" | "PRODUCT" | "FUEL">("ALL")
   const limit = 10
 
   // View mode with localStorage persistence
@@ -85,8 +93,12 @@ export default function PurchasePage() {
     // Always include branchId (even if null) so React Query detects changes
     params.branchId = selectedBranchId || undefined
 
+    if (purchaseTypeFilter !== "ALL") {
+      params.purchaseType = purchaseTypeFilter
+    }
+
     return params
-  }, [page, limit, search, selectedBranchId])
+  }, [page, limit, search, selectedBranchId, purchaseTypeFilter])
 
   // Reset to page 1 when branch changes
   useEffect(() => {
@@ -138,6 +150,20 @@ export default function PurchasePage() {
           )
         },
         sortable: true,
+      },
+      {
+        id: "purchaseType",
+        header: t("purchaseType"),
+        cell: (row) => {
+          const isFuel = row.purchaseType === "FUEL"
+          return (
+            <Badge variant={isFuel ? "secondary" : "outline"} className="gap-1">
+              {isFuel ? <Droplets className="h-3 w-3" /> : <Package className="h-3 w-3" />}
+              {isFuel ? t("fuelPurchase") : t("productPurchase")}
+            </Badge>
+          )
+        },
+        sortable: false,
       },
       {
         id: "totalAmount",
@@ -365,6 +391,30 @@ export default function PurchasePage() {
                   className="pl-9"
                 />
               </div>
+              <Select
+                value={purchaseTypeFilter}
+                onValueChange={(val) => {
+                  setPurchaseTypeFilter(val as "ALL" | "PRODUCT" | "FUEL")
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("allTypes")}</SelectItem>
+                  <SelectItem value="PRODUCT">
+                    <span className="flex items-center gap-1">
+                      <Package className="h-3 w-3" /> {t("productPurchase")}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="FUEL">
+                    <span className="flex items-center gap-1">
+                      <Droplets className="h-3 w-3" /> {t("fuelPurchase")}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
                 data={purchases}
@@ -459,6 +509,10 @@ export default function PurchasePage() {
                               : p.status === "COMPLETED"
                               ? t("statusCompleted")
                               : t("statusCancelled")}
+                          </Badge>
+                          <Badge variant={p.purchaseType === "FUEL" ? "secondary" : "outline"} className="gap-1">
+                            {p.purchaseType === "FUEL" ? <Droplets className="h-3 w-3" /> : <Package className="h-3 w-3" />}
+                            {p.purchaseType === "FUEL" ? t("fuelPurchase") : t("productPurchase")}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
