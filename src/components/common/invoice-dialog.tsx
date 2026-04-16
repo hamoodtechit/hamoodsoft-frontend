@@ -111,7 +111,7 @@ export function InvoiceDialog({
   // Get invoice layout from settings
   const invoiceLayout = invoiceSettings?.layout || "pos-80mm";
 
-  // Determine width based on layout
+  // Determine width for download/print windows
   const getInvoiceWidth = () => {
     switch (invoiceLayout) {
       case "pos-58mm":
@@ -125,16 +125,44 @@ export function InvoiceDialog({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const isPosNarrow = invoiceLayout === "pos-58mm" || invoiceLayout === "pos-80mm";
+
+  /**
+   * Extracts all compiled CSS from the current document's stylesheets.
+   * This captures Tailwind's generated classes, CSS variables, and any custom styles.
+   */
+  const extractPageStyles = (): string => {
+    let cssText = "";
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        for (const rule of Array.from(sheet.cssRules)) {
+          cssText += rule.cssText + "\n";
+        }
+      } catch {
+        // Skip cross-origin stylesheets that can't be read
+      }
+    }
+    return cssText;
   };
 
-  const handleDownload = () => {
+  /**
+   * Opens a new window with the invoice content and all page styles,
+   * then triggers the browser's print dialog.
+   */
+  const openPrintWindow = () => {
     const invoiceWidth = getInvoiceWidth();
+    const isA4 = invoiceLayout === "pos-a4";
 
-    // Create a printable HTML content
-    const printContent =
-      document.getElementById("invoice-content")?.innerHTML || "";
+    // Clone invoice content, stripping elements that should be hidden in print
+    const sourceEl = document.getElementById("invoice-content");
+    if (!sourceEl) return;
+    const clone = sourceEl.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll("[class*='print\\:hidden'], [class*='print:hidden']").forEach(el => el.remove());
+    const printContent = clone.innerHTML;
+
+    // Extract all CSS from the current page (includes Tailwind + CSS variables)
+    const pageStyles = extractPageStyles();
+
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
@@ -142,55 +170,69 @@ export function InvoiceDialog({
         <html>
           <head>
             <title>${isPurchase ? "Receipt" : "Invoice"} ${transaction?.id}</title>
+            <style>${pageStyles}</style>
             <style>
-              @page { size: ${invoiceLayout === "pos-a4" ? "A4" : "auto"}; margin: 0; }
-              * { box-sizing: border-box; }
-              body { 
-                font-family: Arial, sans-serif; 
-                padding: ${invoiceLayout === "pos-a4" ? "20px" : "10px"}; 
-                width: ${invoiceWidth};
-                margin: 0 auto;
+              @page {
+                size: ${isA4 ? "A4" : `${invoiceWidth} auto`};
+                margin: ${isA4 ? "5mm" : "1mm"};
               }
-              .invoice-header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-              .invoice-title { font-size: ${invoiceLayout === "pos-a4" ? "24px" : "18px"}; font-weight: bold; }
-              .invoice-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: ${invoiceLayout === "pos-a4" ? "14px" : "12px"}; }
-              .invoice-table th, .invoice-table td { padding: ${invoiceLayout === "pos-a4" ? "10px" : "6px"}; text-align: left; border-bottom: 1px solid #ddd; }
-              .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
-              .invoice-totals { margin-top: 20px; text-align: right; }
-              .invoice-footer { margin-top: 40px; text-align: center; color: #666; }
+              html, body {
+                background: white !important;
+                color: black !important;
+                margin: 20px;
+                padding: ${isA4 ? "20px" : "8px"};
+              }
+              #print-root {
+                width: 100%;
+                margin: 20px;
+                padding: ${isA4 ? "20px" : "20px"};
+              }
             </style>
           </head>
           <body>
-            ${printContent}
+            <div id="print-root">
+              ${printContent}
+            </div>
           </body>
         </html>
       `);
       printWindow.document.close();
-      printWindow.print();
+      // Small delay to let styles apply before triggering print
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
     }
+  };
+
+  const handlePrint = () => {
+    openPrintWindow();
+  };
+
+  const handleDownload = () => {
+    openPrintWindow();
   };
 
   if (!transaction) return null;
 
   // Determine max width based on layout
+  // Important: These must override the base max-w-lg (512px) from DialogContent
   const getMaxWidthClass = () => {
     switch (invoiceLayout) {
       case "pos-58mm":
-        return "w-[95vw] sm:max-w-md print:w-[58mm] print:max-w-[58mm]";
+        return "!max-w-[360px] w-[95vw]";
       case "pos-80mm":
-        return "w-[95vw] sm:max-w-lg print:w-[80mm] print:max-w-[80mm]";
+        return "!max-w-[480px] w-[95vw]";
       case "pos-a4":
-        return "w-[95vw] sm:max-w-4xl print:w-[210mm] print:max-w-[210mm]";
+        return "!max-w-[900px] w-[95vw]";
       default:
-        return "w-[95vw] sm:max-w-lg print:w-[80mm] print:max-w-[80mm]";
+        return "!max-w-[480px] w-[95vw]";
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto print:max-h-none mx-auto`}
+        className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto mx-auto`}
       >
         {/* Accessibility: DialogContent requires DialogTitle */}
         <DialogHeader className="sr-only">
@@ -205,11 +247,33 @@ export function InvoiceDialog({
                 : "text-xs"
             }`}
         >
+          {/* Action Buttons — hidden in print */}
+          <div className="flex items-center justify-end gap-2 mb-4 print:hidden">
+            {onOpenRecentTransactions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenRecentTransactions}
+              >
+                <History className="h-4 w-4 mr-2" />
+                Recent
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+
           {/* Invoice Header */}
           <div
-            className={`flex items-start justify-between ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}
+            className={`${isPosNarrow ? "flex flex-col gap-2" : "flex items-start justify-between"} ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}
           >
-            <div>
+            <div className="min-w-0 flex-1">
               {/* Logo */}
               {generalSettings?.logoUrl && (
                 <div className={invoiceLayout === "pos-a4" ? "mb-4" : "mb-2"}>
@@ -266,27 +330,7 @@ export function InvoiceDialog({
                 </div>
               )}
             </div>
-            <div className="text-right">
-              <div className="flex gap-2 mb-2 print:hidden">
-                {onOpenRecentTransactions && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onOpenRecentTransactions}
-                  >
-                    <History className="h-4 w-4 mr-2" />
-                    Recent
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </div>
+            <div className={isPosNarrow ? "" : "text-right flex-shrink-0"}>
               <Badge
                 variant={
                   transaction.paymentStatus === "PAID"
@@ -305,32 +349,34 @@ export function InvoiceDialog({
           </div>
 
           {/* Items Table */}
-          <div className="mb-6 overflow-x-auto print:overflow-x-visible">
-            <table className="w-full border-collapse min-w-[400px] print:min-w-0">
+          <div className="mb-6 overflow-x-auto print:overflow-visible">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Item</th>
-                  <th className="text-left py-3 px-4 font-semibold">
-                    Description
-                  </th>
-                  <th className="text-center py-3 px-4 font-semibold">Qty</th>
-                  <th className="text-right py-3 px-4 font-semibold">
-                    Unit Price
-                  </th>
-                  {totals.discount > 0 && (
-                    <th className="text-right py-3 px-4 font-semibold">
-                      Discount
+                  <th className={`text-left font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Item</th>
+                  {!isPosNarrow && (
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Description
                     </th>
                   )}
-                  <th className="text-right py-3 px-4 font-semibold">Total</th>
+                  <th className={`text-center font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Qty</th>
+                  <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                    Price
+                  </th>
+                  {totals.discount > 0 && (
+                    <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                      Disc.
+                    </th>
+                  )}
+                  <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Total</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr className="border-b">
                     <td
-                      className="py-6 px-4 text-center text-muted-foreground"
-                      colSpan={totals.discount > 0 ? 6 : 5}
+                      className={`text-center text-muted-foreground ${isPosNarrow ? "py-4 px-2" : "py-6 px-4"}`}
+                      colSpan={totals.discount > 0 ? (isPosNarrow ? 5 : 6) : (isPosNarrow ? 4 : 5)}
                     >
                       No items found.
                     </td>
@@ -349,31 +395,38 @@ export function InvoiceDialog({
 
                     return (
                       <tr key={index} className="border-b">
-                        <td className="py-3 px-4">
+                        <td className={isPosNarrow ? "py-2 px-2" : "py-3 px-4"}>
                           <div className="font-medium">{item.itemName}</div>
                           {item.sku && (
                             <div className="text-xs text-muted-foreground">
                               SKU: {item.sku}
                             </div>
                           )}
+                          {isPosNarrow && item.itemDescription && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {item.itemDescription}
+                            </div>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-muted-foreground text-sm">
-                          {item.itemDescription || "-"}
-                        </td>
-                        <td className="py-3 px-4 text-center">
+                        {!isPosNarrow && (
+                          <td className="py-3 px-4 text-muted-foreground text-sm">
+                            {item.itemDescription || "-"}
+                          </td>
+                        )}
+                        <td className={`text-center ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           {item.quantity} {item.unit}
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           {formatCurrency(item.price, { generalSettings })}
                         </td>
                         {totals.discount > 0 && (
-                          <td className="py-3 px-4 text-right">
+                          <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                             {itemDiscount > 0
                               ? `-${formatCurrency(itemDiscount, { generalSettings })}`
                               : "-"}
                           </td>
                         )}
-                        <td className="py-3 px-4 text-right font-medium">
+                        <td className={`text-right font-medium ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           {formatCurrency(itemTotal, { generalSettings })}
                         </td>
                       </tr>
