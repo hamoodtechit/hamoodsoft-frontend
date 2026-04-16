@@ -260,9 +260,39 @@ export function PurchaseDialog({
         setCashAccountId("");
         setBankAccountId("");
         setPaymentSplits([]);
+      } else if (purchase && purchase.purchaseType === "FUEL") {
+        setPurchaseType("FUEL");
+        const fuelMap = new Map<string, FuelItemState>();
+        purchase.items?.forEach((item: any) => {
+          if (item.itemType === "FUEL" && item.fuelTypeId) {
+            const key = `${item.fuelTypeId}-${item.price}`;
+            if (!fuelMap.has(key)) {
+              fuelMap.set(key, {
+                id: `fuel-${Date.now()}-${Math.random()}`,
+                fuelTypeId: item.fuelTypeId,
+                fuelTypeName: item.itemName,
+                costPrice: Number(item.price),
+                quantity: 0,
+                tankerAllocations: []
+              });
+            }
+            const state = fuelMap.get(key)!;
+            state.quantity += Number(item.quantity);
+            if (item.tankerId) {
+              state.tankerAllocations.push({
+                 id: `alloc-${Date.now()}-${Math.random()}`,
+                 tankerId: item.tankerId,
+                 tankerName: item.itemDescription?.replace("Tanker: ", "") || "",
+                 quantity: Number(item.quantity)
+              });
+            }
+          }
+        });
+        setFuelItems(Array.from(fuelMap.values()));
+        setFuelErrors({});
       }
     }
-  }, [open, defaultValues, form, isEdit, selectedBranchId]);
+  }, [open, defaultValues, form, isEdit, selectedBranchId, purchase]);
 
   // ─── Fuel helpers ───
 
@@ -434,6 +464,63 @@ export function PurchaseDialog({
     console.log("Purchase form submitted", data);
 
     if (isEdit && purchase) {
+      if (purchaseType === "FUEL") {
+        const status = (data as any).status || purchase.status;
+        
+        // Run inline validation
+        if (!validateFuelItems(status)) return;
+
+        // Build purchase items
+        const purchaseItems: any[] = [];
+        for (const fuelItem of fuelItems) {
+          if (status === "COMPLETED" && fuelItem.tankerAllocations.length > 0) {
+            for (const alloc of fuelItem.tankerAllocations) {
+              if (!alloc.tankerId || alloc.quantity <= 0) continue;
+              purchaseItems.push({
+                sku: `FUEL-${fuelItem.fuelTypeId}-${alloc.tankerId}-${Date.now()}`,
+                itemName: fuelItem.fuelTypeName || "Fuel",
+                itemDescription: alloc.tankerName ? `Tanker: ${alloc.tankerName}` : "",
+                unit: "L",
+                price: fuelItem.costPrice,
+                quantity: alloc.quantity,
+                totalPrice: alloc.quantity * fuelItem.costPrice,
+                fuelTypeId: fuelItem.fuelTypeId,
+                tankerId: alloc.tankerId,
+                itemType: "FUEL",
+                discountType: "NONE",
+                discountAmount: 0,
+              });
+            }
+          } else {
+            // Non-completed: single item using the total quantity (no tanker required)
+            purchaseItems.push({
+              sku: `FUEL-${fuelItem.fuelTypeId}-${Date.now()}`,
+              itemName: fuelItem.fuelTypeName || "Fuel",
+              itemDescription: "",
+              unit: "L",
+              price: fuelItem.costPrice,
+              quantity: fuelItem.quantity,
+              totalPrice: fuelItem.quantity * fuelItem.costPrice,
+              fuelTypeId: fuelItem.fuelTypeId,
+              itemType: "FUEL",
+              discountType: "NONE",
+              discountAmount: 0,
+            });
+          }
+        }
+
+        const updateData = {
+          ...data,
+          items: purchaseItems
+        };
+        
+        updateMutation.mutate(
+          { id: purchase.id, data: updateData as unknown as UpdatePurchaseInput },
+          { onSuccess: () => onOpenChange(false) }
+        );
+        return;
+      }
+
       updateMutation.mutate(
         { id: purchase.id, data: data as UpdatePurchaseInput },
         {
@@ -1112,21 +1199,23 @@ export function PurchaseDialog({
               </div>
 
               {/* ─── FUEL ITEMS SECTION ─── */}
-              {!isEdit && purchaseType === "FUEL" && (
+              {purchaseType === "FUEL" && (
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-base font-medium">
                       {t("fuelItems")}
                     </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addFuelItem}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      {t("addFuelItem")}
-                    </Button>
+                    {!isEdit && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addFuelItem}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t("addFuelItem")}
+                      </Button>
+                    )}
                   </div>
 
                   {fuelItems.map((fuelItem, fuelIndex) => {
@@ -1150,7 +1239,7 @@ export function PurchaseDialog({
                         )}
                       >
                         <div className="absolute top-2 right-2">
-                          {fuelItems.length > 1 && (
+                          {fuelItems.length > 1 && !isEdit && (
                             <Button
                               type="button"
                               variant="ghost"
@@ -1172,6 +1261,7 @@ export function PurchaseDialog({
                             </Label>
                             <Select
                               value={fuelItem.fuelTypeId}
+                              disabled={isEdit}
                               onValueChange={(val) => {
                                 const ft = fuelTypes.find((f) => f.id === val);
                                 updateFuelItem(fuelIndex, {
@@ -1220,6 +1310,7 @@ export function PurchaseDialog({
                             </Label>
                             <NumericInput
                               value={fuelItem.costPrice}
+                              disabled={isEdit}
                               onValueChange={(val) => {
                                 updateFuelItem(fuelIndex, { costPrice: val });
                                 setFuelErrors((prev) => {
@@ -1249,6 +1340,7 @@ export function PurchaseDialog({
                             </Label>
                             <NumericInput
                               value={fuelItem.quantity}
+                              disabled={isEdit}
                               onValueChange={(val) => {
                                 updateFuelItem(fuelIndex, { quantity: val });
                                 setFuelErrors((prev) => {

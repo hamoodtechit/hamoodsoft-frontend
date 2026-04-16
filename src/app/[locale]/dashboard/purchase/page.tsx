@@ -477,10 +477,12 @@ export default function PurchasePage() {
                           Add Payment
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => handleEdit(row)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {tCommon("edit")}
-                      </DropdownMenuItem>
+                      {row.status !== "COMPLETED" && (
+                        <DropdownMenuItem onClick={() => handleEdit(row)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {tCommon("edit")}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => handleDelete(row)}
                         className="text-destructive"
@@ -571,10 +573,12 @@ export default function PurchasePage() {
                               Add Payment
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => handleEdit(p)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
+                          {p.status !== "COMPLETED" && (
+                            <DropdownMenuItem onClick={() => handleEdit(p)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleDelete(p)}
                             className="text-destructive"
