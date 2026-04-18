@@ -547,7 +547,7 @@ export default function StocksPage() {
                                   {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
                                 </Badge>
                                 <span className="font-medium">
-                                  {t("quantity")}: {quantityChange}
+                                  {t("quantity")}: {Math.abs(businessConfig.showPointReducing ? quantityChange : (h.itemType === "FUEL" ? (h.namedQuantity ?? quantityChange) : quantityChange))}
                                 </span>
                                 {stockQuantity !== undefined && stockQuantity !== null && (
                                   <span className="text-sm text-muted-foreground">
