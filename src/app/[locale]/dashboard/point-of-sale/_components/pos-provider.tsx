@@ -19,6 +19,7 @@ import { useCreateSale, useDeleteSale, useSales } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
 import { useInfiniteDispensers } from "@/lib/hooks/use-dispensers"
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useSettings } from "@/lib/hooks/use-settings"
 import type { Product, ProductVariant, Sale, Stock, Dispenser, Account, Contact, Category, Branch } from "@/types"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -272,6 +273,16 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [discountType, setDiscountType] = useState<"NONE" | "PERCENTAGE" | "FIXED">("NONE")
   const [discountAmount, setDiscountAmount] = useState(0)
   const [taxRate, setTaxRate] = useState(defaultTaxRate)
+  
+  // Business config for point reducing
+  const { data: settingsData } = useSettings()
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+    };
+  }, [settingsData]);
 
   useEffect(() => {
     if (taxSettings?.rate !== undefined) {
@@ -1056,6 +1067,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         const sku = item.sku || item.productId || `temp-sku-${item.productId}-${Date.now()}`
         const isFuel = item.productId?.startsWith("fuel-")
 
+        let actualQuantity: number | undefined = undefined;
+        if (isFuel && businessConfig.showPointReducing && businessConfig.pointReducingAmountPerLiter > 0) {
+          actualQuantity = item.quantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
+        }
+
         const itemData = {
           sku: sku,
           productId: isFuel ? undefined : item.productId,
@@ -1065,6 +1081,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
           unit: item.unit,
           price: item.price,
           quantity: item.quantity,
+          actualQuantity,
           discountType: item.discountType,
           discountAmount: item.discountAmount,
           totalPrice: calculateItemTotalFn(item),

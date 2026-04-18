@@ -124,7 +124,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
   // Calculate actual quantity after point reduction
   const calculateActualQuantity = (namedQuantity: number): number => {
-    if (businessConfig.pointReducingAmountPerLiter <= 0) return namedQuantity;
+    if (!businessConfig.showPointReducing || businessConfig.pointReducingAmountPerLiter <= 0) return namedQuantity;
     return namedQuantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
   };
 
@@ -1161,7 +1161,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                   <span className="text-muted-foreground">
                                     Subtotal: <span className="font-bold text-foreground">{(fuelItem.quantity * fuelItem.sellingPrice).toFixed(2)}</span>
                                   </span>
-                                  {businessConfig.pointReducingAmountPerLiter > 0 && (
+                                  {businessConfig.showPointReducing && businessConfig.pointReducingAmountPerLiter > 0 && (
                                     <span className="text-xs text-amber-600 dark:text-amber-400">
                                       Actual: {actualQty.toFixed(3)} L (point reduced)
                                     </span>

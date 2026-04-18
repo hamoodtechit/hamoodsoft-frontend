@@ -214,6 +214,7 @@ export interface StockHistory {
   transactionType: "IN" | "OUT"
   quantity: number
   quantityChange?: number
+  namedQuantity?: number
   reason?: string | null
   description?: string | null
   branch?: Branch
@@ -253,6 +254,7 @@ export interface PurchaseItem {
   tankerId?: string
   itemType?: ItemType
   productId?: string
+  actualQuantity?: number
 }
 
 export type PurchaseStatus = "ORDERED" | "PENDING" | "RETURNED" | "COMPLETED" | "CANCELLED"
@@ -302,6 +304,12 @@ export interface SaleItem {
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount?: number
   totalPrice?: number
+  actualQuantity?: number
+  itemType?: ItemType
+  productId?: string
+  fuelTypeId?: string
+  tankerId?: string
+  dispenserId?: string
   saleReturnId?: string | null
   createdAt?: string
   updatedAt?: string

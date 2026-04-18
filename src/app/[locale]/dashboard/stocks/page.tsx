@@ -34,6 +34,7 @@ import {
   useStockHistory,
   useStocks,
 } from "@/lib/hooks/use-stocks"
+import { useSettings } from "@/lib/hooks/use-settings"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Stock, StockHistory } from "@/types"
 import { ArrowDown, ArrowUp, History, MoreVertical, Package, Plus, Search } from "lucide-react"
@@ -58,6 +59,14 @@ export default function StocksPage() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [historyStock, setHistoryStock] = useState<Stock | null>(null)
+  
+  const { data: settingsData } = useSettings()
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig")
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+    }
+  }, [settingsData])
   
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -543,6 +552,11 @@ export default function StocksPage() {
                                 {stockQuantity !== undefined && stockQuantity !== null && (
                                   <span className="text-sm text-muted-foreground">
                                     ({t("currentStock") || "Current Stock"}: {stockQuantity})
+                                  </span>
+                                )}
+                                {businessConfig.showPointReducing && h.itemType === "FUEL" && h.transactionType === "OUT" && h.namedQuantity && (
+                                  <span className="text-sm text-muted-foreground">
+                                    (Original: {h.namedQuantity})
                                   </span>
                                 )}
                               </div>

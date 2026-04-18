@@ -13,6 +13,7 @@ import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useStockHistory, useStocks } from "@/lib/hooks/use-stocks"
 import { useTankers } from "@/lib/hooks/use-tankers"
+import { useSettings } from "@/lib/hooks/use-settings"
 import { FuelType, StockHistory } from "@/types"
 import { ArrowDown, ArrowUp, Container, History } from "lucide-react"
 import { useMemo } from "react"
@@ -29,6 +30,13 @@ export function FuelStockHistoryDialog({
   onOpenChange,
 }: FuelStockHistoryDialogProps) {
   const { selectedBranchId } = useBranchSelection()
+  const { data: settingsData } = useSettings()
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig")
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+    }
+  }, [settingsData])
 
   // Fetch all tankers so we can compute total fuel across tankers for this fuel type
   const { data: tankersData, isLoading: isLoadingTankers } = useTankers(
@@ -165,6 +173,11 @@ export function FuelStockHistoryDialog({
                           <Badge variant={isIn ? "default" : "destructive"} className="h-5 px-1.5 text-[10px]">
                             {isIn ? "IN" : "OUT"}
                           </Badge>
+                          {businessConfig.showPointReducing && !isIn && h.namedQuantity && (
+                            <span className="text-[10px] text-muted-foreground ml-1">
+                              (Original: {h.namedQuantity.toFixed(2)} L)
+                            </span>
+                          )}
                         </div>
                         {displayName && (
                           <span className="text-xs font-medium text-foreground/70 truncate" title={displayName}>

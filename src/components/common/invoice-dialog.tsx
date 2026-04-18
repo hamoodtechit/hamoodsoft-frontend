@@ -11,7 +11,7 @@ import {
 import { useAppSettings } from "@/lib/providers/settings-provider";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { formatCurrency } from "@/lib/utils/currency";
-import { Purchase, Sale } from "@/types";
+import { Purchase, Sale, SaleItem, PurchaseItem, Setting } from "@/types";
 import { Download, History, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -32,25 +32,23 @@ export function InvoiceDialog({
   onOpenRecentTransactions,
 }: InvoiceDialogProps) {
   const t = useTranslations("sales");
-  const tPurchases = useTranslations("purchases");
-  const tCommon = useTranslations("common");
   const { generalSettings, invoiceSettings } = useAppSettings();
   const { data: settingsData } = useSettings();
   
-  const setting = settingsData?.items?.find((s: any) => s.name === "businessConfig");
-  const businessConfig = setting?.configs || {};
+  const setting = settingsData?.items?.find((s: Setting) => s.name === "businessConfig");
+  const businessConfig = (setting?.configs as { showPointReducing?: boolean; pointReducingAmountPerLiter?: number }) || {};
 
   const calculateActualQuantity = (namedQuantity: number): number => {
-    if (!businessConfig?.showPointReducing) return namedQuantity;
-    if ((businessConfig?.pointReducingAmountPerLiter || 0) <= 0) return namedQuantity;
-    return namedQuantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
+    const { showPointReducing, pointReducingAmountPerLiter = 0 } = businessConfig;
+    if (!showPointReducing || pointReducingAmountPerLiter <= 0) return namedQuantity;
+    return (namedQuantity * (1000 - pointReducingAmountPerLiter)) / 1000;
   };
 
   const transaction = sale || purchase;
   const isPurchase = !!purchase;
 
   // Get items (handle both items and saleItems/purchaseItems)
-  const items = useMemo(() => {
+  const items = useMemo<(SaleItem | PurchaseItem)[]>(() => {
     if (!transaction) return [];
     if (isPurchase) {
       const p = transaction as Purchase;
@@ -429,11 +427,12 @@ export function InvoiceDialog({
                         )}
                         <td className={`text-center ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           <div>{item.quantity} {item.unit}</div>
-                          {(!isPurchase && (transaction as Sale)?.saleType === "FUEL") && businessConfig?.showPointReducing && item.quantity > 0 && (
-                            <div className="text-xs text-muted-foreground mt-0.5" title="Actual Delivery">
-                              {calculateActualQuantity(item.quantity).toFixed(2)} {item.unit}
+                          {/* {(!isPurchase && (item.itemType === "FUEL" || item.productId?.startsWith("fuel-"))) && businessConfig?.showPointReducing && item.quantity > 0 && (
+                            <div className="text-xs text-muted-foreground mt-0.5" title="Actual Delivery"> */}
+                              {/* Use actualQuantity from item if backend provided it, otherwise calculate it */}
+                              {/* {(item.actualQuantity ?? calculateActualQuantity(item.quantity)).toFixed(2)} {item.unit}
                             </div>
-                          )}
+                          )} */}
                         </td>
                         <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           {formatCurrency(item.price, { generalSettings })}
