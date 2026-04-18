@@ -88,7 +88,6 @@ export function TransactionDialog({
         contactId: defaultContactId,
         categoryId: defaultCategoryId,
         amount: 0,
-        paidAmount: 0,
         occurredAt: new Date().toISOString(),
         note: "",
       } as CreateExpenseTransactionInput
@@ -241,7 +240,7 @@ export function TransactionDialog({
               )}
             />
 
-            {!isIncome && (
+            {/* {!isIncome && (
               <FormField
                 control={form.control}
                 name="paidAmount"
@@ -261,7 +260,7 @@ export function TransactionDialog({
                   </FormItem>
                 )}
               />
-            )}
+            )} */}
 
             <FormField
               control={form.control}

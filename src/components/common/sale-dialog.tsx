@@ -580,6 +580,14 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       ...(data as CreateSaleInput),
       payments: payments.length > 0 ? payments : undefined,
     };
+    
+    const totalPaidProduct = payments.reduce((sum, p) => sum + p.amount, 0);
+    let productPaymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
+    if (totalPaidProduct >= totalAmount) productPaymentStatus = "PAID";
+    else if (totalPaidProduct > 0) productPaymentStatus = "PARTIAL";
+
+    saleData.paymentStatus = productPaymentStatus;
+    saleData.paidAmount = totalPaidProduct;
 
     createMutation.mutate(saleData, {
       onSuccess: () => {
@@ -917,62 +925,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="paymentStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("paymentStatus")}</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "PAID"}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="PAID">
-                                  {t("paymentStatusPaid")}
-                                </SelectItem>
-                                <SelectItem value="DUE">
-                                  {t("paymentStatusDue")}
-                                </SelectItem>
-                                <SelectItem value="PARTIAL">
-                                  {t("paymentStatusPartial")}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="paidAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("paidAmount")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              {...field}
-                              value={field.value || ""}
-                              onChange={(e) =>
-                                field.onChange(parseFloat(e.target.value) || 0)
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </>
                 )}
 
@@ -1003,38 +956,6 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 </SelectItem>
                                 <SelectItem value="PENDING">
                                   {t("statusPending")}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="paymentStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("paymentStatus")}</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "PAID"}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="PAID">
-                                  {t("paymentStatusPaid")}
-                                </SelectItem>
-                                <SelectItem value="DUE">
-                                  {t("paymentStatusDue")}
-                                </SelectItem>
-                                <SelectItem value="PARTIAL">
-                                  {t("paymentStatusPartial")}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -1186,6 +1107,20 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     }}
                                     min={0}
                                   />
+                                  {businessConfig?.showPointReducing && fuelItem.quantity > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1 bg-muted/60 p-1.5 rounded-md flex justify-between">
+                                      <span>Points deduction:</span>
+                                      <span className="font-medium text-destructive">
+                                        -{(fuelItem.quantity - actualQty).toFixed(2)} L
+                                      </span>
+                                    </div>
+                                  )}
+                                  {businessConfig?.showPointReducing && fuelItem.quantity > 0 && (
+                                    <div className="text-xs mt-1 flex justify-between font-medium">
+                                      <span>Actual delivery:</span>
+                                      <span className="text-primary">{actualQty.toFixed(2)} L</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 

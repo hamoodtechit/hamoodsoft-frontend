@@ -215,6 +215,7 @@ export interface StockHistory {
   quantity: number
   quantityChange?: number
   reason?: string | null
+  description?: string | null
   branch?: Branch
   product?: Product
   stock?: Stock
@@ -311,6 +312,7 @@ export interface Sale {
   businessId?: string
   branchId: string
   contactId: string
+  saleType?: "PRODUCT" | "FUEL"
   status: SaleStatus
   paymentStatus: PaymentStatus
   paidAmount: number

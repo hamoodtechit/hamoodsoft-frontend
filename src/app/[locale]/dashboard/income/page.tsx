@@ -59,9 +59,8 @@ export default function IncomePage() {
   // Filter transactions for income type
   const incomeTransactions = useMemo(() => {
     return allTransactions.filter((t: Transaction) => {
-      const normalizedType = t.type
-      const rawType = (t as any).type
-      return normalizedType === "INCOME" || rawType === "INCOME" || rawType === "IN"
+      const category = (t as any).category
+      return category === "INCOME"
     })
   }, [allTransactions])
 

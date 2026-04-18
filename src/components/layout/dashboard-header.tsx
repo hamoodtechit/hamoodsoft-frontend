@@ -189,7 +189,7 @@ export function DashboardHeader() {
                     For exact identical UI, we can pass a custom trigger or style NotificationPanel.
                     But calling NotificationPanel directly is safer for existing logic.
                 */}
-                <NotificationPanel />
+                {/* <NotificationPanel /> */}
                 
 
             </div>

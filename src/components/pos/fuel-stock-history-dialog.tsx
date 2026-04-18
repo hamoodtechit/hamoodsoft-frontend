@@ -138,27 +138,49 @@ export function FuelStockHistoryDialog({
               {historyItems.map((h: StockHistory) => {
                 const qty = h.quantityChange ?? h.quantity
                 const isIn = h.transactionType === "IN"
+                // Derive display name from description (e.g. "Sale to Customer", "Purchase from Supplier")
+                const displayName = h.description
+                  ? h.description
+                  : isIn
+                    ? undefined
+                    : "Sale to Anonymous"
                 return (
                   <div
                     key={h.id}
                     className="flex items-start justify-between gap-3 rounded-lg border px-4 py-3"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      {isIn ? (
-                        <ArrowUp className="h-4 w-4 shrink-0 text-green-600" />
-                      ) : (
-                        <ArrowDown className="h-4 w-4 shrink-0 text-red-600" />
-                      )}
-                      <Badge variant={isIn ? "default" : "destructive"} className="shrink-0">
-                        {isIn ? "Stock IN" : "Stock OUT"}
-                      </Badge>
-                      <span className="text-sm font-medium">
-                        {Math.abs(qty).toFixed(2)} L
-                      </span>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                        {isIn ? (
+                          <ArrowUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4 text-red-600" />
+                        )}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {isIn ? "+" : "-"}{Math.abs(qty).toFixed(2)} L
+                          </span>
+                          <Badge variant={isIn ? "default" : "destructive"} className="h-5 px-1.5 text-[10px]">
+                            {isIn ? "IN" : "OUT"}
+                          </Badge>
+                        </div>
+                        {displayName && (
+                          <span className="text-xs font-medium text-foreground/70 truncate" title={displayName}>
+                            {displayName}
+                          </span>
+                        )}
+                        {h.reason && (
+                          <span className="text-xs text-muted-foreground truncate" title={h.reason}>
+                            {h.reason}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground text-right shrink-0">
                       {h.createdAt ? new Date(h.createdAt).toLocaleString() : "—"}
-                    </p>
+                    </div>
                   </div>
                 )
               })}
