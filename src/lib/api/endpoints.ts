@@ -119,6 +119,8 @@ export const endpoints = {
   },
   settings: {
     list: "/settings",
+    create: "/settings",
+    getByName: (name: string) => `/settings/by-name/${name}`,
     update: (id: string) => `/settings/${id}`,
   },
   accounts: {

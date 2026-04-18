@@ -46,3 +46,23 @@ export function useUpdateSetting() {
     },
   })
 }
+
+export function useCreateSetting() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { name: string; configs: Record<string, any> }) =>
+      settingsApi.createSetting(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] })
+      toast.success("Setting created successfully!")
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create setting. Please try again."
+      toast.error(message)
+    },
+  })
+}

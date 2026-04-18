@@ -35,18 +35,23 @@ import { useProducts } from "@/lib/hooks/use-products";
 import { useCreateSale, useUpdateSale } from "@/lib/hooks/use-sales";
 import { useStocks } from "@/lib/hooks/use-stocks";
 import { useUnits } from "@/lib/hooks/use-units";
+import { useFuelTypes } from "@/lib/hooks/use-fuel-types";
+import { useTankers } from "@/lib/hooks/use-tankers";
+import { useSettings } from "@/lib/hooks/use-settings";
 import {
   createSaleSchema,
   updateSaleSchema,
   type CreateSaleInput,
   type UpdateSaleInput,
 } from "@/lib/validations/sales";
-import { Product, ProductVariant, Sale } from "@/types";
+import { Product, ProductVariant, Sale, FuelType, Tanker } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CreditCard,
   DollarSign,
+  Droplets,
   FileText,
+  Package,
   Plus,
   Search,
   ShoppingCart,
@@ -55,6 +60,9 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface SaleDialogProps {
   sale: Sale | null;
@@ -75,8 +83,57 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const createMutation = useCreateSale();
   const updateMutation = useUpdateSale();
 
+  // Fuel data hooks
+  const { data: fuelTypesData } = useFuelTypes();
+  const fuelTypes: FuelType[] = fuelTypesData?.items || [];
+  const { data: tankersData } = useTankers({ limit: 1000 });
+  const tankers: Tanker[] = tankersData?.items || [];
+
+  // Business config for point reducing
+  const { data: settingsData } = useSettings();
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+    };
+  }, [settingsData]);
+
   const isEdit = !!sale;
   const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  // ─── Sale type toggle (Product vs Fuel) ───
+  const [saleType, setSaleType] = useState<"PRODUCT" | "FUEL">("PRODUCT");
+
+  // ─── Fuel items state ───
+  interface FuelSaleItem {
+    id: string;
+    fuelTypeId: string;
+    fuelTypeName: string;
+    sellingPrice: number;
+    quantity: number; // named/told quantity
+    tankerId: string;
+    tankerName: string;
+  }
+  const [fuelSaleItems, setFuelSaleItems] = useState<FuelSaleItem[]>([]);
+
+  // Get tankers for a specific fuel type
+  const getTankersForFuelType = (fuelTypeId: string) => {
+    return tankers.filter((t) => t.fuelTypeId === fuelTypeId);
+  };
+
+  // Calculate actual quantity after point reduction
+  const calculateActualQuantity = (namedQuantity: number): number => {
+    if (businessConfig.pointReducingAmountPerLiter <= 0) return namedQuantity;
+    return namedQuantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
+  };
+
+  // Fuel total calculation
+  const fuelTotal = useMemo(() => {
+    return fuelSaleItems.reduce((sum, item) => {
+      return sum + (item.quantity || 0) * (item.sellingPrice || 0);
+    }, 0);
+  }, [fuelSaleItems]);
 
   const schema = isEdit ? updateSaleSchema : createSaleSchema;
 
@@ -355,13 +412,16 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         setCashAccountId("");
         setBankAccountId("");
         setPaymentSplits([]);
+        // Reset fuel state
+        setSaleType("PRODUCT");
+        setFuelSaleItems([]);
       }
     }
   }, [open, defaultValues, form, isEdit, selectedBranchId]);
 
   const onSubmit = (data: CreateSaleInput | UpdateSaleInput) => {
-    // Validate stock availability before submitting
-    if (!isEdit && "items" in data && data.items) {
+    // Validate stock availability before submitting (ONLY FOR PRODUCT SALES)
+    if (!isEdit && saleType === "PRODUCT" && "items" in data && data.items) {
       for (let i = 0; i < data.items.length; i++) {
         const item = data.items[i];
         const product = selectedProducts[i];
@@ -402,6 +462,85 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       return;
     }
 
+    // ─── FUEL SALE ───
+    if (!isEdit && saleType === "FUEL") {
+      if (fuelSaleItems.length === 0 || fuelSaleItems.every((fi) => !fi.fuelTypeId)) {
+        toast.error("Please add at least one fuel item");
+        return;
+      }
+
+      // Build sale items from fuel items
+      const saleItems: any[] = [];
+      for (const fuelItem of fuelSaleItems) {
+        if (!fuelItem.fuelTypeId || fuelItem.quantity <= 0) continue;
+        const actualQty = calculateActualQuantity(fuelItem.quantity);
+        saleItems.push({
+          sku: `FUEL-${fuelItem.fuelTypeId}-${fuelItem.tankerId || "NOTANK"}-${Date.now()}`,
+          itemName: fuelItem.fuelTypeName || "Fuel",
+          itemDescription: fuelItem.tankerName ? `Tanker: ${fuelItem.tankerName}` : "",
+          unit: "L",
+          price: fuelItem.sellingPrice,
+          quantity: fuelItem.quantity, // named/told quantity
+          actualQuantity: actualQty, // actual (reduced) quantity
+          totalPrice: fuelItem.quantity * fuelItem.sellingPrice,
+          fuelTypeId: fuelItem.fuelTypeId,
+          tankerId: fuelItem.tankerId || undefined,
+          itemType: "FUEL",
+          discountType: "NONE",
+          discountAmount: 0,
+        });
+      }
+
+      if (saleItems.length === 0) {
+        toast.error("Please add valid fuel items with quantity");
+        return;
+      }
+
+      const fuelGrandTotal = saleItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+
+      // Build payments
+      const payments: Array<{ accountId: string; amount: number; type: "SALE_PAYMENT" }> = [];
+      const paidAmt = Number(form.watch("paidAmount" as any) || 0);
+
+      if (paymentMethod === "CASH" && cashAccountId) {
+        payments.push({ accountId: cashAccountId, amount: paidAmt || fuelGrandTotal, type: "SALE_PAYMENT" });
+      } else if (paymentMethod === "CARD" && bankAccountId) {
+        payments.push({ accountId: bankAccountId, amount: paidAmt || fuelGrandTotal, type: "SALE_PAYMENT" });
+      } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
+        paymentSplits.forEach((split) => {
+          if (split.accountId && split.amount > 0) {
+            payments.push({ accountId: split.accountId, amount: split.amount, type: "SALE_PAYMENT" });
+          }
+        });
+      }
+
+      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      let paymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
+      if (totalPaid >= fuelGrandTotal) paymentStatus = "PAID";
+      else if (totalPaid > 0) paymentStatus = "PARTIAL";
+
+      const fuelSaleData: any = {
+        branchId: (data as any).branchId,
+        contactId: (data as any).contactId,
+        items: saleItems,
+        payments: payments.length > 0 ? payments : undefined,
+        totalPrice: fuelGrandTotal,
+        paidAmount: totalPaid,
+        paymentStatus,
+        status: "SOLD",
+      };
+
+      createMutation.mutate(fuelSaleData, {
+        onSuccess: () => {
+          onOpenChange(false);
+          form.reset(defaultValues);
+          setFuelSaleItems([]);
+        },
+      });
+      return;
+    }
+
+    // ─── PRODUCT SALE (existing logic) ───
     // Build payments array based on payment method
     const payments: Array<{
       accountId: string;
@@ -448,6 +587,22 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         form.reset(defaultValues);
       },
     });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saleType === "FUEL") {
+      // For fuel sales, we bypass the overarching RHF `items` validation 
+      // because fuel items are strictly validated inside onSubmit.
+      const values = form.getValues();
+      const isValid = await form.trigger(["branchId", "contactId"] as any);
+      if (isValid) {
+        onSubmit(values as any);
+      }
+    } else {
+      // Standard product sale validation
+      form.handleSubmit(onSubmit)(e);
+    }
   };
 
   const addItem = () => {
@@ -542,6 +697,12 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   // Calculate sale total
   const calculateTotal = () => {
     if (isEdit) return null;
+
+    // For fuel sales, use fuel total
+    if (saleType === "FUEL") {
+      return fuelTotal;
+    }
+
     const items = form.watch("items" as any) || [];
     const saleDiscountType = form.watch("discountType" as any) || "NONE";
     const saleDiscountAmount = form.watch("discountAmount" as any) || 0;
@@ -622,7 +783,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={handleFormSubmit}
             className="flex flex-col flex-1 min-h-0"
           >
             <ScrollArea className="h-[calc(90vh-220px)]">
@@ -883,30 +1044,211 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="paidAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("paidAmount")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              {...field}
-                              value={field.value || ""}
-                              onChange={(e) =>
-                                field.onChange(parseFloat(e.target.value) || 0)
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
+                    {/* ─── SALE TYPE TOGGLE ─── */}
+                    <div className="flex gap-2 border-b pb-3">
+                      <Button
+                        type="button"
+                        variant={saleType === "PRODUCT" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSaleType("PRODUCT")}
+                        className="text-xs"
+                      >
+                        <Package className="h-3 w-3 mr-1" />
+                        Product
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={saleType === "FUEL" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSaleType("FUEL");
+                          if (fuelSaleItems.length === 0) {
+                            setFuelSaleItems([{
+                              id: `fuel-${Date.now()}`,
+                              fuelTypeId: "",
+                              fuelTypeName: "",
+                              sellingPrice: 0,
+                              quantity: 0,
+                              tankerId: "",
+                              tankerName: "",
+                            }]);
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        <Droplets className="h-3 w-3 mr-1" />
+                        Fuel
+                      </Button>
+                    </div>
+
+                    {/* ─── FUEL ITEMS SECTION ─── */}
+                    {saleType === "FUEL" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-medium">Fuel Items</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setFuelSaleItems((prev) => [...prev, {
+                                id: `fuel-${Date.now()}-${Math.random()}`,
+                                fuelTypeId: "",
+                                fuelTypeName: "",
+                                sellingPrice: 0,
+                                quantity: 0,
+                                tankerId: "",
+                                tankerName: "",
+                              }]);
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Fuel Item
+                          </Button>
+                        </div>
+
+                        {fuelSaleItems.map((fuelItem, fuelIndex) => {
+                          const matchingTankers = getTankersForFuelType(fuelItem.fuelTypeId);
+                          const actualQty = calculateActualQuantity(fuelItem.quantity);
+                          return (
+                            <div
+                              key={fuelItem.id}
+                              className="p-4 border rounded-lg space-y-4 bg-muted/50 relative"
+                            >
+                              <div className="absolute top-2 right-2">
+                                {fuelSaleItems.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setFuelSaleItems((prev) => prev.filter((_, i) => i !== fuelIndex))}
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                                {/* Fuel Type */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    Fuel Type <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Select
+                                    value={fuelItem.fuelTypeId}
+                                    onValueChange={(val) => {
+                                      const ft = fuelTypes.find((f) => f.id === val);
+                                      const autoTankers = tankers.filter((t) => t.fuelTypeId === val);
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex
+                                            ? {
+                                                ...item,
+                                                fuelTypeId: val,
+                                                fuelTypeName: ft?.name || "",
+                                                sellingPrice: ft?.price || 0,
+                                                tankerId: autoTankers.length > 0 ? autoTankers[0].id : "",
+                                                tankerName: autoTankers.length > 0 ? autoTankers[0].name : "",
+                                              }
+                                            : item
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select fuel type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {fuelTypes.map((ft) => (
+                                        <SelectItem key={ft.id} value={ft.id}>
+                                          {ft.name} — ৳{ft.price}/L
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Quantity */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    Quantity (L) <span className="text-destructive">*</span>
+                                  </Label>
+                                  <NumericInput
+                                    value={fuelItem.quantity}
+                                    onValueChange={(val) => {
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex ? { ...item, quantity: val } : item
+                                        )
+                                      );
+                                    }}
+                                    min={0}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Tanker Selection */}
+                              {fuelItem.fuelTypeId && matchingTankers.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Tanker</Label>
+                                  <Select
+                                    value={fuelItem.tankerId}
+                                    onValueChange={(val) => {
+                                      const tk = matchingTankers.find((t) => t.id === val);
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex
+                                            ? { ...item, tankerId: val, tankerName: tk?.name || "" }
+                                            : item
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Select tanker" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {matchingTankers.map((tk) => (
+                                        <SelectItem key={tk.id} value={tk.id}>
+                                          {tk.name} ({tk.currentFuel}/{tk.capacity}L)
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {/* Subtotal and actual qty info */}
+                              {fuelItem.quantity > 0 && fuelItem.sellingPrice > 0 && (
+                                <div className="flex flex-col items-end gap-1 text-sm">
+                                  <span className="text-muted-foreground">
+                                    Subtotal: <span className="font-bold text-foreground">{(fuelItem.quantity * fuelItem.sellingPrice).toFixed(2)}</span>
+                                  </span>
+                                  {businessConfig.pointReducingAmountPerLiter > 0 && (
+                                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                                      Actual: {actualQty.toFixed(3)} L (point reduced)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Fuel Total */}
+                        {fuelTotal > 0 && (
+                          <div className="flex justify-end items-center text-base font-bold border-t pt-3">
+                            <span className="text-muted-foreground mr-3">Total:</span>
+                            <span>{fuelTotal.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ─── PRODUCT ITEMS SECTION ─── */}
+                    {saleType === "PRODUCT" && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <Label className="text-base font-medium">
@@ -1689,8 +2031,10 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           </div>
                         </div>
                       )}
+                    </div>
+                    )}
 
-                      {total !== null && (
+                    {total !== null && (
                         <>
                           {/* Payment Method Selection */}
                           <div className="space-y-4 pt-4 border-t">
@@ -1726,20 +2070,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 <CreditCard className="h-3 w-3 mr-1" />
                                 Card
                               </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  paymentMethod === "CREDIT"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setPaymentMethod("CREDIT")}
-                                className="text-xs"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                Credit
-                              </Button>
+                              {/* Credit payment option hidden per business requirement */}
                               <Button
                                 type="button"
                                 variant={
@@ -1982,7 +2313,35 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             )}
                           </div>
 
-                          <div className="flex justify-end pt-4 border-t">
+                          {paymentMethod !== "MIXED" && paymentMethod !== "CREDIT" && (
+                            <div className="pt-4 border-t">
+                              <FormField
+                                control={form.control}
+                                name="paidAmount"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>{t("paidAmount")}</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        {...field}
+                                        value={field.value || ""}
+                                        onChange={(e) =>
+                                          field.onChange(parseFloat(e.target.value) || 0)
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex justify-end pt-4 border-t mt-4">
                             <div className="text-right">
                               <Label className="text-sm text-muted-foreground">
                                 {t("total")}
@@ -2015,7 +2374,6 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           </div>
                         </>
                       )}
-                    </div>
                   </>
                 )}
               </div>

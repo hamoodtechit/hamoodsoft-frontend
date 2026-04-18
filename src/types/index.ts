@@ -254,7 +254,7 @@ export interface PurchaseItem {
   productId?: string
 }
 
-export type PurchaseStatus = "PENDING" | "COMPLETED" | "CANCELLED"
+export type PurchaseStatus = "ORDERED" | "PENDING" | "RETURNED" | "COMPLETED" | "CANCELLED"
 
 export interface Purchase {
   id: string
@@ -536,6 +536,7 @@ export interface FuelType {
   businessId: string
   name: string
   price: number
+  costPrice?: number
   createdAt: string
   updatedAt: string
 }
@@ -560,11 +561,13 @@ export interface Tanker {
 export interface CreateFuelTypeInput {
   name: string
   price: number
+  costPrice?: number
 }
 
 export interface UpdateFuelTypeInput {
   name?: string
   price?: number
+  costPrice?: number
 }
 
 export interface CreateTankerInput {

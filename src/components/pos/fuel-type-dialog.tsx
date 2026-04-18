@@ -30,6 +30,7 @@ import * as z from "zod"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   price: z.preprocess((val) => Number(val), z.number().min(0, "Price must be positive")),
+  costPrice: z.preprocess((val) => Number(val), z.number().min(0, "Cost price must be positive")),
 })
 
 interface FuelTypeDialogProps {
@@ -48,6 +49,7 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
     defaultValues: {
       name: "",
       price: 0,
+      costPrice: 0,
     },
   })
 
@@ -56,11 +58,13 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
       form.reset({
         name: fuelType.name,
         price: fuelType.price,
+        costPrice: fuelType.costPrice ?? 0,
       })
     } else {
       form.reset({
         name: "",
         price: 0,
+        costPrice: 0,
       })
     }
   }, [fuelType, form, open])
@@ -112,7 +116,20 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price per Liter</FormLabel>
+                  <FormLabel>Selling Price per Liter</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="costPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost/Purchase Price per Liter</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
                   </FormControl>

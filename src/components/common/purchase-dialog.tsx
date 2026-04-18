@@ -438,8 +438,8 @@ export function PurchaseDialog({
               allocErrors[j] = aErr;
             }
           }
-          // Check total allocation matches fuel quantity
-          if (item.quantity > 0 && Math.abs(totalAllocQty - item.quantity) > 0.01) {
+          // Allow allocation total to differ from purchased quantity (transport loss/gain)
+          if (false && item.quantity > 0 && Math.abs(totalAllocQty - item.quantity) > 0.01) {
             itemErrors.tankerAllocations = `Tanker allocations total (${totalAllocQty.toFixed(2)} L) must equal quantity (${item.quantity.toFixed(2)} L)`;
             hasError = true;
           }
@@ -937,11 +937,21 @@ export function PurchaseDialog({
   const selectedContact = contacts.find((c) => c.id === watchedContactId);
 
   // Compute how much is unpaid
+  let cashPaid = 0;
+  if (paymentMethod === "MIXED") {
+    cashPaid = paymentSplits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  } else if (paymentMethod === "CREDIT") {
+    cashPaid = 0;
+  } else {
+    cashPaid = Number(paidAmount) || 0;
+  }
+
   const dueAmount = isEdit
     ? Number(form.watch("dueAmount" as any) || 0)
     : total !== null
-      ? Math.max(0, total - (Number(paidAmount) || 0))
+      ? Math.max(0, total - cashPaid)
       : 0;
+
   const availableCredit = selectedContact
     ? (selectedContact.balance || 0) + (selectedContact.creditLimit || 0)
     : 0;
@@ -1123,6 +1133,9 @@ export function PurchaseDialog({
                           ))}
                         </SelectContent>
                       </Select>
+
+
+{/* 
                       {selectedContact && !isEdit && (
                         <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
                           <div className="flex justify-between text-muted-foreground mb-1">
@@ -1156,7 +1169,13 @@ export function PurchaseDialog({
                             </span>
                           </div>
                         </div>
-                      )}
+                      )} */}
+
+
+
+
+
+                      {/* Supplier balance/credit info hidden per business requirement */}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1253,7 +1272,7 @@ export function PurchaseDialog({
                         </div>
 
                         {/* Row 1: Fuel Type + Cost Price + Quantity */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
                           {/* Fuel Type */}
                           <div className="space-y-2">
                             <Label className="text-sm">
@@ -1264,10 +1283,22 @@ export function PurchaseDialog({
                               disabled={isEdit}
                               onValueChange={(val) => {
                                 const ft = fuelTypes.find((f) => f.id === val);
+                                // Auto-fill costPrice from fuel type
+                                const autoTankers = tankers.filter((t) => t.fuelTypeId === val);
+                                // Auto-create one tanker allocation if tankers available
+                                const autoAllocations = autoTankers.length > 0
+                                  ? [{
+                                      id: `alloc-${Date.now()}-${Math.random()}`,
+                                      tankerId: autoTankers[0].id,
+                                      tankerName: autoTankers[0].name,
+                                      quantity: fuelItem.quantity || 0,
+                                    }]
+                                  : [];
                                 updateFuelItem(fuelIndex, {
                                   fuelTypeId: val,
                                   fuelTypeName: ft?.name || "",
-                                  tankerAllocations: [],
+                                  costPrice: ft?.costPrice || 0,
+                                  tankerAllocations: autoAllocations,
                                 });
                                 // Clear this field's error
                                 setFuelErrors((prev) => {
@@ -1303,7 +1334,10 @@ export function PurchaseDialog({
                             )}
                           </div>
 
-                          {/* Cost Price */}
+
+
+
+{/* 
                           <div className="space-y-2">
                             <Label className="text-sm">
                               {t("costPrice")} <span className="text-destructive">*</span>
@@ -1331,7 +1365,9 @@ export function PurchaseDialog({
                                 {itemErrors.costPrice}
                               </p>
                             )}
-                          </div>
+                          </div> */}
+
+                          {/* Cost Price — hidden, auto-filled from fuel type */}
 
                           {/* Quantity (Liters) */}
                           <div className="space-y-2">
@@ -1457,7 +1493,15 @@ export function PurchaseDialog({
                                           />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {matchingTankers.map((tk) => (
+                                          {matchingTankers
+                                            .filter((tk) => {
+                                              // Filter out tankers already selected in other allocations
+                                              const selectedInOther = fuelItem.tankerAllocations.some(
+                                                (a, ai) => ai !== allocIndex && a.tankerId === tk.id
+                                              );
+                                              return !selectedInOther;
+                                            })
+                                            .map((tk) => (
                                             <SelectItem
                                               key={tk.id}
                                               value={tk.id}
@@ -2028,7 +2072,7 @@ export function PurchaseDialog({
                     <div className="flex gap-2 flex-wrap">
                       <Button type="button" variant={paymentMethod === "CASH" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CASH")} className="text-xs">Cash</Button>
                       <Button type="button" variant={paymentMethod === "CARD" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CARD")} className="text-xs">Card</Button>
-                      <Button type="button" variant={paymentMethod === "CREDIT" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("CREDIT")} className="text-xs">Credit</Button>
+                      {/* Credit payment option hidden per business requirement */}
                       <Button type="button" variant={paymentMethod === "MIXED" ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod("MIXED")} className="text-xs">Mixed</Button>
                     </div>
 
@@ -2189,7 +2233,7 @@ export function PurchaseDialog({
             >
               {tCommon("cancel")}
             </Button>
-            <Button type="submit" disabled={isLoading || isCreditExceeded}>
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <span className="animate-spin">⏳</span>

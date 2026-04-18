@@ -65,7 +65,7 @@ export const createPurchaseSchema = z.object({
 export const updatePurchaseSchema = z.object({
   branchId: z.string().min(1, "Branch is required").optional(),
   contactId: z.string().min(1, "Contact is required").optional(),
-  status: z.enum(["PENDING", "COMPLETED", "CANCELLED"]).optional(),
+  status: z.enum(["ORDERED", "PENDING", "RETURNED", "COMPLETED", "CANCELLED"]).optional(),
 })
 
 export type CreatePurchaseInput = z.infer<typeof createPurchaseSchema>

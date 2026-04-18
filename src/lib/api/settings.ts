@@ -1,4 +1,4 @@
-import { UpdateSettingInput } from "@/lib/validations/settings"
+import { CreateSettingInput, UpdateSettingInput } from "@/lib/validations/settings"
 import { ApiResponse, PaginatedResult, Setting } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
@@ -60,6 +60,16 @@ export const settingsApi = {
       endpoints.settings.list
     )
     return normalizeSettingsList(response.data.data)
+  },
+
+  getSettingByName: async (name: string): Promise<Setting> => {
+    const response = await apiClient.get<ApiResponse<Setting>>(endpoints.settings.getByName(name))
+    return response.data.data
+  },
+
+  createSetting: async (data: CreateSettingInput): Promise<Setting> => {
+    const response = await apiClient.post<ApiResponse<Setting>>(endpoints.settings.create, data)
+    return response.data.data
   },
 
   updateSetting: async (id: string, data: UpdateSettingInput): Promise<Setting> => {
