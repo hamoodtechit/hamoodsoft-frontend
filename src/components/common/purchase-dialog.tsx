@@ -219,6 +219,41 @@ export function PurchaseDialog({
     name: "paidAmount" as any,
   });
 
+  const watchedStatus = useWatch({
+    control: form.control,
+    name: "status" as any,
+  });
+
+  // Watch for status changes to auto-allocate tankers for fuel items
+  useEffect(() => {
+    if (isEdit && purchaseType === "FUEL" && watchedStatus === "COMPLETED") {
+      setFuelItems((prevItems) => {
+        let changed = false;
+        const newItems = prevItems.map((item) => {
+          if (item.tankerAllocations.length === 0) {
+            const autoTankers = tankers.filter((t) => t.fuelTypeId === item.fuelTypeId);
+            if (autoTankers.length > 0) {
+              changed = true;
+              return {
+                ...item,
+                tankerAllocations: [
+                  {
+                    id: `alloc-${Date.now()}-${Math.random()}`,
+                    tankerId: autoTankers[0].id,
+                    tankerName: autoTankers[0].name,
+                    quantity: item.quantity || 0,
+                  },
+                ],
+              };
+            }
+          }
+          return item;
+        });
+        return changed ? newItems : prevItems;
+      });
+    }
+  }, [watchedStatus, isEdit, purchaseType, tankers]);
+
   useEffect(() => {
     if (accounts.length > 0) {
       if (!cashAccountId) setCashAccountId(accounts[0].id);
@@ -1242,7 +1277,6 @@ export function PurchaseDialog({
                       fuelItem.fuelTypeId
                     );
                     const itemErrors = fuelErrors[fuelIndex];
-                    const watchedStatus = form.watch("status" as any) || "PENDING";
                     const isCompleted = watchedStatus === "COMPLETED";
                     const allocTotalQty = fuelItem.tankerAllocations.reduce(
                       (s, a) => s + (a.quantity || 0),

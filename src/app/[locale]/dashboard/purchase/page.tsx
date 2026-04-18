@@ -134,13 +134,17 @@ export default function PurchasePage() {
         header: t("status"),
         cell: (row) => {
           const statusColors: Record<string, string> = {
+            ORDERED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
             PENDING: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
             COMPLETED: "bg-green-500/10 text-green-600 dark:text-green-400",
+            RETURNED: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
             CANCELLED: "bg-red-500/10 text-red-600 dark:text-red-400",
           }
           const statusLabels: Record<string, string> = {
+            ORDERED: t("statusOrdered") || "Ordered",
             PENDING: t("statusPending"),
             COMPLETED: t("statusCompleted"),
+            RETURNED: "Returned",
             CANCELLED: t("statusCancelled"),
           }
           return (
@@ -345,10 +349,14 @@ export default function PurchasePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "ORDERED":
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
       case "PENDING":
         return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
       case "COMPLETED":
         return "bg-green-500/10 text-green-600 dark:text-green-400"
+      case "RETURNED":
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400"
       case "CANCELLED":
         return "bg-red-500/10 text-red-600 dark:text-red-400"
       default:
@@ -510,6 +518,10 @@ export default function PurchasePage() {
                               ? t("statusPending")
                               : p.status === "COMPLETED"
                               ? t("statusCompleted")
+                              : p.status === "ORDERED"
+                              ? t("statusOrdered") || "Ordered"
+                              : p.status === "RETURNED"
+                              ? "Returned"
                               : t("statusCancelled")}
                           </Badge>
                           <Badge variant={p.purchaseType === "FUEL" ? "secondary" : "outline"} className="gap-1">
@@ -657,6 +669,10 @@ export default function PurchasePage() {
                     ? t("statusPending")
                     : viewPurchase.status === "COMPLETED"
                     ? t("statusCompleted")
+                    : viewPurchase.status === "ORDERED"
+                    ? t("statusOrdered") || "Ordered"
+                    : viewPurchase.status === "RETURNED"
+                    ? "Returned"
                     : t("statusCancelled")}
                 </Badge>
               </div>

@@ -205,10 +205,22 @@ export function PaymentDialog({
                       type="number"
                       step="0.01"
                       {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      max={defaultAmount !== undefined ? defaultAmount : undefined}
+                      onChange={(e) => {
+                        let val = parseFloat(e.target.value) || 0;
+                        if (defaultAmount !== undefined && val > defaultAmount) {
+                          val = defaultAmount;
+                        }
+                        field.onChange(val);
+                      }}
                       placeholder="0.00"
                     />
                   </FormControl>
+                  {defaultAmount !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tCommon("remainingAmount") || "Remaining"}: {formatCurrency(defaultAmount, { generalSettings })}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
