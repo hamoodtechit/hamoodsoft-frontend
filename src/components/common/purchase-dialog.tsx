@@ -1322,7 +1322,7 @@ export function PurchaseDialog({
                               <SelectContent>
                                 {fuelTypes.map((ft) => (
                                   <SelectItem key={ft.id} value={ft.id}>
-                                    {ft.name} — ৳{ft.price}/L (sell)
+                                    {ft.name} — Sell: ৳{ft.price}/L | Cost: ৳{ft.costPrice ?? 0}/L
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1337,37 +1337,13 @@ export function PurchaseDialog({
 
 
 
-{/* 
-                          <div className="space-y-2">
-                            <Label className="text-sm">
-                              {t("costPrice")} <span className="text-destructive">*</span>
-                            </Label>
-                            <NumericInput
-                              value={fuelItem.costPrice}
-                              disabled={isEdit}
-                              onValueChange={(val) => {
-                                updateFuelItem(fuelIndex, { costPrice: val });
-                                setFuelErrors((prev) => {
-                                  const updated = { ...prev };
-                                  if (updated[fuelIndex]) {
-                                    delete updated[fuelIndex].costPrice;
-                                  }
-                                  return updated;
-                                });
-                              }}
-                              min={0}
-                              className={cn(
-                                itemErrors?.costPrice && "border-destructive ring-destructive"
-                              )}
-                            />
-                            {itemErrors?.costPrice && (
-                              <p className="text-[0.8rem] font-medium text-destructive">
-                                {itemErrors.costPrice}
-                              </p>
-                            )}
-                          </div> */}
-
-                          {/* Cost Price — hidden, auto-filled from fuel type */}
+                          {/* Cost Price — read-only display */}
+                          <div className="space-y-2 flex flex-col justify-center">
+                            <Label className="text-sm text-muted-foreground">{t("costPrice")}</Label>
+                            <div className="font-medium text-base">
+                              {fuelItem.costPrice !== undefined && fuelItem.fuelTypeId ? `৳${fuelItem.costPrice.toFixed(2)}` : "—"}
+                            </div>
+                          </div>
 
                           {/* Quantity (Liters) */}
                           <div className="space-y-2">
@@ -2160,9 +2136,9 @@ export function PurchaseDialog({
                       <span>{total.toFixed(2)}</span>
                     </div>
 
-                    {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
-                      <div className="flex items-center justify-between pt-4 border-t border-border">
-                        <div className="w-[150px] sm:w-[250px]">
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      <div className="w-[150px] sm:w-[250px]">
+                        {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
                           <FormField
                             control={form.control}
                             name="paidAmount"
@@ -2184,28 +2160,33 @@ export function PurchaseDialog({
                               </FormItem>
                             )}
                           />
-                        </div>
-
-                        <div className="flex flex-col items-end justify-center space-y-1">
-                          <Label className="text-muted-foreground">
-                            {t("dueAmount")}
-                          </Label>
-                          <div className="text-2xl font-bold pt-1">
-                            <span
-                              className={
-                                Number(form.watch("dueAmount" as any) || 0) > 0
-                                  ? "text-destructive"
-                                  : "text-emerald-600"
-                              }
-                            >
-                              {Number(
-                                form.watch("dueAmount" as any) || 0,
-                              ).toFixed(2)}
-                            </span>
+                        )}
+                        {paymentMethod === "MIXED" && (
+                          <div className="space-y-1 pt-1 text-sm text-muted-foreground">
+                            <span>{t("paymentSplit")} active</span>
                           </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end justify-center space-y-1">
+                        <Label className="text-muted-foreground">
+                          {t("dueAmount")}
+                        </Label>
+                        <div className="text-2xl font-bold pt-1">
+                          <span
+                            className={
+                              Number(form.watch("dueAmount" as any) || 0) > 0
+                                ? "text-destructive"
+                                : "text-emerald-600"
+                            }
+                          >
+                            {Number(
+                              form.watch("dueAmount" as any) || 0,
+                            ).toFixed(2)}
+                          </span>
                         </div>
                       </div>
-                    )}
+                    </div>
 
                     {!isEdit &&
                       dueAmount > 0 &&

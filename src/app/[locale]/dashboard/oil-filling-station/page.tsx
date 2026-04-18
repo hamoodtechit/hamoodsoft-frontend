@@ -94,8 +94,14 @@ export default function OilFillingStationPage() {
     },
     {
       id: "price",
-      header: "Price/Liter",
+      header: "Selling Price/Liter",
       cell: (row) => `${row.price.toFixed(2)}`,
+      sortable: true,
+    },
+    {
+      id: "costPrice",
+      header: "Cost Price/Liter",
+      cell: (row) => `${(row.costPrice ?? 0).toFixed(2)}`,
       sortable: true,
     },
     {
