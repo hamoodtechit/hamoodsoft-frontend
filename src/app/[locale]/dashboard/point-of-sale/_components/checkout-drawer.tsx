@@ -142,7 +142,7 @@ export function CheckoutDrawer() {
               {selectedContact && (
                 <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
                   <div className="flex justify-between text-muted-foreground mb-1">
-                    <span>Deposit Balance:</span>
+                    <span>Balance:</span>
                     <span
                       className={
                         selectedContact.balance < 0

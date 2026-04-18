@@ -176,16 +176,19 @@ export function InvoiceDialog({
                 size: ${isA4 ? "A4" : `${invoiceWidth} auto`};
                 margin: ${isA4 ? "5mm" : "1mm"};
               }
+              *, *::before, *::after {
+                box-sizing: border-box;
+              }
               html, body {
                 background: white !important;
                 color: black !important;
-                margin: 20px;
-                padding: ${isA4 ? "20px" : "8px"};
+                margin: 0;
+                padding: 0;
               }
               #print-root {
-                width: 100%;
-                margin: 20px;
-                padding: ${isA4 ? "20px" : "20px"};
+                max-width: 100%;
+                margin: 0 auto;
+                padding: ${isA4 ? "22px 30px" : "34px 22px"};
               }
             </style>
           </head>
@@ -240,7 +243,7 @@ export function InvoiceDialog({
         </DialogHeader>
         <div
           id="invoice-content"
-          className={`p-6 print:p-0 ${invoiceLayout === "pos-a4"
+          className={`print:p-0 ${invoiceLayout === "pos-a4"
               ? ""
               : invoiceLayout === "pos-80mm"
                 ? "text-sm"
