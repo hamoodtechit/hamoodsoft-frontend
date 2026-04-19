@@ -812,6 +812,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 branchId,
                 productId: createdProduct.id,
                 unitId: stock.unitId,
+                itemType: 'PRODUCT' as const,
                 quantity: stock.quantity,
                 purchasePrice: stock.purchasePrice,
                 salePrice: stock.salePrice,

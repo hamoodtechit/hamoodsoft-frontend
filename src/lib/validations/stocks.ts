@@ -4,6 +4,7 @@ export const createStockSchema = z.object({
   branchId: z.string().uuid("Branch is required"),
   productId: z.string().uuid("Product is required"),
   unitId: z.string().uuid("Unit is required"),
+  itemType: z.enum(["PRODUCT", "FUEL"]).optional(),
   quantity: z
     .number({ invalid_type_error: "Quantity must be a number" })
     .min(0, "Quantity must be 0 or greater"),
