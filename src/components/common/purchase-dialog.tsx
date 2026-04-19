@@ -508,9 +508,11 @@ export function PurchaseDialog({
         // Build purchase items
         const purchaseItems: any[] = [];
         for (const fuelItem of fuelItems) {
-          if (status === "COMPLETED" && fuelItem.tankerAllocations.length > 0) {
+          if (fuelItem.tankerAllocations.length > 0) {
+            let allocatedQty = 0;
             for (const alloc of fuelItem.tankerAllocations) {
               if (!alloc.tankerId || alloc.quantity <= 0) continue;
+              allocatedQty += alloc.quantity;
               purchaseItems.push({
                 sku: `FUEL-${fuelItem.fuelTypeId}-${alloc.tankerId}-${Date.now()}`,
                 itemName: fuelItem.fuelTypeName || "Fuel",
@@ -526,8 +528,24 @@ export function PurchaseDialog({
                 discountAmount: 0,
               });
             }
+            const remainingQty = fuelItem.quantity - allocatedQty;
+            if (remainingQty > 0) {
+              purchaseItems.push({
+                sku: `FUEL-${fuelItem.fuelTypeId}-unalloc-${Date.now()}`,
+                itemName: fuelItem.fuelTypeName || "Fuel",
+                itemDescription: "",
+                unit: "L",
+                price: fuelItem.costPrice,
+                quantity: remainingQty,
+                totalPrice: remainingQty * fuelItem.costPrice,
+                fuelTypeId: fuelItem.fuelTypeId,
+                itemType: "FUEL",
+                discountType: "NONE",
+                discountAmount: 0,
+              });
+            }
           } else {
-            // Non-completed: single item using the total quantity (no tanker required)
+            // No allocations at all
             purchaseItems.push({
               sku: `FUEL-${fuelItem.fuelTypeId}-${Date.now()}`,
               itemName: fuelItem.fuelTypeName || "Fuel",
@@ -579,10 +597,11 @@ export function PurchaseDialog({
       // Build purchase items from fuel items (one PurchaseItem per tanker allocation)
       const purchaseItems: any[] = [];
       for (const fuelItem of fuelItems) {
-        if (status === "COMPLETED" && fuelItem.tankerAllocations.length > 0) {
-          // COMPLETED: one item per tanker allocation
+        if (fuelItem.tankerAllocations.length > 0) {
+          let allocatedQty = 0;
           for (const alloc of fuelItem.tankerAllocations) {
             if (!alloc.tankerId || alloc.quantity <= 0) continue;
+            allocatedQty += alloc.quantity;
             purchaseItems.push({
               sku: `FUEL-${fuelItem.fuelTypeId}-${alloc.tankerId}-${Date.now()}`,
               itemName: fuelItem.fuelTypeName || "Fuel",
@@ -600,8 +619,24 @@ export function PurchaseDialog({
               discountAmount: 0,
             });
           }
+          const remainingQty = fuelItem.quantity - allocatedQty;
+          if (remainingQty > 0) {
+            purchaseItems.push({
+              sku: `FUEL-${fuelItem.fuelTypeId}-unalloc-${Date.now()}`,
+              itemName: fuelItem.fuelTypeName || "Fuel",
+              itemDescription: "",
+              unit: "L",
+              price: fuelItem.costPrice,
+              quantity: remainingQty,
+              totalPrice: remainingQty * fuelItem.costPrice,
+              fuelTypeId: fuelItem.fuelTypeId,
+              itemType: "FUEL",
+              discountType: "NONE",
+              discountAmount: 0,
+            });
+          }
         } else {
-          // Non-completed: single item using the total quantity (no tanker required)
+          // No allocations at all
           purchaseItems.push({
             sku: `FUEL-${fuelItem.fuelTypeId}-${Date.now()}`,
             itemName: fuelItem.fuelTypeName || "Fuel",
