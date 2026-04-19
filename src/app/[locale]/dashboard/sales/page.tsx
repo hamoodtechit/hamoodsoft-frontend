@@ -890,9 +890,10 @@ export default function SalesPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium">{item.itemName}</p>
                                 {item.itemDescription && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {item.itemDescription}
-                                  </p>
+                                  <div 
+                                    className="text-sm text-muted-foreground mt-1"
+                                    dangerouslySetInnerHTML={{ __html: item.itemDescription }}
+                                  />
                                 )}
                                 <div className="flex items-center gap-4 mt-2 text-sm">
                                   <span>
@@ -942,7 +943,7 @@ export default function SalesPage() {
                             </Badge>
                             {payment.accountId && (
                               <span className="text-sm text-muted-foreground">
-                                Account: {payment.accountId.slice(0, 8)}...
+                                {t("account") || "Account"}: {payment.account?.name || payment.accountId.slice(0, 8) + "..."}
                               </span>
                             )}
                           </div>

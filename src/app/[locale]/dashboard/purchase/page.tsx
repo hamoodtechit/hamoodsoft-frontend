@@ -795,11 +795,12 @@ export default function PurchasePage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="font-medium">{item.itemName}</p>
-                              {item.itemDescription && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {item.itemDescription}
-                                </p>
-                              )}
+                                {item.itemDescription && (
+                                  <div 
+                                    className="text-sm text-muted-foreground mt-1"
+                                    dangerouslySetInnerHTML={{ __html: item.itemDescription }}
+                                  />
+                                )}
                               <div className="flex items-center gap-4 mt-2 text-sm">
                                 <span>
                                   {t("quantity")}: {item.quantity} {item.unit}
