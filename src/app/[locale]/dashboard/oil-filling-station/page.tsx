@@ -166,17 +166,21 @@ export default function OilFillingStationPage() {
     {
       id: "currentFuel",
       header: "Current Level",
-      cell: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs">{row.currentFuel}L / {row.capacity}L</span>
-          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${row.currentFuel / row.capacity < 0.2 ? 'bg-destructive' : 'bg-primary'}`}
-              style={{ width: `${(row.currentFuel / row.capacity) * 100}%` }}
-            />
+      cell: (row) => {
+        const current = Number(row.currentFuel || 0);
+        const capacity = Number(row.capacity || 0);
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs">{current.toFixed(2)}L / {capacity.toFixed(2)}L</span>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${capacity > 0 && current / capacity < 0.2 ? 'bg-destructive' : 'bg-primary'}`}
+                style={{ width: capacity > 0 ? `${(current / capacity) * 100}%` : '0%' }}
+              />
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: "location",
