@@ -59,9 +59,8 @@ export default function ExpensePage() {
   // Filter transactions for expense type
   const expenseTransactions = useMemo(() => {
     return allTransactions.filter((t: Transaction) => {
-      const normalizedType = t.type
-      const rawType = (t as any).type
-      return normalizedType === "EXPENSE" || rawType === "EXPENSE" || rawType === "EX"
+      const category = (t as any).category
+      return category === "EXPENSE"
     })
   }, [allTransactions])
 
@@ -240,14 +239,6 @@ export default function ExpensePage() {
                             {formatCurrency(transactionDetails.amount, { generalSettings })}
                           </div>
                         </div>
-                        {(transactionDetails as any).paidAmount !== undefined && (
-                          <div>
-                            <div className="text-sm text-muted-foreground">Paid Amount</div>
-                            <div className="text-base">
-                              {formatCurrency((transactionDetails as any).paidAmount || 0, { generalSettings })}
-                            </div>
-                          </div>
-                        )}
                         {transactionDetails.occurredAt && (
                           <div>
                             <div className="text-sm text-muted-foreground">Occurred At</div>

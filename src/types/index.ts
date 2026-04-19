@@ -112,6 +112,7 @@ export interface ProductVariantInput {
 
 export interface Product {
   id: string
+  sku?: string
   businessId?: string
   branchIds?: string[]
   name: string
@@ -176,12 +177,17 @@ export interface Brand {
   updatedAt?: string
 }
 
+export type ItemType = "PRODUCT" | "FUEL" | "SERVICE"
+
 export interface Stock {
   id: string
   businessId?: string
   branchId: string
-  productId: string
-  unitId: string
+  productId?: string | null
+  unitId?: string | null
+  fuelTypeId?: string | null
+  tankerId?: string | null
+  itemType?: ItemType | null
   quantity: number
   sku?: string // SKU field from stock
   variantId?: string | null // Variant ID for variant-specific stock
@@ -200,12 +206,17 @@ export interface StockHistory {
   id: string
   stockId: string
   branchId: string
-  productId: string
-  unitId: string
+  productId?: string | null
+  fuelTypeId?: string | null
+  tankerId?: string | null
+  itemType?: ItemType | null
+  unitId?: string | null
   transactionType: "IN" | "OUT"
   quantity: number
   quantityChange?: number
+  namedQuantity?: number
   reason?: string | null
+  description?: string | null
   branch?: Branch
   product?: Product
   stock?: Stock
@@ -217,7 +228,7 @@ export interface StockAdjustment {
   businessId?: string
   branchId: string
   stockId: string
-  productId: string
+  productId?: string | null
   stockHistoryId: string
   reason: string
   branch?: Branch
@@ -239,15 +250,21 @@ export interface PurchaseItem {
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount?: number
   totalPrice?: number
+  fuelTypeId?: string
+  tankerId?: string
+  itemType?: ItemType
+  productId?: string
+  actualQuantity?: number
 }
 
-export type PurchaseStatus = "PENDING" | "COMPLETED" | "CANCELLED"
+export type PurchaseStatus = "ORDERED" | "PENDING" | "RETURNED" | "COMPLETED" | "CANCELLED"
 
 export interface Purchase {
   id: string
   businessId?: string
   branchId: string
   contactId: string
+  purchaseType?: "PRODUCT" | "FUEL"
   status: PurchaseStatus
   paidAmount: number
   dueAmount: number
@@ -287,6 +304,12 @@ export interface SaleItem {
   discountType?: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount?: number
   totalPrice?: number
+  actualQuantity?: number
+  itemType?: ItemType
+  productId?: string
+  fuelTypeId?: string
+  tankerId?: string
+  dispenserId?: string
   saleReturnId?: string | null
   createdAt?: string
   updatedAt?: string
@@ -297,6 +320,7 @@ export interface Sale {
   businessId?: string
   branchId: string
   contactId: string
+  saleType?: "PRODUCT" | "FUEL"
   status: SaleStatus
   paymentStatus: PaymentStatus
   paidAmount: number
@@ -522,7 +546,7 @@ export interface FuelType {
   businessId: string
   name: string
   price: number
-  isActive: boolean
+  costPrice?: number
   createdAt: string
   updatedAt: string
 }
@@ -547,7 +571,13 @@ export interface Tanker {
 export interface CreateFuelTypeInput {
   name: string
   price: number
-  isActive?: boolean
+  costPrice?: number
+}
+
+export interface UpdateFuelTypeInput {
+  name?: string
+  price?: number
+  costPrice?: number
 }
 
 export interface CreateTankerInput {

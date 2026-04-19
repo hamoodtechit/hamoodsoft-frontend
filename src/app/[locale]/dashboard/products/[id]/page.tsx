@@ -76,17 +76,14 @@ export default function ProductDetailsPage() {
   }
 
   return (
-    <PageLayout title={product.name} description={product.description || undefined} maxWidth="full">
+    <PageLayout 
+      title={product.name} 
+      backHref="/dashboard/products" 
+      backLabel={tCommon("back") || "Back to Products"} 
+      maxWidth="full"
+    >
       {/* Header Actions */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push(`/${locale}/dashboard/products`)}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {tCommon("back") || "Back"}
-        </Button>
+      <div className="flex items-center justify-end">
         <Button
           variant="default"
           size="sm"
@@ -195,7 +192,7 @@ export default function ProductDetailsPage() {
                 {product.description && (
                   <div>
                     <p className="text-sm text-muted-foreground">{t("productDescription")}</p>
-                    <p className="font-medium">{product.description}</p>
+                    <div className="font-medium prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
                   </div>
                 )}
               </CardContent>

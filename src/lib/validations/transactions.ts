@@ -15,7 +15,7 @@ export const createExpenseTransactionSchema = z.object({
   contactId: z.string().optional(),
   categoryId: z.string().optional(),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
-  paidAmount: z.number().min(0, "Paid amount must be greater than or equal to 0").optional(),
+  // paidAmount: z.number().min(0, "Paid amount must be greater than or equal to 0").optional(),
   occurredAt: z.string().optional(),
   note: z.string().optional(),
 })

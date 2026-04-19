@@ -7,6 +7,7 @@ interface PageLayoutProps {
   title: string
   description?: string
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full"
+  align?: "left" | "center"
   className?: string
   showBackButton?: boolean
   backHref?: string
@@ -18,6 +19,7 @@ export function PageLayout({
   title,
   description,
   maxWidth = "2xl",
+  align = "center",
   className,
   showBackButton = true,
   backHref,
@@ -37,7 +39,7 @@ export function PageLayout({
       </div>
 
       {/* Content */}
-      <PageContainer maxWidth={maxWidth}>{children}</PageContainer>
+      <PageContainer maxWidth={maxWidth} align={align}>{children}</PageContainer>
     </div>
   )
 }

@@ -119,6 +119,8 @@ export const endpoints = {
   },
   settings: {
     list: "/settings",
+    create: "/settings",
+    getByName: (name: string) => `/settings/by-name/${name}`,
     update: (id: string) => `/settings/${id}`,
   },
   accounts: {
@@ -157,6 +159,7 @@ export const endpoints = {
   fuelTypes: {
     create: "/fuel-types",
     list: "/fuel-types",
+    update: (id: string) => `/fuel-types/${id}`,
     delete: (id: string) => `/fuel-types/${id}`,
   },
   tankers: {

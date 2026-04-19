@@ -4,6 +4,7 @@ import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { PageLayout } from "@/components/common/page-layout"
 import { FuelTypeDialog } from "@/components/pos/fuel-type-dialog"
+import { FuelStockHistoryDialog } from "@/components/pos/fuel-stock-history-dialog"
 import { TankerDialog } from "@/components/pos/tanker-dialog"
 import { DispenserDialog } from "@/components/pos/dispenser-dialog"
 import { DispenserReadingDialog } from "@/components/pos/dispenser-reading-dialog"
@@ -24,7 +25,7 @@ import { useDeleteTanker, useTankers } from "@/lib/hooks/use-tankers"
 import { useDeleteDispenser, useDispensers } from "@/lib/hooks/use-dispensers"
 import { useDeleteDispenserReading, useDispenserReadings } from "@/lib/hooks/use-dispenser-readings"
 import { Dispenser, DispenserReading, FuelType, Tanker } from "@/types"
-import { Container, Droplets, Fuel, Gauge, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
+import { Container, Droplets, Fuel, Gauge, History, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
@@ -41,6 +42,7 @@ export default function OilFillingStationPage() {
   const [isFuelDialogOpen, setIsFuelDialogOpen] = useState(false)
   const [isFuelDeleteDialogOpen, setIsFuelDeleteDialogOpen] = useState(false)
   const [fuelTypeToDelete, setFuelTypeToDelete] = useState<FuelType | null>(null)
+  const [isFuelHistoryOpen, setIsFuelHistoryOpen] = useState(false)
   
   // Tankers State
   const [selectedTanker, setSelectedTanker] = useState<Tanker | null>(null)
@@ -92,18 +94,15 @@ export default function OilFillingStationPage() {
     },
     {
       id: "price",
-      header: "Price/Liter",
+      header: "Selling Price/Liter",
       cell: (row) => `${row.price.toFixed(2)}`,
       sortable: true,
     },
     {
-      id: "status",
-      header: "Status",
-      cell: (row) => (
-        <Badge variant={row.isActive ? "default" : "secondary"}>
-          {row.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      id: "costPrice",
+      header: "Cost Price/Liter",
+      cell: (row) => `${(row.costPrice ?? 0).toFixed(2)}`,
+      sortable: true,
     },
     {
       id: "actions",
@@ -116,6 +115,12 @@ export default function OilFillingStationPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => {
+              setSelectedFuelType(row)
+              setIsFuelHistoryOpen(true)
+            }}>
+              <History className="mr-2 h-4 w-4" /> History
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => {
               setSelectedFuelType(row)
               setIsFuelDialogOpen(true)
@@ -161,17 +166,21 @@ export default function OilFillingStationPage() {
     {
       id: "currentFuel",
       header: "Current Level",
-      cell: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs">{row.currentFuel}L / {row.capacity}L</span>
-          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${row.currentFuel / row.capacity < 0.2 ? 'bg-destructive' : 'bg-primary'}`}
-              style={{ width: `${(row.currentFuel / row.capacity) * 100}%` }}
-            />
+      cell: (row) => {
+        const current = Number(row.currentFuel || 0);
+        const capacity = Number(row.capacity || 0);
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs">{current.toFixed(2)}L / {capacity.toFixed(2)}L</span>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${capacity > 0 && current / capacity < 0.2 ? 'bg-destructive' : 'bg-primary'}`}
+                style={{ width: capacity > 0 ? `${(current / capacity) * 100}%` : '0%' }}
+              />
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: "location",
@@ -398,7 +407,7 @@ export default function OilFillingStationPage() {
         </div>
 
         <TabsContent value="dashboard" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Tankers</CardTitle>
@@ -426,7 +435,7 @@ export default function OilFillingStationPage() {
                 <div className="text-2xl font-bold">{dispensersData?.meta.total || 0}</div>
               </CardContent>
             </Card>
-            <Card>
+            {/* <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
                 <Gauge className="h-4 w-4 text-muted-foreground" />
@@ -434,7 +443,7 @@ export default function OilFillingStationPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{readingsData?.meta.total || 0}</div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
           <Card>
             <CardHeader>
@@ -543,6 +552,12 @@ export default function OilFillingStationPage() {
           </Card>
         </TabsContent> */}
       </Tabs>
+
+      <FuelStockHistoryDialog
+        fuelType={selectedFuelType}
+        open={isFuelHistoryOpen}
+        onOpenChange={setIsFuelHistoryOpen}
+      />
 
       <FuelTypeDialog
         fuelType={selectedFuelType}

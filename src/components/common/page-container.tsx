@@ -4,6 +4,7 @@ interface PageContainerProps {
   children: React.ReactNode
   className?: string
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full"
+  align?: "left" | "center"
 }
 
 const maxWidthClasses = {
@@ -19,12 +20,13 @@ export function PageContainer({
   children,
   className,
   maxWidth = "2xl",
+  align = "center",
 }: PageContainerProps) {
   if (maxWidth === "full") {
     return <div className={cn("w-full", className)}>{children}</div>
   }
   return (
-    <div className={cn("flex justify-center", className)}>
+    <div className={cn("flex", align === "center" ? "justify-center" : "justify-start", className)}>
       <div className={cn("w-full", maxWidthClasses[maxWidth])}>{children}</div>
     </div>
   )

@@ -1,76 +1,141 @@
-    "use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { useAccounts } from "@/lib/hooks/use-accounts"
-import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
-import { useBranches } from "@/lib/hooks/use-branches"
-import { useContacts } from "@/lib/hooks/use-contacts"
-import { useProducts } from "@/lib/hooks/use-products"
-import { useCreateSale, useUpdateSale } from "@/lib/hooks/use-sales"
-import { useStocks } from "@/lib/hooks/use-stocks"
-import { useUnits } from "@/lib/hooks/use-units"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAccounts } from "@/lib/hooks/use-accounts";
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection";
+import { useBranches } from "@/lib/hooks/use-branches";
+import { useContacts } from "@/lib/hooks/use-contacts";
+import { useProducts } from "@/lib/hooks/use-products";
+import { useCreateSale, useUpdateSale } from "@/lib/hooks/use-sales";
+import { useStocks } from "@/lib/hooks/use-stocks";
+import { useUnits } from "@/lib/hooks/use-units";
+import { useFuelTypes } from "@/lib/hooks/use-fuel-types";
+import { useTankers } from "@/lib/hooks/use-tankers";
+import { useSettings } from "@/lib/hooks/use-settings";
 import {
-    createSaleSchema,
-    updateSaleSchema,
-    type CreateSaleInput,
-    type UpdateSaleInput,
-} from "@/lib/validations/sales"
-import { Product, ProductVariant, Sale } from "@/types"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { CreditCard, DollarSign, FileText, Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
-import { useTranslations } from "next-intl"
-import { useEffect, useMemo, useState } from "react"
-import { useFieldArray, useForm, useWatch } from "react-hook-form"
+  createSaleSchema,
+  updateSaleSchema,
+  type CreateSaleInput,
+  type UpdateSaleInput,
+} from "@/lib/validations/sales";
+import { Product, ProductVariant, Sale, FuelType, Tanker } from "@/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  CreditCard,
+  DollarSign,
+  Droplets,
+  FileText,
+  Package,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface SaleDialogProps {
-  sale: Sale | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  sale: Sale | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
-  const t = useTranslations("sales")
-  const tCommon = useTranslations("common")
-  const { data: branches = [] } = useBranches()
-  const { selectedBranchId } = useBranchSelection()
-  const { data: units = [] } = useUnits(selectedBranchId || undefined)
-  const { data: contactsData } = useContacts({ type: "CUSTOMER" })
-  const contacts = contactsData?.items || []
-  const { data: accountsData } = useAccounts({ limit: 1000 })
-  const accounts = accountsData?.items?.filter(acc => acc.isActive) || []
-  const createMutation = useCreateSale()
-  const updateMutation = useUpdateSale()
+  const t = useTranslations("sales");
+  const tCommon = useTranslations("common");
+  const { data: branches = [] } = useBranches();
+  const { selectedBranchId } = useBranchSelection();
+  const { data: units = [] } = useUnits(selectedBranchId || undefined);
+  const { data: contactsData } = useContacts({ type: "CUSTOMER" });
+  const contacts = contactsData?.items || [];
+  const { data: accountsData } = useAccounts({ limit: 1000 });
+  const accounts = accountsData?.items?.filter((acc) => acc.isActive) || [];
+  const createMutation = useCreateSale();
+  const updateMutation = useUpdateSale();
 
-  const isEdit = !!sale
-  const isLoading = createMutation.isPending || updateMutation.isPending
+  // Fuel data hooks
+  const { data: fuelTypesData } = useFuelTypes();
+  const fuelTypes: FuelType[] = fuelTypesData?.items || [];
+  const { data: tankersData } = useTankers({ limit: 1000 });
+  const tankers: Tanker[] = tankersData?.items || [];
 
-  const schema = isEdit ? updateSaleSchema : createSaleSchema
+  // Business config for point reducing
+  const { data: settingsData } = useSettings();
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+    };
+  }, [settingsData]);
+
+  const isEdit = !!sale;
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  // ─── Sale type toggle (Product vs Fuel) ───
+  const [saleType, setSaleType] = useState<"PRODUCT" | "FUEL">("PRODUCT");
+
+  // ─── Fuel items state ───
+  interface FuelSaleItem {
+    id: string;
+    fuelTypeId: string;
+    fuelTypeName: string;
+    sellingPrice: number;
+    quantity: number; // named/told quantity
+    tankerId: string;
+    tankerName: string;
+  }
+  const [fuelSaleItems, setFuelSaleItems] = useState<FuelSaleItem[]>([]);
+
+  // Get tankers for a specific fuel type
+  const getTankersForFuelType = (fuelTypeId: string) => {
+    return tankers.filter((t) => t.fuelTypeId === fuelTypeId);
+  };
+
+  // Calculate actual quantity after point reduction
+  const calculateActualQuantity = (namedQuantity: number): number => {
+    if (!businessConfig.showPointReducing || businessConfig.pointReducingAmountPerLiter <= 0) return namedQuantity;
+    return namedQuantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
+  };
+
+  // Fuel total calculation
+  const fuelTotal = useMemo(() => {
+    return fuelSaleItems.reduce((sum, item) => {
+      return sum + (item.quantity || 0) * (item.sellingPrice || 0);
+    }, 0);
+  }, [fuelSaleItems]);
+
+  const schema = isEdit ? updateSaleSchema : createSaleSchema;
 
   const defaultValues = useMemo(() => {
     if (!sale) {
@@ -96,7 +161,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         totalPrice: 0,
         discountType: "NONE" as const,
         discountAmount: 0,
-      }
+      };
     }
     // For update, only include fields that can be updated
     return {
@@ -105,43 +170,43 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       status: sale.status || "SOLD",
       paymentStatus: sale.paymentStatus || "DUE",
       paidAmount: sale.paidAmount || 0,
-    }
-  }, [sale, selectedBranchId])
+    };
+  }, [sale, selectedBranchId]);
 
   const form = useForm<CreateSaleInput | UpdateSaleInput>({
     resolver: zodResolver(schema as any),
     defaultValues,
-  })
+  });
 
   // Fetch products for selection - watch branchId from form
-  const branchId = useWatch({ control: form.control, name: "branchId" })
-  const { data: productsData } = useProducts({ 
+  const branchId = useWatch({ control: form.control, name: "branchId" });
+  const { data: productsData } = useProducts({
     branchId: branchId || selectedBranchId || undefined,
-    limit: 1000 // Get all products for selection
-  })
-  const products = productsData?.items || []
-  
+    limit: 1000, // Get all products for selection
+  });
+  const products = productsData?.items || [];
+
   // Fetch stocks for the selected branch
-  const { data: stocksData } = useStocks({ 
-    branchId: branchId || selectedBranchId || undefined 
-  })
-  const stocks = stocksData?.items || []
-  
+  const { data: stocksData } = useStocks({
+    branchId: branchId || selectedBranchId || undefined,
+  });
+  const stocks = stocksData?.items || [];
+
   // Create stock map by SKU and productId for quick lookup
   const stockMapBySku = useMemo(() => {
-    const map = new Map<string, any>()
-    
+    const map = new Map<string, any>();
+
     // Add stocks from separate query
     stocks.forEach((stock: any) => {
       if (stock.sku) {
-        map.set(stock.sku, stock)
+        map.set(stock.sku, stock);
       }
       // Also map by productId for non-variable products
       if (stock.productId) {
-        map.set(stock.productId, stock)
+        map.set(stock.productId, stock);
       }
-    })
-    
+    });
+
     // Also add stocks from product.stocks array (if available)
     products.forEach((product) => {
       if (product.stocks && Array.isArray(product.stocks)) {
@@ -149,141 +214,176 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
           if (stock.sku) {
             // Only add if not already in map (separate query takes precedence)
             if (!map.has(stock.sku)) {
-              map.set(stock.sku, stock)
+              map.set(stock.sku, stock);
             }
           }
           // Also map by productId
           if (stock.productId && !map.has(stock.productId)) {
-            map.set(stock.productId, stock)
+            map.set(stock.productId, stock);
           }
-        })
+        });
       }
-    })
-    
-    return map
-  }, [stocks, products])
-  
+    });
+
+    return map;
+  }, [stocks, products]);
+
   // Helper function to find stock for a product/variant (multiple strategies)
-  const findStock = (product: Product, variant?: ProductVariant | null): any => {
-    const currentBranchId = branchId || selectedBranchId
-    
+  const findStock = (
+    product: Product,
+    variant?: ProductVariant | null,
+  ): any => {
+    const currentBranchId = branchId || selectedBranchId;
+
     if (variant) {
       // For variants, try multiple strategies
-      const sku = variant.sku || variant.id
-      
+      const sku = variant.sku || variant.id;
+
       // Strategy 1: Find by SKU in stockMapBySku
-      let stock = stockMapBySku.get(sku)
-      
+      let stock = stockMapBySku.get(sku);
+
       // Strategy 2: Find by SKU in product.stocks
       if (!stock && product.stocks && Array.isArray(product.stocks)) {
-        stock = product.stocks.find((s: any) => s.sku === sku && s.branchId === currentBranchId)
+        stock = product.stocks.find(
+          (s: any) => s.sku === sku && s.branchId === currentBranchId,
+        );
       }
-      
+
       // Strategy 3: Try from separate stocks query by SKU
       if (!stock) {
-        stock = stocks.find((s: any) => s.sku === sku && s.branchId === currentBranchId)
+        stock = stocks.find(
+          (s: any) => s.sku === sku && s.branchId === currentBranchId,
+        );
       }
-      
+
       // Strategy 4: For variable products, try by productId if SKU doesn't match
       if (!stock && product.isVariable) {
-        stock = product.stocks?.find((s: any) => 
-          s.branchId === currentBranchId && s.productId === product.id
-        ) || stocks.find((s: any) => 
-          s.productId === product.id && s.branchId === currentBranchId
-        )
+        stock =
+          product.stocks?.find(
+            (s: any) =>
+              s.branchId === currentBranchId && s.productId === product.id,
+          ) ||
+          stocks.find(
+            (s: any) =>
+              s.productId === product.id && s.branchId === currentBranchId,
+          );
       }
-      
-      return stock
+
+      return stock;
     } else {
       // For non-variable products, check by productId
       // Strategy 1: Find by productId in stockMapBySku
-      let stock = stockMapBySku.get(product.id)
-      
+      let stock = stockMapBySku.get(product.id);
+
       // Strategy 2: Find in product.stocks by productId and branchId
       if (!stock && product.stocks && Array.isArray(product.stocks)) {
-        stock = product.stocks.find((s: any) => 
-          s.productId === product.id && s.branchId === currentBranchId
-        )
+        stock = product.stocks.find(
+          (s: any) =>
+            s.productId === product.id && s.branchId === currentBranchId,
+        );
       }
-      
+
       // Strategy 3: Try from separate stocks query
       if (!stock) {
-        stock = stocks.find((s: any) => 
-          s.productId === product.id && s.branchId === currentBranchId
-        )
+        stock = stocks.find(
+          (s: any) =>
+            s.productId === product.id && s.branchId === currentBranchId,
+        );
       }
-      
-      return stock
+
+      return stock;
     }
-  }
-  
+  };
+
   // Helper function to check if product/variant is in stock
-  const isProductInStock = (product: Product, variant?: ProductVariant | null): boolean => {
+  const isProductInStock = (
+    product: Product,
+    variant?: ProductVariant | null,
+  ): boolean => {
     // If stock management is disabled, allow sale
     if (!product.manageStocks) {
-      return true
+      return true;
     }
-    
+
     // For variable products without variant selected, check if any variant has stock
-    if (product.isVariable && product.productVariants && product.productVariants.length > 0 && !variant) {
+    if (
+      product.isVariable &&
+      product.productVariants &&
+      product.productVariants.length > 0 &&
+      !variant
+    ) {
       return product.productVariants.some((v) => {
-        const vStock = findStock(product, v)
-        return vStock && vStock.quantity > 0
-      })
+        const vStock = findStock(product, v);
+        return vStock && vStock.quantity > 0;
+      });
     }
-    
-    const stock = findStock(product, variant || undefined)
-    return stock && stock.quantity > 0
-  }
-  
+
+    const stock = findStock(product, variant || undefined);
+    return stock && stock.quantity > 0;
+  };
+
   // Helper function to get available stock quantity
-  const getAvailableStock = (product: Product, variant?: ProductVariant | null): number => {
+  const getAvailableStock = (
+    product: Product,
+    variant?: ProductVariant | null,
+  ): number => {
     if (!product.manageStocks) {
-      return Infinity // No stock management, unlimited
+      return Infinity; // No stock management, unlimited
     }
-    
+
     // For variable products without variant selected, return 0 (need to select variant first)
-    if (product.isVariable && product.productVariants && product.productVariants.length > 0 && !variant) {
-      return 0
+    if (
+      product.isVariable &&
+      product.productVariants &&
+      product.productVariants.length > 0 &&
+      !variant
+    ) {
+      return 0;
     }
-    
-    const stock = findStock(product, variant || undefined)
-    return stock?.quantity || 0
-  }
+
+    const stock = findStock(product, variant || undefined);
+    return stock?.quantity || 0;
+  };
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items" as any,
-  })
+  });
 
   // Track selected products and variants for each item
-  const [selectedProducts, setSelectedProducts] = useState<Record<number, Product | null>>({})
-  const [selectedVariants, setSelectedVariants] = useState<Record<number, ProductVariant | null>>({})
-  const [productSearchQueries, setProductSearchQueries] = useState<Record<number, string>>({})
-  
+  const [selectedProducts, setSelectedProducts] = useState<
+    Record<number, Product | null>
+  >({});
+  const [selectedVariants, setSelectedVariants] = useState<
+    Record<number, ProductVariant | null>
+  >({});
+  const [productSearchQueries, setProductSearchQueries] = useState<
+    Record<number, string>
+  >({});
+
   // Payment method and account selection
-  type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED"
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH")
-  const [cashAccountId, setCashAccountId] = useState<string>("")
-  const [bankAccountId, setBankAccountId] = useState<string>("")
-  
+  type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED";
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [cashAccountId, setCashAccountId] = useState<string>("");
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+
   // Payment splits for MIXED payment method
   interface PaymentSplit {
-    id: string
-    accountId: string
-    amount: number
+    id: string;
+    accountId: string;
+    amount: number;
   }
-  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([])
+  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([]);
 
   // Watch paidAmount to calculate total in create mode
   const paidAmount = useWatch({
     control: form.control,
     name: "paidAmount" as any,
-  })
+  });
 
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues)
+      form.reset(defaultValues);
       if (!isEdit) {
         // Reset items array for create
         form.setValue("items" as any, [
@@ -298,113 +398,223 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
             discountAmount: 0,
             totalPrice: 0,
           },
-        ])
+        ]);
         // Auto-select branch if available
         if (selectedBranchId) {
-          form.setValue("branchId", selectedBranchId)
+          form.setValue("branchId", selectedBranchId);
         }
         // Reset product selections
-        setSelectedProducts({})
-        setSelectedVariants({})
-        setProductSearchQueries({})
+        setSelectedProducts({});
+        setSelectedVariants({});
+        setProductSearchQueries({});
         // Reset payment method and accounts
-        setPaymentMethod("CASH")
-        setCashAccountId("")
-        setBankAccountId("")
-        setPaymentSplits([])
+        setPaymentMethod("CASH");
+        setCashAccountId("");
+        setBankAccountId("");
+        setPaymentSplits([]);
+        // Reset fuel state
+        setSaleType("PRODUCT");
+        setFuelSaleItems([]);
       }
     }
-  }, [open, defaultValues, form, isEdit, selectedBranchId])
+  }, [open, defaultValues, form, isEdit, selectedBranchId]);
 
   const onSubmit = (data: CreateSaleInput | UpdateSaleInput) => {
-    // Validate stock availability before submitting
-    if (!isEdit && 'items' in data && data.items) {
+    // Validate stock availability before submitting (ONLY FOR PRODUCT SALES)
+    if (!isEdit && saleType === "PRODUCT" && "items" in data && data.items) {
       for (let i = 0; i < data.items.length; i++) {
-        const item = data.items[i]
-        const product = selectedProducts[i]
-        
+        const item = data.items[i];
+        const product = selectedProducts[i];
+
         if (product && product.manageStocks) {
-          const variant = selectedVariants[i]
-          const availableStock = getAvailableStock(product, variant)
-          const requestedQuantity = item.quantity || 1
-          
+          const variant = selectedVariants[i];
+          const availableStock = getAvailableStock(product, variant);
+          const requestedQuantity = item.quantity || 1;
+
           if (requestedQuantity > availableStock) {
             form.setError(`items.${i}.quantity` as any, {
               type: "manual",
-              message: `Only ${availableStock} available in stock. Requested: ${requestedQuantity}`
-            })
-            return
+              message: `Only ${availableStock} available in stock. Requested: ${requestedQuantity}`,
+            });
+            return;
           }
-          
+
           if (availableStock === 0) {
             form.setError(`items.${i}.itemName` as any, {
               type: "manual",
-              message: "This product is out of stock"
-            })
-            return
+              message: "This product is out of stock",
+            });
+            return;
           }
         }
       }
     }
-    
+
     if (isEdit && sale) {
       updateMutation.mutate(
         { id: sale.id, data: data as UpdateSaleInput },
         {
           onSuccess: () => {
-            onOpenChange(false)
+            onOpenChange(false);
           },
-        }
-      )
-      return
+        },
+      );
+      return;
     }
 
+    // ─── FUEL SALE ───
+    if (!isEdit && saleType === "FUEL") {
+      if (fuelSaleItems.length === 0 || fuelSaleItems.every((fi) => !fi.fuelTypeId)) {
+        toast.error("Please add at least one fuel item");
+        return;
+      }
+
+      // Build sale items from fuel items
+      const saleItems: any[] = [];
+      for (const fuelItem of fuelSaleItems) {
+        if (!fuelItem.fuelTypeId || fuelItem.quantity <= 0) continue;
+        const actualQty = calculateActualQuantity(fuelItem.quantity);
+        saleItems.push({
+          sku: `FUEL-${fuelItem.fuelTypeId}-${fuelItem.tankerId || "NOTANK"}-${Date.now()}`,
+          itemName: fuelItem.fuelTypeName || "Fuel",
+          itemDescription: fuelItem.tankerName ? `Tanker: ${fuelItem.tankerName}` : "",
+          unit: "L",
+          price: fuelItem.sellingPrice,
+          quantity: fuelItem.quantity, // named/told quantity
+          actualQuantity: actualQty, // actual (reduced) quantity
+          totalPrice: fuelItem.quantity * fuelItem.sellingPrice,
+          fuelTypeId: fuelItem.fuelTypeId,
+          tankerId: fuelItem.tankerId || undefined,
+          itemType: "FUEL",
+          discountType: "NONE",
+          discountAmount: 0,
+        });
+      }
+
+      if (saleItems.length === 0) {
+        toast.error("Please add valid fuel items with quantity");
+        return;
+      }
+
+      const fuelGrandTotal = saleItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+
+      // Build payments
+      const payments: Array<{ accountId: string; amount: number; type: "SALE_PAYMENT" }> = [];
+      const paidAmt = Number(form.watch("paidAmount" as any) || 0);
+
+      if (paymentMethod === "CASH" && cashAccountId) {
+        payments.push({ accountId: cashAccountId, amount: paidAmt || fuelGrandTotal, type: "SALE_PAYMENT" });
+      } else if (paymentMethod === "CARD" && bankAccountId) {
+        payments.push({ accountId: bankAccountId, amount: paidAmt || fuelGrandTotal, type: "SALE_PAYMENT" });
+      } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
+        paymentSplits.forEach((split) => {
+          if (split.accountId && split.amount > 0) {
+            payments.push({ accountId: split.accountId, amount: split.amount, type: "SALE_PAYMENT" });
+          }
+        });
+      }
+
+      const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+      let paymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
+      if (totalPaid >= fuelGrandTotal) paymentStatus = "PAID";
+      else if (totalPaid > 0) paymentStatus = "PARTIAL";
+
+      const fuelSaleData: any = {
+        branchId: (data as any).branchId,
+        contactId: (data as any).contactId,
+        items: saleItems,
+        payments: payments.length > 0 ? payments : undefined,
+        totalPrice: fuelGrandTotal,
+        paidAmount: totalPaid,
+        paymentStatus,
+        status: "SOLD",
+      };
+
+      createMutation.mutate(fuelSaleData, {
+        onSuccess: () => {
+          onOpenChange(false);
+          form.reset(defaultValues);
+          setFuelSaleItems([]);
+        },
+      });
+      return;
+    }
+
+    // ─── PRODUCT SALE (existing logic) ───
     // Build payments array based on payment method
-    const payments: Array<{ accountId: string; amount: number; type: "SALE_PAYMENT" }> = []
-    const totalAmount = total || 0
-    const paidAmount = form.watch("paidAmount" as any) || 0
-    
+    const payments: Array<{
+      accountId: string;
+      amount: number;
+      type: "SALE_PAYMENT";
+    }> = [];
+    const totalAmount = total || 0;
+    const paidAmount = form.watch("paidAmount" as any) || 0;
+
     if (paymentMethod === "CASH" && cashAccountId) {
       payments.push({
         accountId: cashAccountId,
         amount: paidAmount || totalAmount,
         type: "SALE_PAYMENT",
-      })
+      });
     } else if (paymentMethod === "CARD" && bankAccountId) {
       payments.push({
         accountId: bankAccountId,
         amount: paidAmount || totalAmount,
         type: "SALE_PAYMENT",
-      })
+      });
     } else if (paymentMethod === "MIXED" && paymentSplits.length > 0) {
       // Use payment splits
-      paymentSplits.forEach(split => {
+      paymentSplits.forEach((split) => {
         if (split.accountId && split.amount > 0) {
           payments.push({
             accountId: split.accountId,
             amount: split.amount,
             type: "SALE_PAYMENT",
-          })
+          });
         }
-      })
+      });
     }
     // CREDIT payment method doesn't add any payment (paymentStatus will be DUE)
 
     const saleData: CreateSaleInput = {
       ...(data as CreateSaleInput),
       payments: payments.length > 0 ? payments : undefined,
-    }
+    };
+    
+    const totalPaidProduct = payments.reduce((sum, p) => sum + p.amount, 0);
+    let productPaymentStatus: "PAID" | "DUE" | "PARTIAL" = "DUE";
+    if (totalPaidProduct >= totalAmount) productPaymentStatus = "PAID";
+    else if (totalPaidProduct > 0) productPaymentStatus = "PARTIAL";
+
+    saleData.paymentStatus = productPaymentStatus;
+    saleData.paidAmount = totalPaidProduct;
 
     createMutation.mutate(saleData, {
       onSuccess: () => {
-        onOpenChange(false)
-        form.reset(defaultValues)
+        onOpenChange(false);
+        form.reset(defaultValues);
       },
-    })
-  }
+    });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saleType === "FUEL") {
+      // For fuel sales, we bypass the overarching RHF `items` validation 
+      // because fuel items are strictly validated inside onSubmit.
+      const values = form.getValues();
+      const isValid = await form.trigger(["branchId", "contactId"] as any);
+      if (isValid) {
+        onSubmit(values as any);
+      }
+    } else {
+      // Standard product sale validation
+      form.handleSubmit(onSubmit)(e);
+    }
+  };
 
   const addItem = () => {
-    const newIndex = fields.length
+    const newIndex = fields.length;
     append({
       sku: "",
       itemName: "",
@@ -415,125 +625,156 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       discountType: "NONE" as const,
       discountAmount: 0,
       totalPrice: 0,
-    })
-    setSelectedProducts(prev => ({ ...prev, [newIndex]: null }))
-    setSelectedVariants(prev => ({ ...prev, [newIndex]: null }))
-    setProductSearchQueries(prev => ({ ...prev, [newIndex]: "" }))
-  }
+    });
+    setSelectedProducts((prev) => ({ ...prev, [newIndex]: null }));
+    setSelectedVariants((prev) => ({ ...prev, [newIndex]: null }));
+    setProductSearchQueries((prev) => ({ ...prev, [newIndex]: "" }));
+  };
 
   const removeItem = (index: number) => {
     if (fields.length > 1) {
-      remove(index)
+      remove(index);
       // Clean up state for removed item
-      setSelectedProducts(prev => {
-        const updated = { ...prev }
-        delete updated[index]
+      setSelectedProducts((prev) => {
+        const updated = { ...prev };
+        delete updated[index];
         // Reindex remaining items
-        const reindexed: Record<number, Product | null> = {}
-        Object.keys(updated).forEach(key => {
-          const oldIndex = parseInt(key)
+        const reindexed: Record<number, Product | null> = {};
+        Object.keys(updated).forEach((key) => {
+          const oldIndex = parseInt(key);
           if (oldIndex > index) {
-            reindexed[oldIndex - 1] = updated[oldIndex]
+            reindexed[oldIndex - 1] = updated[oldIndex];
           } else if (oldIndex < index) {
-            reindexed[oldIndex] = updated[oldIndex]
+            reindexed[oldIndex] = updated[oldIndex];
           }
-        })
-        return reindexed
-      })
-      setSelectedVariants(prev => {
-        const updated = { ...prev }
-        delete updated[index]
-        const reindexed: Record<number, ProductVariant | null> = {}
-        Object.keys(updated).forEach(key => {
-          const oldIndex = parseInt(key)
+        });
+        return reindexed;
+      });
+      setSelectedVariants((prev) => {
+        const updated = { ...prev };
+        delete updated[index];
+        const reindexed: Record<number, ProductVariant | null> = {};
+        Object.keys(updated).forEach((key) => {
+          const oldIndex = parseInt(key);
           if (oldIndex > index) {
-            reindexed[oldIndex - 1] = updated[oldIndex]
+            reindexed[oldIndex - 1] = updated[oldIndex];
           } else if (oldIndex < index) {
-            reindexed[oldIndex] = updated[oldIndex]
+            reindexed[oldIndex] = updated[oldIndex];
           }
-        })
-        return reindexed
-      })
-      setProductSearchQueries(prev => {
-        const updated = { ...prev }
-        delete updated[index]
-        const reindexed: Record<number, string> = {}
-        Object.keys(updated).forEach(key => {
-          const oldIndex = parseInt(key)
+        });
+        return reindexed;
+      });
+      setProductSearchQueries((prev) => {
+        const updated = { ...prev };
+        delete updated[index];
+        const reindexed: Record<number, string> = {};
+        Object.keys(updated).forEach((key) => {
+          const oldIndex = parseInt(key);
           if (oldIndex > index) {
-            reindexed[oldIndex - 1] = updated[oldIndex]
+            reindexed[oldIndex - 1] = updated[oldIndex];
           } else if (oldIndex < index) {
-            reindexed[oldIndex] = updated[oldIndex]
+            reindexed[oldIndex] = updated[oldIndex];
           }
-        })
-        return reindexed
-      })
+        });
+        return reindexed;
+      });
     }
-  }
+  };
 
   // Calculate item total price (price * quantity - discount)
   const calculateItemTotal = (item: any) => {
     // Handle undefined/null items (especially in edit mode)
-    if (!item || typeof item !== 'object') {
-      return 0
+    if (!item || typeof item !== "object") {
+      return 0;
     }
-    
-    const subtotal = (item.price || 0) * (item.quantity || 0)
-    const discountType = item.discountType || "NONE"
-    const discountAmount = item.discountAmount || 0
-    
-    let discount = 0
+
+    const subtotal = (item.price || 0) * (item.quantity || 0);
+    const discountType = item.discountType || "NONE";
+    const discountAmount = item.discountAmount || 0;
+
+    let discount = 0;
     if (discountType === "PERCENTAGE") {
-      discount = (subtotal * discountAmount) / 100
+      discount = (subtotal * discountAmount) / 100;
     } else if (discountType === "FIXED") {
-      discount = discountAmount
+      discount = discountAmount;
     }
-    
-    return Math.max(0, subtotal - discount)
-  }
+
+    return Math.max(0, subtotal - discount);
+  };
 
   // Calculate sale total
   const calculateTotal = () => {
-    if (isEdit) return null
-    const items = form.watch("items" as any) || []
-    const saleDiscountType = form.watch("discountType" as any) || "NONE"
-    const saleDiscountAmount = form.watch("discountAmount" as any) || 0
-    
-    const itemsTotal = items.reduce((sum: number, item: any) => {
-      return sum + calculateItemTotal(item)
-    }, 0)
-    
-    let discount = 0
-    if (saleDiscountType === "PERCENTAGE") {
-      discount = (itemsTotal * saleDiscountAmount) / 100
-    } else if (saleDiscountType === "FIXED") {
-      discount = saleDiscountAmount
-    }
-    
-    return Math.max(0, itemsTotal - discount)
-  }
+    if (isEdit) return null;
 
-  const total = calculateTotal()
+    // For fuel sales, use fuel total
+    if (saleType === "FUEL") {
+      return fuelTotal;
+    }
+
+    const items = form.watch("items" as any) || [];
+    const saleDiscountType = form.watch("discountType" as any) || "NONE";
+    const saleDiscountAmount = form.watch("discountAmount" as any) || 0;
+
+    const itemsTotal = items.reduce((sum: number, item: any) => {
+      return sum + calculateItemTotal(item);
+    }, 0);
+
+    let discount = 0;
+    if (saleDiscountType === "PERCENTAGE") {
+      discount = (itemsTotal * saleDiscountAmount) / 100;
+    } else if (saleDiscountType === "FIXED") {
+      discount = saleDiscountAmount;
+    }
+
+    return Math.max(0, itemsTotal - discount);
+  };
+
+  const total = calculateTotal();
 
   // Watch items to update totalPrice
-  const watchedItems = form.watch("items" as any) || []
-  const watchedDiscountType = form.watch("discountType" as any) || "NONE"
-  const watchedDiscountAmount = form.watch("discountAmount" as any) || 0
+  const watchedItems = form.watch("items" as any) || [];
+  const watchedDiscountType = form.watch("discountType" as any) || "NONE";
+  const watchedDiscountAmount = form.watch("discountAmount" as any) || 0;
+  const watchedContactId = form.watch("contactId" as any);
+  const selectedContact = contacts.find((c) => c.id === watchedContactId);
+
+  // Compute how much is being paid upfront
+  const watchedPaidAmount = form.watch("paidAmount" as any) || 0;
+  let cashPaid = 0;
+  if (paymentMethod === "MIXED") {
+    cashPaid = paymentSplits.reduce(
+      (sum, s) => sum + (Number(s.amount) || 0),
+      0,
+    );
+  } else if (paymentMethod === "CREDIT") {
+    cashPaid = 0;
+  } else {
+    cashPaid = Number(watchedPaidAmount);
+  }
+
+  const unpaidAmount = total !== null ? Math.max(0, total - cashPaid) : 0;
+  const availableCredit = selectedContact
+    ? (selectedContact.balance || 0) + (selectedContact.creditLimit || 0)
+    : 0;
+  const isCreditExceeded =
+    unpaidAmount > 0 && selectedContact && unpaidAmount > availableCredit;
 
   // Update item totalPrice when item fields change
   useEffect(() => {
     watchedItems.forEach((item: any, index: number) => {
-      const itemTotal = calculateItemTotal(item)
-      form.setValue(`items.${index}.totalPrice` as any, itemTotal, { shouldValidate: false })
-    })
-  }, [watchedItems, form])
+      const itemTotal = calculateItemTotal(item);
+      form.setValue(`items.${index}.totalPrice` as any, itemTotal, {
+        shouldValidate: false,
+      });
+    });
+  }, [watchedItems, form]);
 
   // Update sale totalPrice when items or discount change
   useEffect(() => {
     if (!isEdit && total !== null) {
-      form.setValue("totalPrice" as any, total, { shouldValidate: false })
+      form.setValue("totalPrice" as any, total, { shouldValidate: false });
     }
-  }, [total, isEdit, form, watchedDiscountType, watchedDiscountAmount])
+  }, [total, isEdit, form, watchedDiscountType, watchedDiscountAmount]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -549,7 +790,10 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <form
+            onSubmit={handleFormSubmit}
+            className="flex flex-col flex-1 min-h-0"
+          >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -559,7 +803,10 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("branch")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder={t("selectBranch")} />
@@ -584,7 +831,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("contact")}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isEdit}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isEdit}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder={t("selectContact")} />
@@ -593,11 +844,46 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           <SelectContent>
                             {contacts.map((contact) => (
                               <SelectItem key={contact.id} value={contact.id}>
-                                {contact.name} {contact.email ? `(${contact.email})` : ""}
+                                {contact.name}{" "}
+                                {contact.email ? `(${contact.email})` : ""}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {selectedContact && (
+                          <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
+                            <div className="flex justify-between text-muted-foreground mb-1">
+                              <span>Balance:</span>
+                              <span
+                                className={
+                                  selectedContact.balance < 0
+                                    ? "text-destructive font-medium"
+                                    : "text-emerald-500 font-medium"
+                                }
+                              >
+                                {selectedContact.balance.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground mb-1">
+                              <span>Credit Limit:</span>
+                              <span>
+                                {selectedContact.creditLimit.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between font-medium border-t pt-1 mt-1">
+                              <span>Available Credit:</span>
+                              <span
+                                className={
+                                  availableCredit < 0
+                                    ? "text-destructive"
+                                    : "text-emerald-500"
+                                }
+                              >
+                                {availableCredit.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -623,9 +909,15 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="DRAFT">{t("statusDraft")}</SelectItem>
-                                <SelectItem value="SOLD">{t("statusSold")}</SelectItem>
-                                <SelectItem value="PENDING">{t("statusPending")}</SelectItem>
+                                <SelectItem value="DRAFT">
+                                  {t("statusDraft")}
+                                </SelectItem>
+                                <SelectItem value="SOLD">
+                                  {t("statusSold")}
+                                </SelectItem>
+                                <SelectItem value="PENDING">
+                                  {t("statusPending")}
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -633,54 +925,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="paymentStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("paymentStatus")}</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "PAID"}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="PAID">{t("paymentStatusPaid")}</SelectItem>
-                                <SelectItem value="DUE">{t("paymentStatusDue")}</SelectItem>
-                                <SelectItem value="PARTIAL">{t("paymentStatusPartial")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="paidAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("paidAmount")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              {...field}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </>
                 )}
 
@@ -703,35 +948,15 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="DRAFT">{t("statusDraft")}</SelectItem>
-                                <SelectItem value="SOLD">{t("statusSold")}</SelectItem>
-                                <SelectItem value="PENDING">{t("statusPending")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="paymentStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("paymentStatus")}</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "PAID"}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="PAID">{t("paymentStatusPaid")}</SelectItem>
-                                <SelectItem value="DUE">{t("paymentStatusDue")}</SelectItem>
-                                <SelectItem value="PARTIAL">{t("paymentStatusPartial")}</SelectItem>
+                                <SelectItem value="DRAFT">
+                                  {t("statusDraft")}
+                                </SelectItem>
+                                <SelectItem value="SOLD">
+                                  {t("statusSold")}
+                                </SelectItem>
+                                <SelectItem value="PENDING">
+                                  {t("statusPending")}
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -740,32 +965,236 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="paidAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("paidAmount")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              {...field}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
+                    {/* ─── SALE TYPE TOGGLE ─── */}
+                    <div className="flex gap-2 border-b pb-3">
+                      <Button
+                        type="button"
+                        variant={saleType === "PRODUCT" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSaleType("PRODUCT")}
+                        className="text-xs"
+                      >
+                        <Package className="h-3 w-3 mr-1" />
+                        Product
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={saleType === "FUEL" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSaleType("FUEL");
+                          if (fuelSaleItems.length === 0) {
+                            setFuelSaleItems([{
+                              id: `fuel-${Date.now()}`,
+                              fuelTypeId: "",
+                              fuelTypeName: "",
+                              sellingPrice: 0,
+                              quantity: 0,
+                              tankerId: "",
+                              tankerName: "",
+                            }]);
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        <Droplets className="h-3 w-3 mr-1" />
+                        Fuel
+                      </Button>
+                    </div>
+
+                    {/* ─── FUEL ITEMS SECTION ─── */}
+                    {saleType === "FUEL" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-medium">Fuel Items</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setFuelSaleItems((prev) => [...prev, {
+                                id: `fuel-${Date.now()}-${Math.random()}`,
+                                fuelTypeId: "",
+                                fuelTypeName: "",
+                                sellingPrice: 0,
+                                quantity: 0,
+                                tankerId: "",
+                                tankerName: "",
+                              }]);
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Fuel Item
+                          </Button>
+                        </div>
+
+                        {fuelSaleItems.map((fuelItem, fuelIndex) => {
+                          const matchingTankers = getTankersForFuelType(fuelItem.fuelTypeId);
+                          const actualQty = calculateActualQuantity(fuelItem.quantity);
+                          return (
+                            <div
+                              key={fuelItem.id}
+                              className="p-4 border rounded-lg space-y-4 bg-muted/50 relative"
+                            >
+                              <div className="absolute top-2 right-2">
+                                {fuelSaleItems.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setFuelSaleItems((prev) => prev.filter((_, i) => i !== fuelIndex))}
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                                {/* Fuel Type */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    Fuel Type <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Select
+                                    value={fuelItem.fuelTypeId}
+                                    onValueChange={(val) => {
+                                      const ft = fuelTypes.find((f) => f.id === val);
+                                      const autoTankers = tankers.filter((t) => t.fuelTypeId === val);
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex
+                                            ? {
+                                                ...item,
+                                                fuelTypeId: val,
+                                                fuelTypeName: ft?.name || "",
+                                                sellingPrice: ft?.price || 0,
+                                                tankerId: autoTankers.length > 0 ? autoTankers[0].id : "",
+                                                tankerName: autoTankers.length > 0 ? autoTankers[0].name : "",
+                                              }
+                                            : item
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select fuel type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {fuelTypes.map((ft) => (
+                                        <SelectItem key={ft.id} value={ft.id}>
+                                          {ft.name} — ৳{ft.price}/L
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Quantity */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    Quantity (L) <span className="text-destructive">*</span>
+                                  </Label>
+                                  <NumericInput
+                                    value={fuelItem.quantity}
+                                    onValueChange={(val) => {
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex ? { ...item, quantity: val } : item
+                                        )
+                                      );
+                                    }}
+                                    min={0}
+                                  />
+                                  {businessConfig?.showPointReducing && fuelItem.quantity > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1 bg-muted/60 p-1.5 rounded-md flex justify-between">
+                                      <span>Points deduction:</span>
+                                      <span className="font-medium text-destructive">
+                                        -{(fuelItem.quantity - actualQty).toFixed(2)} L
+                                      </span>
+                                    </div>
+                                  )}
+                                  {businessConfig?.showPointReducing && fuelItem.quantity > 0 && (
+                                    <div className="text-xs mt-1 flex justify-between font-medium">
+                                      <span>Actual delivery:</span>
+                                      <span className="text-primary">{actualQty.toFixed(2)} L</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Tanker Selection */}
+                              {fuelItem.fuelTypeId && matchingTankers.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Tanker</Label>
+                                  <Select
+                                    value={fuelItem.tankerId}
+                                    onValueChange={(val) => {
+                                      const tk = matchingTankers.find((t) => t.id === val);
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) =>
+                                          i === fuelIndex
+                                            ? { ...item, tankerId: val, tankerName: tk?.name || "" }
+                                            : item
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Select tanker" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {matchingTankers.map((tk) => (
+                                        <SelectItem key={tk.id} value={tk.id}>
+                                          {tk.name} ({tk.currentFuel}/{tk.capacity}L)
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {/* Subtotal and actual qty info */}
+                              {fuelItem.quantity > 0 && fuelItem.sellingPrice > 0 && (
+                                <div className="flex flex-col items-end gap-1 text-sm">
+                                  <span className="text-muted-foreground">
+                                    Subtotal: <span className="font-bold text-foreground">{(fuelItem.quantity * fuelItem.sellingPrice).toFixed(2)}</span>
+                                  </span>
+                                  {businessConfig.showPointReducing && businessConfig.pointReducingAmountPerLiter > 0 && (
+                                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                                      Actual: {actualQty.toFixed(3)} L (point reduced)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Fuel Total */}
+                        {fuelTotal > 0 && (
+                          <div className="flex justify-end items-center text-base font-bold border-t pt-3">
+                            <span className="text-muted-foreground mr-3">Total:</span>
+                            <span>{fuelTotal.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ─── PRODUCT ITEMS SECTION ─── */}
+                    {saleType === "PRODUCT" && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label className="text-base font-medium">{t("items")}</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                        <Label className="text-base font-medium">
+                          {t("items")}
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addItem}
+                        >
                           <Plus className="mr-2 h-4 w-4" />
                           {t("addItem")}
                         </Button>
@@ -777,7 +1206,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           className="p-4 border rounded-lg space-y-4 bg-muted/50"
                         >
                           <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-sm">{t("item")} {index + 1}</h4>
+                            <h4 className="font-medium text-sm">
+                              {t("item")} {index + 1}
+                            </h4>
                             {fields.length > 1 && (
                               <Button
                                 type="button"
@@ -797,19 +1228,26 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             name={`items.${index}.itemName` as any}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>{t("itemName")} / {t("product") || "Product"}</FormLabel>
+                                <FormLabel>
+                                  {t("itemName")} / {t("product") || "Product"}
+                                </FormLabel>
                                 <FormControl>
                                   <div className="space-y-2">
                                     <div className="relative">
                                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                       <Input
-                                        placeholder={t("searchPlaceholder") || "Search products..."}
-                                        value={productSearchQueries[index] || ""}
+                                        placeholder={
+                                          t("searchPlaceholder") ||
+                                          "Search products..."
+                                        }
+                                        value={
+                                          productSearchQueries[index] || ""
+                                        }
                                         onChange={(e) => {
-                                          setProductSearchQueries(prev => ({
+                                          setProductSearchQueries((prev) => ({
                                             ...prev,
-                                            [index]: e.target.value
-                                          }))
+                                            [index]: e.target.value,
+                                          }));
                                         }}
                                         className="pl-9"
                                       />
@@ -817,87 +1255,171 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     <Select
                                       value={selectedProducts[index]?.id || ""}
                                       onValueChange={(productId) => {
-                                        const product = products.find(p => p.id === productId)
+                                        const product = products.find(
+                                          (p) => p.id === productId,
+                                        );
                                         if (product) {
                                           // Check if product is in stock
                                           if (!isProductInStock(product)) {
-                                            form.setError(`items.${index}.itemName` as any, {
-                                              type: "manual",
-                                              message: "This product is out of stock"
-                                            })
-                                            return
+                                            form.setError(
+                                              `items.${index}.itemName` as any,
+                                              {
+                                                type: "manual",
+                                                message:
+                                                  "This product is out of stock",
+                                              },
+                                            );
+                                            return;
                                           }
-                                          
-                                          setSelectedProducts(prev => ({ ...prev, [index]: product }))
-                                          setSelectedVariants(prev => ({ ...prev, [index]: null }))
-                                          
+
+                                          setSelectedProducts((prev) => ({
+                                            ...prev,
+                                            [index]: product,
+                                          }));
+                                          setSelectedVariants((prev) => ({
+                                            ...prev,
+                                            [index]: null,
+                                          }));
+
                                           // Auto-fill item fields
-                                          field.onChange(product.name)
-                                          form.setValue(`items.${index}.itemDescription` as any, product.description || "")
-                                          form.setValue(`items.${index}.unit` as any, product.unit?.suffix || "")
-                                          
+                                          field.onChange(product.name);
+                                          form.setValue(
+                                            `items.${index}.itemDescription` as any,
+                                            product.description || "",
+                                          );
+                                          form.setValue(
+                                            `items.${index}.unit` as any,
+                                            product.unit?.suffix || "",
+                                          );
+
                                           // Get price from stock if available, otherwise use product price
                                           // Priority: stock.salePrice > product.price (use ?? to handle 0 prices correctly)
-                                          const stock = product.stocks?.find((s: any) => 
-                                            s.branchId === (branchId || selectedBranchId)
-                                          ) || stockMapBySku.get(product.id)
-                                          
-                                          const price = stock?.salePrice ?? product.price ?? 0
-                                          form.setValue(`items.${index}.price` as any, price)
-                                          
+                                          const stock =
+                                            product.stocks?.find(
+                                              (s: any) =>
+                                                s.branchId ===
+                                                (branchId || selectedBranchId),
+                                            ) || stockMapBySku.get(product.id);
+
+                                          const price =
+                                            stock?.salePrice ??
+                                            product.price ??
+                                            0;
+                                          form.setValue(
+                                            `items.${index}.price` as any,
+                                            price,
+                                          );
+
                                           // Set SKU - use first variant SKU if variable, or product barcode
-                                          if (product.isVariable && product.productVariants && product.productVariants.length > 0) {
+                                          if (
+                                            product.isVariable &&
+                                            product.productVariants &&
+                                            product.productVariants.length > 0
+                                          ) {
                                             // Don't set SKU yet, wait for variant selection
-                                            form.setValue(`items.${index}.sku` as any, "")
+                                            form.setValue(
+                                              `items.${index}.sku` as any,
+                                              "",
+                                            );
                                           } else {
-                                            const sku = stock?.sku || product.barcode || ""
-                                            form.setValue(`items.${index}.sku` as any, sku)
+                                            const sku =
+                                              stock?.sku ||
+                                              product.barcode ||
+                                              "";
+                                            form.setValue(
+                                              `items.${index}.sku` as any,
+                                              sku,
+                                            );
                                           }
-                                          
+
                                           // Set max quantity based on available stock
-                                          const availableStock = getAvailableStock(product)
-                                          if (product.manageStocks && availableStock > 0) {
-                                            const currentQuantity = form.getValues(`items.${index}.quantity` as any) || 1
-                                            if (currentQuantity > availableStock) {
-                                              form.setValue(`items.${index}.quantity` as any, availableStock)
+                                          const availableStock =
+                                            getAvailableStock(product);
+                                          if (
+                                            product.manageStocks &&
+                                            availableStock > 0
+                                          ) {
+                                            const currentQuantity =
+                                              form.getValues(
+                                                `items.${index}.quantity` as any,
+                                              ) || 1;
+                                            if (
+                                              currentQuantity > availableStock
+                                            ) {
+                                              form.setValue(
+                                                `items.${index}.quantity` as any,
+                                                availableStock,
+                                              );
                                             }
                                           }
                                         }
                                       }}
                                     >
                                       <SelectTrigger>
-                                        <SelectValue placeholder={t("selectProduct") || "Select a product"} />
+                                        <SelectValue
+                                          placeholder={
+                                            t("selectProduct") ||
+                                            "Select a product"
+                                          }
+                                        />
                                       </SelectTrigger>
                                       <SelectContent className="max-h-[300px]">
                                         {products
                                           .filter((p) => {
-                                            const query = (productSearchQueries[index] || "").toLowerCase()
-                                            if (!query) return true
-                                            return p.name.toLowerCase().includes(query) ||
-                                              p.barcode?.toLowerCase().includes(query) ||
-                                              p.description?.toLowerCase().includes(query)
+                                            const query = (
+                                              productSearchQueries[index] || ""
+                                            ).toLowerCase();
+                                            if (!query) return true;
+                                            return (
+                                              p.name
+                                                .toLowerCase()
+                                                .includes(query) ||
+                                              p.barcode
+                                                ?.toLowerCase()
+                                                .includes(query) ||
+                                              p.description
+                                                ?.toLowerCase()
+                                                .includes(query)
+                                            );
                                           })
                                           .map((product) => {
-                                            const inStock = isProductInStock(product)
-                                            const availableStock = getAvailableStock(product)
+                                            const inStock =
+                                              isProductInStock(product);
+                                            const availableStock =
+                                              getAvailableStock(product);
                                             return (
-                                              <SelectItem 
-                                                key={product.id} 
+                                              <SelectItem
+                                                key={product.id}
                                                 value={product.id}
-                                                disabled={product.manageStocks && !inStock}
+                                                disabled={
+                                                  product.manageStocks &&
+                                                  !inStock
+                                                }
                                               >
                                                 <div className="flex items-center justify-between w-full">
-                                                  <span className={product.manageStocks && !inStock ? "text-muted-foreground" : ""}>
+                                                  <span
+                                                    className={
+                                                      product.manageStocks &&
+                                                      !inStock
+                                                        ? "text-muted-foreground"
+                                                        : ""
+                                                    }
+                                                  >
                                                     {product.name}
-                                                    {product.manageStocks && !inStock && " (Out of Stock)"}
+                                                    {product.manageStocks &&
+                                                      !inStock &&
+                                                      " (Out of Stock)"}
                                                   </span>
                                                   <span className="text-xs text-muted-foreground ml-2">
-                                                    {product.price} {product.unit?.suffix || ""}
-                                                    {product.manageStocks && inStock && ` (Stock: ${availableStock})`}
+                                                    {product.price}{" "}
+                                                    {product.unit?.suffix || ""}
+                                                    {product.manageStocks &&
+                                                      inStock &&
+                                                      ` (Stock: ${availableStock})`}
                                                   </span>
                                                 </div>
                                               </SelectItem>
-                                            )
+                                            );
                                           })}
                                       </SelectContent>
                                     </Select>
@@ -909,128 +1431,232 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           />
 
                           {/* Variant Selection for Variable Products */}
-                          {selectedProducts[index]?.isVariable && selectedProducts[index]?.productVariants && selectedProducts[index]!.productVariants!.length > 0 && (
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.sku` as any}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>{t("variant") || "Variant"}</FormLabel>
-                                  <Select
-                                    value={selectedVariants[index]?.id || ""}
-                                    onValueChange={(variantId) => {
-                                      // Find variant from productVariants or variants array
-                                      const product = selectedProducts[index]
-                                      if (!product) return
-                                      
-                                      const variantRaw = (product.productVariants || product.variants || []).find((v: any) => v.id === variantId)
-                                      if (!variantRaw) return
-                                      
-                                      // Ensure variant has productId for type safety
-                                      const variant: ProductVariant = {
-                                        ...variantRaw,
-                                        productId: (variantRaw as any).productId || product.id,
-                                        id: variantRaw.id || variantId,
-                                        sku: variantRaw.sku || variantRaw.id || "",
-                                        price: variantRaw.price ?? 0,
-                                        variantName: variantRaw.variantName || "",
-                                        unitId: variantRaw.unitId || product.unitId || "",
-                                      }
-                                      
-                                      // Check if variant is in stock
-                                      if (!isProductInStock(product, variant)) {
-                                        form.setError(`items.${index}.sku` as any, {
-                                          type: "manual",
-                                          message: "This variant is out of stock"
-                                        })
-                                        return
-                                      }
-                                      
-                                      setSelectedVariants(prev => ({ ...prev, [index]: variant }))
-                                      
-                                      // Update SKU
-                                      field.onChange(variant.sku || "")
-                                      
-                                      // Update price from variant or stock
-                                      // For variants: Priority is variant.price > stock.salePrice > product.price
-                                      // IMPORTANT: Variant price should take priority over stock salePrice for variant-specific pricing
-                                      const stock = (variant.sku ? stockMapBySku.get(variant.sku) : undefined) || 
-                                                   (variant.id ? stockMapBySku.get(variant.id) : undefined) ||
-                                                   product.stocks?.find((s: any) => 
-                                                     s.branchId === (branchId || selectedBranchId) && s.sku === variant.sku
-                                                   )
-                                      
-                                      // For variants: Use variant.price first (it's the specific price for this variant)
-                                      // Only use stock.salePrice if variant.price is not set
-                                      // Priority: variant.price > stock.salePrice > product.price
-                                      const variantPrice = variant.price !== null && variant.price !== undefined ? variant.price : null
-                                      const price = variantPrice ?? stock?.salePrice ?? product.price ?? 0
-                                      
-                                      // Debug log in development
-                                      if (process.env.NODE_ENV === "development") {
-                                        console.log("💰 Variant Price Selection:", {
-                                          variantId: variant.id,
-                                          variantName: variant.variantName,
-                                          variantPrice: variant.price,
-                                          variantPriceType: typeof variant.price,
-                                          stockSalePrice: stock?.salePrice,
-                                          productPrice: product.price,
-                                          finalPrice: price
-                                        })
-                                      }
-                                      
-                                      form.setValue(`items.${index}.price` as any, price)
-                                      
-                                      // Update item name to include variant
-                                      const itemName = `${product.name} - ${variant.variantName}`
-                                      form.setValue(`items.${index}.itemName` as any, itemName)
-                                      
-                                      // Set max quantity based on available stock
-                                      const availableStock = getAvailableStock(product, variant)
-                                      if (product.manageStocks && availableStock > 0) {
-                                        const currentQuantity = form.getValues(`items.${index}.quantity` as any) || 1
-                                        if (currentQuantity > availableStock) {
-                                          form.setValue(`items.${index}.quantity` as any, availableStock)
+                          {selectedProducts[index]?.isVariable &&
+                            selectedProducts[index]?.productVariants &&
+                            selectedProducts[index]!.productVariants!.length >
+                              0 && (
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.sku` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {t("variant") || "Variant"}
+                                    </FormLabel>
+                                    <Select
+                                      value={selectedVariants[index]?.id || ""}
+                                      onValueChange={(variantId) => {
+                                        // Find variant from productVariants or variants array
+                                        const product = selectedProducts[index];
+                                        if (!product) return;
+
+                                        const variantRaw = (
+                                          product.productVariants ||
+                                          product.variants ||
+                                          []
+                                        ).find((v: any) => v.id === variantId);
+                                        if (!variantRaw) return;
+
+                                        // Ensure variant has productId for type safety
+                                        const variant: ProductVariant = {
+                                          ...variantRaw,
+                                          productId:
+                                            (variantRaw as any).productId ||
+                                            product.id,
+                                          id: variantRaw.id || variantId,
+                                          sku:
+                                            variantRaw.sku ||
+                                            variantRaw.id ||
+                                            "",
+                                          price: variantRaw.price ?? 0,
+                                          variantName:
+                                            variantRaw.variantName || "",
+                                          unitId:
+                                            variantRaw.unitId ||
+                                            product.unitId ||
+                                            "",
+                                        };
+
+                                        // Check if variant is in stock
+                                        if (
+                                          !isProductInStock(product, variant)
+                                        ) {
+                                          form.setError(
+                                            `items.${index}.sku` as any,
+                                            {
+                                              type: "manual",
+                                              message:
+                                                "This variant is out of stock",
+                                            },
+                                          );
+                                          return;
                                         }
-                                      }
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={t("selectVariant") || "Select a variant"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {selectedProducts[index]?.productVariants?.map((variant) => {
-                                        const inStock = isProductInStock(selectedProducts[index]!, variant)
-                                        const availableStock = getAvailableStock(selectedProducts[index]!, variant)
-                                        return (
-                                          <SelectItem 
-                                            key={variant.id} 
-                                            value={variant.id}
-                                            disabled={selectedProducts[index]!.manageStocks && !inStock}
-                                          >
-                                            <div className="flex items-center justify-between w-full">
-                                              <span className={selectedProducts[index]!.manageStocks && !inStock ? "text-muted-foreground" : ""}>
-                                                {variant.variantName}
-                                                {selectedProducts[index]!.manageStocks && !inStock && " (Out of Stock)"}
-                                              </span>
-                                              <span className="text-xs text-muted-foreground ml-2">
-                                                {variant.price} {variant.unit?.suffix || selectedProducts[index]?.unit?.suffix || ""}
-                                                {selectedProducts[index]!.manageStocks && inStock && ` (Stock: ${availableStock})`}
-                                              </span>
-                                            </div>
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
+
+                                        setSelectedVariants((prev) => ({
+                                          ...prev,
+                                          [index]: variant,
+                                        }));
+
+                                        // Update SKU
+                                        field.onChange(variant.sku || "");
+
+                                        // Update price from variant or stock
+                                        // For variants: Priority is variant.price > stock.salePrice > product.price
+                                        // IMPORTANT: Variant price should take priority over stock salePrice for variant-specific pricing
+                                        const stock =
+                                          (variant.sku
+                                            ? stockMapBySku.get(variant.sku)
+                                            : undefined) ||
+                                          (variant.id
+                                            ? stockMapBySku.get(variant.id)
+                                            : undefined) ||
+                                          product.stocks?.find(
+                                            (s: any) =>
+                                              s.branchId ===
+                                                (branchId ||
+                                                  selectedBranchId) &&
+                                              s.sku === variant.sku,
+                                          );
+
+                                        // For variants: Use variant.price first (it's the specific price for this variant)
+                                        // Only use stock.salePrice if variant.price is not set
+                                        // Priority: variant.price > stock.salePrice > product.price
+                                        const variantPrice =
+                                          variant.price !== null &&
+                                          variant.price !== undefined
+                                            ? variant.price
+                                            : null;
+                                        const price =
+                                          variantPrice ??
+                                          stock?.salePrice ??
+                                          product.price ??
+                                          0;
+
+                                        // Debug log in development
+                                        if (
+                                          process.env.NODE_ENV === "development"
+                                        ) {
+                                          console.log(
+                                            "💰 Variant Price Selection:",
+                                            {
+                                              variantId: variant.id,
+                                              variantName: variant.variantName,
+                                              variantPrice: variant.price,
+                                              variantPriceType:
+                                                typeof variant.price,
+                                              stockSalePrice: stock?.salePrice,
+                                              productPrice: product.price,
+                                              finalPrice: price,
+                                            },
+                                          );
+                                        }
+
+                                        form.setValue(
+                                          `items.${index}.price` as any,
+                                          price,
+                                        );
+
+                                        // Update item name to include variant
+                                        const itemName = `${product.name} - ${variant.variantName}`;
+                                        form.setValue(
+                                          `items.${index}.itemName` as any,
+                                          itemName,
+                                        );
+
+                                        // Set max quantity based on available stock
+                                        const availableStock =
+                                          getAvailableStock(product, variant);
+                                        if (
+                                          product.manageStocks &&
+                                          availableStock > 0
+                                        ) {
+                                          const currentQuantity =
+                                            form.getValues(
+                                              `items.${index}.quantity` as any,
+                                            ) || 1;
+                                          if (
+                                            currentQuantity > availableStock
+                                          ) {
+                                            form.setValue(
+                                              `items.${index}.quantity` as any,
+                                              availableStock,
+                                            );
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue
+                                          placeholder={
+                                            t("selectVariant") ||
+                                            "Select a variant"
+                                          }
+                                        />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {selectedProducts[
+                                          index
+                                        ]?.productVariants?.map((variant) => {
+                                          const inStock = isProductInStock(
+                                            selectedProducts[index]!,
+                                            variant,
+                                          );
+                                          const availableStock =
+                                            getAvailableStock(
+                                              selectedProducts[index]!,
+                                              variant,
+                                            );
+                                          return (
+                                            <SelectItem
+                                              key={variant.id}
+                                              value={variant.id}
+                                              disabled={
+                                                selectedProducts[index]!
+                                                  .manageStocks && !inStock
+                                              }
+                                            >
+                                              <div className="flex items-center justify-between w-full">
+                                                <span
+                                                  className={
+                                                    selectedProducts[index]!
+                                                      .manageStocks && !inStock
+                                                      ? "text-muted-foreground"
+                                                      : ""
+                                                  }
+                                                >
+                                                  {variant.variantName}
+                                                  {selectedProducts[index]!
+                                                    .manageStocks &&
+                                                    !inStock &&
+                                                    " (Out of Stock)"}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground ml-2">
+                                                  {variant.price}{" "}
+                                                  {variant.unit?.suffix ||
+                                                    selectedProducts[index]
+                                                      ?.unit?.suffix ||
+                                                    ""}
+                                                  {selectedProducts[index]!
+                                                    .manageStocks &&
+                                                    inStock &&
+                                                    ` (Stock: ${availableStock})`}
+                                                </span>
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
 
                           {/* SKU Field (read-only if product selected) */}
-                          {(!selectedProducts[index] || (!selectedProducts[index]?.isVariable || selectedVariants[index])) && (
+                          {(!selectedProducts[index] ||
+                            !selectedProducts[index]?.isVariable ||
+                            selectedVariants[index]) && (
                             <FormField
                               control={form.control}
                               name={`items.${index}.sku` as any}
@@ -1038,11 +1664,15 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 <FormItem>
                                   <FormLabel>{t("sku") || "SKU"}</FormLabel>
                                   <FormControl>
-                                    <Input 
-                                      placeholder={t("skuPlaceholder") || "SKU"} 
+                                    <Input
+                                      placeholder={t("skuPlaceholder") || "SKU"}
                                       {...field}
                                       readOnly={!!selectedProducts[index]}
-                                      className={selectedProducts[index] ? "bg-muted" : ""}
+                                      className={
+                                        selectedProducts[index]
+                                          ? "bg-muted"
+                                          : ""
+                                      }
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1058,15 +1688,23 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>{t("unit")}</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder={t("unitPlaceholder")} />
+                                        <SelectValue
+                                          placeholder={t("unitPlaceholder")}
+                                        />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                       {units.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.suffix}>
+                                        <SelectItem
+                                          key={unit.id}
+                                          value={unit.suffix}
+                                        >
                                           {unit.name} ({unit.suffix})
                                         </SelectItem>
                                       ))}
@@ -1085,7 +1723,12 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               <FormItem>
                                 <FormLabel>{t("itemDescription")}</FormLabel>
                                 <FormControl>
-                                  <Input placeholder={t("itemDescriptionPlaceholder")} {...field} />
+                                  <Input
+                                    placeholder={t(
+                                      "itemDescriptionPlaceholder",
+                                    )}
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1108,7 +1751,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                       {...field}
                                       value={field.value || ""}
                                       onChange={(e) =>
-                                        field.onChange(parseFloat(e.target.value) || 0)
+                                        field.onChange(
+                                          parseFloat(e.target.value) || 0,
+                                        )
                                       }
                                     />
                                   </FormControl>
@@ -1121,11 +1766,15 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               control={form.control}
                               name={`items.${index}.quantity` as any}
                               render={({ field }) => {
-                                const product = selectedProducts[index]
-                                const variant = selectedVariants[index]
-                                const availableStock = product ? getAvailableStock(product, variant) : Infinity
-                                const maxQuantity = product?.manageStocks ? availableStock : undefined
-                                
+                                const product = selectedProducts[index];
+                                const variant = selectedVariants[index];
+                                const availableStock = product
+                                  ? getAvailableStock(product, variant)
+                                  : Infinity;
+                                const maxQuantity = product?.manageStocks
+                                  ? availableStock
+                                  : undefined;
+
                                 return (
                                   <FormItem>
                                     <FormLabel>{t("quantity")}</FormLabel>
@@ -1139,15 +1788,22 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                         {...field}
                                         value={field.value || ""}
                                         onChange={(e) => {
-                                          const value = parseInt(e.target.value) || 1
-                                          if (product?.manageStocks && value > availableStock) {
-                                            form.setError(`items.${index}.quantity` as any, {
-                                              type: "manual",
-                                              message: `Only ${availableStock} available in stock`
-                                            })
-                                            return
+                                          const value =
+                                            parseInt(e.target.value) || 1;
+                                          if (
+                                            product?.manageStocks &&
+                                            value > availableStock
+                                          ) {
+                                            form.setError(
+                                              `items.${index}.quantity` as any,
+                                              {
+                                                type: "manual",
+                                                message: `Only ${availableStock} available in stock`,
+                                              },
+                                            );
+                                            return;
                                           }
-                                          field.onChange(value)
+                                          field.onChange(value);
                                         }}
                                       />
                                     </FormControl>
@@ -1158,14 +1814,18 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     )}
                                     <FormMessage />
                                   </FormItem>
-                                )
+                                );
                               }}
                             />
 
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium">{t("totalPrice") || "Total"}</Label>
+                              <Label className="text-sm font-medium">
+                                {t("totalPrice") || "Total"}
+                              </Label>
                               <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                                {calculateItemTotal(form.watch(`items.${index}` as any) || {}).toFixed(2)}
+                                {calculateItemTotal(
+                                  form.watch(`items.${index}` as any) || {},
+                                ).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -1176,17 +1836,29 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               name={`items.${index}.discountType` as any}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>{t("discountType") || "Discount Type"}</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value || "NONE"}>
+                                  <FormLabel>
+                                    {t("discountType") || "Discount Type"}
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value || "NONE"}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="NONE">{t("discountNone") || "None"}</SelectItem>
-                                      <SelectItem value="PERCENTAGE">{t("discountPercentage") || "Percentage"}</SelectItem>
-                                      <SelectItem value="FIXED">{t("discountFixed") || "Fixed"}</SelectItem>
+                                      <SelectItem value="NONE">
+                                        {t("discountNone") || "None"}
+                                      </SelectItem>
+                                      <SelectItem value="PERCENTAGE">
+                                        {t("discountPercentage") ||
+                                          "Percentage"}
+                                      </SelectItem>
+                                      <SelectItem value="FIXED">
+                                        {t("discountFixed") || "Fixed"}
+                                      </SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1199,7 +1871,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               name={`items.${index}.discountAmount` as any}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>{t("discountAmount") || "Discount Amount"}</FormLabel>
+                                  <FormLabel>
+                                    {t("discountAmount") || "Discount Amount"}
+                                  </FormLabel>
                                   <FormControl>
                                     <Input
                                       type="number"
@@ -1209,7 +1883,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                       {...field}
                                       value={field.value || ""}
                                       onChange={(e) =>
-                                        field.onChange(parseFloat(e.target.value) || 0)
+                                        field.onChange(
+                                          parseFloat(e.target.value) || 0,
+                                        )
                                       }
                                     />
                                   </FormControl>
@@ -1229,17 +1905,29 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               name="discountType"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>{t("discountType") || "Sale Discount Type"}</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value || "NONE"}>
+                                  <FormLabel>
+                                    {t("discountType") || "Sale Discount Type"}
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value || "NONE"}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="NONE">{t("discountNone") || "None"}</SelectItem>
-                                      <SelectItem value="PERCENTAGE">{t("discountPercentage") || "Percentage"}</SelectItem>
-                                      <SelectItem value="FIXED">{t("discountFixed") || "Fixed"}</SelectItem>
+                                      <SelectItem value="NONE">
+                                        {t("discountNone") || "None"}
+                                      </SelectItem>
+                                      <SelectItem value="PERCENTAGE">
+                                        {t("discountPercentage") ||
+                                          "Percentage"}
+                                      </SelectItem>
+                                      <SelectItem value="FIXED">
+                                        {t("discountFixed") || "Fixed"}
+                                      </SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1252,7 +1940,10 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               name="discountAmount"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>{t("discountAmount") || "Sale Discount Amount"}</FormLabel>
+                                  <FormLabel>
+                                    {t("discountAmount") ||
+                                      "Sale Discount Amount"}
+                                  </FormLabel>
                                   <FormControl>
                                     <Input
                                       type="number"
@@ -1262,7 +1953,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                       {...field}
                                       value={field.value || ""}
                                       onChange={(e) =>
-                                        field.onChange(parseFloat(e.target.value) || 0)
+                                        field.onChange(
+                                          parseFloat(e.target.value) || 0,
+                                        )
                                       }
                                     />
                                   </FormControl>
@@ -1273,16 +1966,24 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                           </div>
                         </div>
                       )}
+                    </div>
+                    )}
 
-                      {total !== null && (
+                    {total !== null && (
                         <>
                           {/* Payment Method Selection */}
                           <div className="space-y-4 pt-4 border-t">
-                            <Label className="text-base font-medium">{t("paymentMethod") || "Payment Method"}</Label>
+                            <Label className="text-base font-medium">
+                              {t("paymentMethod") || "Payment Method"}
+                            </Label>
                             <div className="flex gap-2 flex-wrap">
                               <Button
                                 type="button"
-                                variant={paymentMethod === "CASH" ? "default" : "outline"}
+                                variant={
+                                  paymentMethod === "CASH"
+                                    ? "default"
+                                    : "outline"
+                                }
                                 size="sm"
                                 onClick={() => setPaymentMethod("CASH")}
                                 className="text-xs"
@@ -1292,7 +1993,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                               </Button>
                               <Button
                                 type="button"
-                                variant={paymentMethod === "CARD" ? "default" : "outline"}
+                                variant={
+                                  paymentMethod === "CARD"
+                                    ? "default"
+                                    : "outline"
+                                }
                                 size="sm"
                                 onClick={() => setPaymentMethod("CARD")}
                                 className="text-xs"
@@ -1300,19 +2005,14 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 <CreditCard className="h-3 w-3 mr-1" />
                                 Card
                               </Button>
+                              {/* Credit payment option hidden per business requirement */}
                               <Button
                                 type="button"
-                                variant={paymentMethod === "CREDIT" ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setPaymentMethod("CREDIT")}
-                                className="text-xs"
-                              >
-                                <FileText className="h-3 w-3 mr-1" />
-                                Credit
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={paymentMethod === "MIXED" ? "default" : "outline"}
+                                variant={
+                                  paymentMethod === "MIXED"
+                                    ? "default"
+                                    : "outline"
+                                }
                                 size="sm"
                                 onClick={() => setPaymentMethod("MIXED")}
                                 className="text-xs"
@@ -1322,48 +2022,76 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             </div>
 
                             {/* Account Selection for CASH */}
-                            {paymentMethod === "CASH" && accounts.length > 0 && (
-                              <div className="space-y-2">
-                                <Label className="text-sm">{t("account") || "Account"}</Label>
-                                <Select value={cashAccountId} onValueChange={setCashAccountId}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={t("selectAccount") || "Select account"} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {accounts.map((account) => (
-                                      <SelectItem key={account.id} value={account.id}>
-                                        {account.name} ({account.type})
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
+                            {paymentMethod === "CASH" &&
+                              accounts.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    {t("account") || "Account"}
+                                  </Label>
+                                  <Select
+                                    value={cashAccountId}
+                                    onValueChange={setCashAccountId}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue
+                                        placeholder={
+                                          t("selectAccount") || "Select account"
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.map((account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name} ({account.type})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
 
                             {/* Account Selection for CARD */}
-                            {paymentMethod === "CARD" && accounts.length > 0 && (
-                              <div className="space-y-2">
-                                <Label className="text-sm">{t("account") || "Account"}</Label>
-                                <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={t("selectAccount") || "Select account"} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {accounts.map((account) => (
-                                      <SelectItem key={account.id} value={account.id}>
-                                        {account.name} ({account.type})
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
+                            {paymentMethod === "CARD" &&
+                              accounts.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    {t("account") || "Account"}
+                                  </Label>
+                                  <Select
+                                    value={bankAccountId}
+                                    onValueChange={setBankAccountId}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue
+                                        placeholder={
+                                          t("selectAccount") || "Select account"
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.map((account) => (
+                                        <SelectItem
+                                          key={account.id}
+                                          value={account.id}
+                                        >
+                                          {account.name} ({account.type})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
 
                             {/* Payment Splits for MIXED */}
                             {paymentMethod === "MIXED" && (
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <Label className="text-sm">{t("paymentSplit") || "Payment Split"}</Label>
+                                  <Label className="text-sm">
+                                    {t("paymentSplit") || "Payment Split"}
+                                  </Label>
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1376,7 +2104,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                           accountId: "",
                                           amount: 0,
                                         },
-                                      ])
+                                      ]);
                                     }}
                                     className="h-7 text-xs"
                                   >
@@ -1387,30 +2115,45 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
                                 {paymentSplits.length === 0 && (
                                   <p className="text-xs text-muted-foreground text-center py-2">
-                                    {t("noPaymentSplits") || "No payment splits. Click 'Add Account' to split payment."}
+                                    {t("noPaymentSplits") ||
+                                      "No payment splits. Click 'Add Account' to split payment."}
                                   </p>
                                 )}
 
                                 {paymentSplits.map((split, index) => {
-                                  const totalAllocated = paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)
-                                  const remaining = total - totalAllocated
+                                  const totalAllocated = paymentSplits.reduce(
+                                    (sum, s) => sum + (s.amount || 0),
+                                    0,
+                                  );
+                                  const remaining = total - totalAllocated;
                                   return (
-                                    <div key={split.id} className="flex gap-2 items-start">
+                                    <div
+                                      key={split.id}
+                                      className="flex gap-2 items-start"
+                                    >
                                       <div className="flex-1 space-y-1">
                                         <Select
                                           value={split.accountId}
                                           onValueChange={(value) => {
-                                            const updated = [...paymentSplits]
-                                            updated[index].accountId = value
-                                            setPaymentSplits(updated)
+                                            const updated = [...paymentSplits];
+                                            updated[index].accountId = value;
+                                            setPaymentSplits(updated);
                                           }}
                                         >
                                           <SelectTrigger className="h-9 text-xs">
-                                            <SelectValue placeholder={t("selectAccount") || "Select account"} />
+                                            <SelectValue
+                                              placeholder={
+                                                t("selectAccount") ||
+                                                "Select account"
+                                              }
+                                            />
                                           </SelectTrigger>
                                           <SelectContent>
                                             {accounts.map((account) => (
-                                              <SelectItem key={account.id} value={account.id}>
+                                              <SelectItem
+                                                key={account.id}
+                                                value={account.id}
+                                              >
                                                 {account.name} ({account.type})
                                               </SelectItem>
                                             ))}
@@ -1420,10 +2163,16 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                           type="number"
                                           value={split.amount || ""}
                                           onChange={(e) => {
-                                            const updated = [...paymentSplits]
-                                            const amount = Math.max(0, Math.min(Number(e.target.value), total))
-                                            updated[index].amount = amount
-                                            setPaymentSplits(updated)
+                                            const updated = [...paymentSplits];
+                                            const amount = Math.max(
+                                              0,
+                                              Math.min(
+                                                Number(e.target.value),
+                                                total,
+                                              ),
+                                            );
+                                            updated[index].amount = amount;
+                                            setPaymentSplits(updated);
                                           }}
                                           className="h-9 text-xs"
                                           placeholder="Amount"
@@ -1437,34 +2186,60 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => {
-                                          setPaymentSplits(paymentSplits.filter((_, i) => i !== index))
+                                          setPaymentSplits(
+                                            paymentSplits.filter(
+                                              (_, i) => i !== index,
+                                            ),
+                                          );
                                         }}
                                         className="h-9 w-9 p-0"
                                       >
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                       </Button>
                                     </div>
-                                  )
+                                  );
                                 })}
 
                                 {paymentSplits.length > 0 && (
                                   <div className="pt-2 border-t space-y-1">
                                     <div className="flex justify-between text-xs">
-                                      <span className="text-muted-foreground">{t("totalAllocated") || "Total Allocated"}:</span>
+                                      <span className="text-muted-foreground">
+                                        {t("totalAllocated") ||
+                                          "Total Allocated"}
+                                        :
+                                      </span>
                                       <span className="font-medium">
-                                        {paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0).toFixed(2)}
+                                        {paymentSplits
+                                          .reduce(
+                                            (sum, s) => sum + (s.amount || 0),
+                                            0,
+                                          )
+                                          .toFixed(2)}
                                       </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                      <span className="text-muted-foreground">{t("remaining") || "Remaining"}:</span>
+                                      <span className="text-muted-foreground">
+                                        {t("remaining") || "Remaining"}:
+                                      </span>
                                       <span
                                         className={
-                                          total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0) < 0
+                                          total -
+                                            paymentSplits.reduce(
+                                              (sum, s) => sum + (s.amount || 0),
+                                              0,
+                                            ) <
+                                          0
                                             ? "text-destructive font-medium"
                                             : "font-medium"
                                         }
                                       >
-                                        {(total - paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0)).toFixed(2)}
+                                        {(
+                                          total -
+                                          paymentSplits.reduce(
+                                            (sum, s) => sum + (s.amount || 0),
+                                            0,
+                                          )
+                                        ).toFixed(2)}
                                       </span>
                                     </div>
                                   </div>
@@ -1473,15 +2248,67 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             )}
                           </div>
 
-                          <div className="flex justify-end pt-4 border-t">
+                          {paymentMethod !== "MIXED" && paymentMethod !== "CREDIT" && (
+                            <div className="pt-4 border-t">
+                              <FormField
+                                control={form.control}
+                                name="paidAmount"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>{t("paidAmount")}</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        {...field}
+                                        value={field.value || ""}
+                                        onChange={(e) =>
+                                          field.onChange(parseFloat(e.target.value) || 0)
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex justify-end pt-4 border-t mt-4">
                             <div className="text-right">
-                              <Label className="text-sm text-muted-foreground">{t("total")}</Label>
-                              <p className="text-2xl font-bold">{total.toFixed(2)}</p>
+                              <Label className="text-sm text-muted-foreground">
+                                {t("total")}
+                              </Label>
+                              <p className="text-2xl font-bold">
+                                {total.toFixed(2)}
+                              </p>
+
+                              {unpaidAmount > 0 && selectedContact && (
+                                <div className="mt-2 space-y-1">
+                                  <p className="text-sm text-muted-foreground">
+                                    Unpaid Amount:{" "}
+                                    <span className="font-medium">
+                                      {unpaidAmount.toFixed(2)}
+                                    </span>
+                                  </p>
+                                  {isCreditExceeded ? (
+                                    <p className="text-xs font-medium text-destructive bg-destructive/10 p-1.5 rounded border border-destructive/20">
+                                      Exceeds available credit of{" "}
+                                      {availableCredit.toFixed(2)}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs font-medium text-emerald-500 bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20">
+                                      Within available credit limit
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </>
                       )}
-                    </div>
                   </>
                 )}
               </div>
@@ -1497,12 +2324,16 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? tCommon("loading") : isEdit ? tCommon("save") : tCommon("create")}
+                {isLoading
+                  ? tCommon("loading")
+                  : isEdit
+                    ? tCommon("save")
+                    : tCommon("create")}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

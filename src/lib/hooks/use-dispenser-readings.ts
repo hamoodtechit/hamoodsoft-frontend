@@ -2,6 +2,7 @@ import { dispenserReadingsApi } from "@/lib/api/dispenser-readings"
 import { CreateDispenserReadingInput } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useDispenserReadings(params?: {
   page?: number
@@ -28,7 +29,7 @@ export function useCreateDispenserReading() {
       toast.success("Reading recorded successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to record reading")
+      toast.error(extractError(error, "Failed to record reading"))
     },
   })
 }
@@ -43,7 +44,7 @@ export function useDeleteDispenserReading() {
       toast.success("Reading deleted successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete reading")
+      toast.error(extractError(error, "Failed to delete reading"))
     },
   })
 }

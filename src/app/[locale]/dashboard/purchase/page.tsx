@@ -34,10 +34,18 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Purchase } from "@/types"
-import { CreditCard, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
+import { CreditCard, Droplets, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useAccounts } from "@/lib/hooks/use-accounts"
 
 export default function PurchasePage() {
   const t = useTranslations("purchases")
@@ -51,9 +59,12 @@ export default function PurchasePage() {
   const { selectedBranchId } = useBranchSelection()
   const { generalSettings } = useAppSettings()
   const deleteMutation = useDeletePurchase()
+  const { data: accountsData } = useAccounts({ limit: 1000 })
+  const accounts = accountsData?.items || []
 
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<"ALL" | "PRODUCT" | "FUEL">("ALL")
   const limit = 10
 
   // View mode with localStorage persistence
@@ -85,8 +96,12 @@ export default function PurchasePage() {
     // Always include branchId (even if null) so React Query detects changes
     params.branchId = selectedBranchId || undefined
 
+    if (purchaseTypeFilter !== "ALL") {
+      params.purchaseType = purchaseTypeFilter
+    }
+
     return params
-  }, [page, limit, search, selectedBranchId])
+  }, [page, limit, search, selectedBranchId, purchaseTypeFilter])
 
   // Reset to page 1 when branch changes
   useEffect(() => {
@@ -121,14 +136,18 @@ export default function PurchasePage() {
         id: "status",
         header: t("status"),
         cell: (row) => {
-          const statusColors = {
+          const statusColors: Record<string, string> = {
+            ORDERED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
             PENDING: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
             COMPLETED: "bg-green-500/10 text-green-600 dark:text-green-400",
+            RETURNED: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
             CANCELLED: "bg-red-500/10 text-red-600 dark:text-red-400",
           }
-          const statusLabels = {
+          const statusLabels: Record<string, string> = {
+            ORDERED: t("statusOrdered") || "Ordered",
             PENDING: t("statusPending"),
             COMPLETED: t("statusCompleted"),
+            RETURNED: "Returned",
             CANCELLED: t("statusCancelled"),
           }
           return (
@@ -138,6 +157,20 @@ export default function PurchasePage() {
           )
         },
         sortable: true,
+      },
+      {
+        id: "purchaseType",
+        header: t("purchaseType"),
+        cell: (row) => {
+          const isFuel = row.purchaseType === "FUEL"
+          return (
+            <Badge variant={isFuel ? "secondary" : "outline"} className="gap-1">
+              {isFuel ? <Droplets className="h-3 w-3" /> : <Package className="h-3 w-3" />}
+              {isFuel ? t("fuelPurchase") : t("productPurchase")}
+            </Badge>
+          )
+        },
+        sortable: false,
       },
       {
         id: "totalAmount",
@@ -319,10 +352,14 @@ export default function PurchasePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "ORDERED":
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
       case "PENDING":
         return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
       case "COMPLETED":
         return "bg-green-500/10 text-green-600 dark:text-green-400"
+      case "RETURNED":
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400"
       case "CANCELLED":
         return "bg-red-500/10 text-red-600 dark:text-red-400"
       default:
@@ -365,6 +402,30 @@ export default function PurchasePage() {
                   className="pl-9"
                 />
               </div>
+              <Select
+                value={purchaseTypeFilter}
+                onValueChange={(val) => {
+                  setPurchaseTypeFilter(val as "ALL" | "PRODUCT" | "FUEL")
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("allTypes")}</SelectItem>
+                  <SelectItem value="PRODUCT">
+                    <span className="flex items-center gap-1">
+                      <Package className="h-3 w-3" /> {t("productPurchase")}
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="FUEL">
+                    <span className="flex items-center gap-1">
+                      <Droplets className="h-3 w-3" /> {t("fuelPurchase")}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
                 data={purchases}
@@ -427,10 +488,12 @@ export default function PurchasePage() {
                           Add Payment
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => handleEdit(row)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {tCommon("edit")}
-                      </DropdownMenuItem>
+                      {row.status !== "COMPLETED" && (
+                        <DropdownMenuItem onClick={() => handleEdit(row)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {tCommon("edit")}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => handleDelete(row)}
                         className="text-destructive"
@@ -458,7 +521,15 @@ export default function PurchasePage() {
                               ? t("statusPending")
                               : p.status === "COMPLETED"
                               ? t("statusCompleted")
+                              : p.status === "ORDERED"
+                              ? t("statusOrdered") || "Ordered"
+                              : p.status === "RETURNED"
+                              ? "Returned"
                               : t("statusCancelled")}
+                          </Badge>
+                          <Badge variant={p.purchaseType === "FUEL" ? "secondary" : "outline"} className="gap-1">
+                            {p.purchaseType === "FUEL" ? <Droplets className="h-3 w-3" /> : <Package className="h-3 w-3" />}
+                            {p.purchaseType === "FUEL" ? t("fuelPurchase") : t("productPurchase")}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -517,10 +588,12 @@ export default function PurchasePage() {
                               Add Payment
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => handleEdit(p)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
+                          {p.status !== "COMPLETED" && (
+                            <DropdownMenuItem onClick={() => handleEdit(p)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleDelete(p)}
                             className="text-destructive"
@@ -599,6 +672,10 @@ export default function PurchasePage() {
                     ? t("statusPending")
                     : viewPurchase.status === "COMPLETED"
                     ? t("statusCompleted")
+                    : viewPurchase.status === "ORDERED"
+                    ? t("statusOrdered") || "Ordered"
+                    : viewPurchase.status === "RETURNED"
+                    ? "Returned"
                     : t("statusCancelled")}
                 </Badge>
               </div>
@@ -718,11 +795,12 @@ export default function PurchasePage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="font-medium">{item.itemName}</p>
-                              {item.itemDescription && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {item.itemDescription}
-                                </p>
-                              )}
+                                {item.itemDescription && (
+                                  <div 
+                                    className="text-sm text-muted-foreground mt-1"
+                                    dangerouslySetInnerHTML={{ __html: item.itemDescription }}
+                                  />
+                                )}
                               <div className="flex items-center gap-4 mt-2 text-sm">
                                 <span>
                                   {t("quantity")}: {item.quantity} {item.unit}
@@ -803,7 +881,7 @@ export default function PurchasePage() {
                               </Badge>
                               {payment.accountId && (
                                 <span className="text-sm text-muted-foreground">
-                                  Account: {payment.accountId.slice(0, 8)}...
+                                  Account: {accounts.find(a => a.id === payment.accountId)?.name || `${payment.accountId.slice(0, 8)}...`}
                                 </span>
                               )}
                             </div>

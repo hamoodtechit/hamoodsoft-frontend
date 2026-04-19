@@ -1,7 +1,8 @@
 import { fuelTypesApi } from "@/lib/api/fuel-types";
-import { CreateFuelTypeInput } from "@/types";
+import { CreateFuelTypeInput, UpdateFuelTypeInput } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { extractError } from "@/lib/utils/error";
 
 export function useFuelTypes(params: { page?: number; limit?: number; search?: string; isActive?: boolean } = { limit: 1000 }) {
   return useQuery({
@@ -19,7 +20,21 @@ export function useCreateFuelType() {
       toast.success("Fuel type created successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create fuel type")
+      toast.error(extractError(error, "Failed to create fuel type"))
+    },
+  })
+}
+
+export function useUpdateFuelType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateFuelTypeInput }) => fuelTypesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
+      toast.success("Fuel type updated successfully")
+    },
+    onError: (error: any) => {
+      toast.error(extractError(error, "Failed to update fuel type"))
     },
   })
 }
@@ -33,7 +48,7 @@ export function useDeleteFuelType() {
       toast.success("Fuel type deleted successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete fuel type")
+      toast.error(extractError(error, "Failed to delete fuel type"))
     },
   })
 }

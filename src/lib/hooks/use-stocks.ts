@@ -8,7 +8,7 @@ import { toast } from "sonner"
 // List stocks with pagination and filters
 export function useStocks(params?: StocksListParams) {
   return useQuery({
-    queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId],
+    queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId, params?.fuelTypeId, params?.tankerId, params?.itemType],
     queryFn: () => stocksApi.list(params),
     refetchOnWindowFocus: true,
     enabled: !!params?.branchId,
@@ -27,7 +27,7 @@ export function useStock(id: string | undefined) {
 // List stock history with pagination and filters
 export function useStockHistory(params?: StockHistoryListParams) {
   return useQuery({
-    queryKey: ["stockHistory", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId],
+    queryKey: ["stockHistory", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.stockId, params?.fuelTypeId, params?.tankerId, params?.itemType],
     queryFn: () => stocksApi.listHistory(params),
     refetchOnWindowFocus: true,
     enabled: !!params?.branchId,

@@ -15,12 +15,14 @@ export function usePurchases(params?: PurchasesListParams) {
     params?.search ?? "",
     params?.contactId ?? null,
     params?.status ?? null,
+    params?.purchaseType ?? null,
     branchId ?? null,
   ] as const
 
   return useQuery({
     queryKey,
     queryFn: () => purchasesApi.getPurchases(params),
+    enabled: !!branchId,
     refetchOnWindowFocus: true,
     staleTime: 0,
   })
@@ -41,6 +43,10 @@ export function useCreatePurchase() {
     mutationFn: (data: CreatePurchaseInput) => purchasesApi.createPurchase(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchases"] })
+      // Invalidate fuel-related queries when creating fuel purchases
+      queryClient.invalidateQueries({ queryKey: ["tankers"] })
+      queryClient.invalidateQueries({ queryKey: ["stocks"] })
+      queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
       toast.success("Purchase created successfully!")
     },
     onError: (error: any) => {

@@ -108,7 +108,7 @@ export default function ProfilePage() {
       <PageLayout
         title={tProfile("title")}
         description={tProfile("description")}
-        maxWidth="full"
+        align="left"
       >
         <div className="space-y-6 w-full">
           {/* Profile Information Card Skeleton */}
@@ -194,7 +194,7 @@ export default function ProfilePage() {
     <PageLayout
       title={tProfile("title")}
       description={tProfile("description")}
-      maxWidth="full"
+      align="left"
     >
       <div className="space-y-6 w-full">
         {/* Profile Information Card */}

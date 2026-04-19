@@ -6,7 +6,7 @@ const baseContactSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
-  balance: z.number().min(0, "Balance must be greater than or equal to 0").default(0),
+  balance: z.number().default(0),
   creditLimit: z.number().min(0, "Credit limit must be greater than or equal to 0").default(0),
 })
 

@@ -1,194 +1,291 @@
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { useAppSettings } from "@/lib/providers/settings-provider"
-import { formatCurrency } from "@/lib/utils/currency"
-import { Purchase, Sale } from "@/types"
-import { Download, History, Printer } from "lucide-react"
-import { useTranslations } from "next-intl"
-import { useMemo } from "react"
+} from "@/components/ui/dialog";
+import { useAppSettings } from "@/lib/providers/settings-provider";
+import { useSettings } from "@/lib/hooks/use-settings";
+import { formatCurrency } from "@/lib/utils/currency";
+import { Purchase, Sale, SaleItem, PurchaseItem, Setting } from "@/types";
+import { Download, History, Printer } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 
 interface InvoiceDialogProps {
-  sale?: Sale | null
-  purchase?: Purchase | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onOpenRecentTransactions?: () => void
+  sale?: Sale | null;
+  purchase?: Purchase | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onOpenRecentTransactions?: () => void;
 }
 
-export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecentTransactions }: InvoiceDialogProps) {
-  const t = useTranslations("sales")
-  const tPurchases = useTranslations("purchases")
-  const tCommon = useTranslations("common")
-  const { generalSettings, invoiceSettings } = useAppSettings()
+export function InvoiceDialog({
+  sale,
+  purchase,
+  open,
+  onOpenChange,
+  onOpenRecentTransactions,
+}: InvoiceDialogProps) {
+  const t = useTranslations("sales");
+  const { generalSettings, invoiceSettings } = useAppSettings();
+  const { data: settingsData } = useSettings();
+  
+  const setting = settingsData?.items?.find((s: Setting) => s.name === "businessConfig");
+  const businessConfig = (setting?.configs as { showPointReducing?: boolean; pointReducingAmountPerLiter?: number }) || {};
 
-  const transaction = sale || purchase
-  const isPurchase = !!purchase
+  const calculateActualQuantity = (namedQuantity: number): number => {
+    const { showPointReducing, pointReducingAmountPerLiter = 0 } = businessConfig;
+    if (!showPointReducing || pointReducingAmountPerLiter <= 0) return namedQuantity;
+    return (namedQuantity * (1000 - pointReducingAmountPerLiter)) / 1000;
+  };
+
+  const transaction = sale || purchase;
+  const isPurchase = !!purchase;
 
   // Get items (handle both items and saleItems/purchaseItems)
-  const items = useMemo(() => {
-    if (!transaction) return []
+  const items = useMemo<(SaleItem | PurchaseItem)[]>(() => {
+    if (!transaction) return [];
     if (isPurchase) {
-      const p = transaction as Purchase
-      return p.items || p.purchaseItems || []
+      const p = transaction as Purchase;
+      return p.items || p.purchaseItems || [];
     }
-    const s = transaction as Sale
-    return s.items || s.saleItems || []
-  }, [transaction, isPurchase])
+    const s = transaction as Sale;
+    return s.items || s.saleItems || [];
+  }, [transaction, isPurchase]);
 
   // Calculate totals
   const totals = useMemo(() => {
-    if (!transaction) return { subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0, change: 0 }
-    
+    if (!transaction)
+      return {
+        subtotal: 0,
+        discount: 0,
+        tax: 0,
+        total: 0,
+        paid: 0,
+        due: 0,
+        change: 0,
+      };
+
     // Calculate item totals with item-level discounts
     const itemsSubtotal = items.reduce((sum, item) => {
-      const itemSubtotal = item.price * item.quantity
+      const itemSubtotal = item.price * item.quantity;
       const itemDiscount =
         item.discountType === "PERCENTAGE"
           ? (itemSubtotal * (item.discountAmount || 0)) / 100
           : item.discountType === "FIXED"
-          ? item.discountAmount || 0
-          : 0
-      const itemTotal = itemSubtotal - itemDiscount
-      return sum + itemTotal
-    }, 0)
-    
+            ? item.discountAmount || 0
+            : 0;
+      const itemTotal = itemSubtotal - itemDiscount;
+      return sum + itemTotal;
+    }, 0);
+
     // Apply transaction-level discount
-    const discount = transaction.discountAmount || 0
-    const afterDiscount = Math.max(0, itemsSubtotal - discount)
-    
+    const discount = transaction.discountAmount || 0;
+    const afterDiscount = Math.max(0, itemsSubtotal - discount);
+
     // Total from backend (includes tax)
-    // For purchases, totalAmount/totalPrice is what we want. 
-    const total = transaction.totalPrice || transaction.totalAmount || itemsSubtotal
-    
+    // For purchases, totalAmount/totalPrice is what we want.
+    const total =
+      transaction.totalPrice || transaction.totalAmount || itemsSubtotal;
+
     // Calculate tax
-    let tax = 0
+    let tax = 0;
     if (isPurchase) {
-      const p = transaction as Purchase
+      const p = transaction as Purchase;
       if (p.taxAmount) {
-        tax = p.taxAmount
+        tax = p.taxAmount;
       } else if (p.taxType === "PERCENTAGE" && p.taxRate) {
-        tax = (afterDiscount * p.taxRate) / 100
+        tax = (afterDiscount * p.taxRate) / 100;
       } else {
         // Fallback or if tax is already in total but fields are missing
-        tax = Math.max(0, total - afterDiscount)
+        tax = Math.max(0, total - afterDiscount);
       }
     } else {
-       // Sales logic (keep existing or update if Sales has tax fields)
-       tax = Math.max(0, total - afterDiscount)
+      // Sales logic (keep existing or update if Sales has tax fields)
+      tax = Math.max(0, total - afterDiscount);
     }
-    
-    const paid = transaction.paidAmount || 0
-    const due = Math.max(0, total - paid)
-    const change = Math.max(0, paid - total)
 
-    return { subtotal: itemsSubtotal, discount, tax, total, paid, due, change }
-  }, [transaction, items])
+    const paid = transaction.paidAmount || 0;
+    const due = Math.max(0, total - paid);
+    const change = Math.max(0, paid - total);
+
+    return { subtotal: itemsSubtotal, discount, tax, total, paid, due, change };
+  }, [transaction, items]);
 
   // Get invoice layout from settings
-  const invoiceLayout = invoiceSettings?.layout || "pos-80mm"
-  
-  // Determine width based on layout
+  const invoiceLayout = invoiceSettings?.layout || "pos-80mm";
+
+  // Determine width for download/print windows
   const getInvoiceWidth = () => {
     switch (invoiceLayout) {
       case "pos-58mm":
-        return "58mm"
+        return "58mm";
       case "pos-80mm":
-        return "80mm"
+        return "80mm";
       case "pos-a4":
-        return "210mm"
+        return "210mm";
       default:
-        return "80mm"
+        return "80mm";
     }
-  }
+  };
 
-  const handlePrint = () => {
-    window.print()
-  }
+  const isPosNarrow = invoiceLayout === "pos-58mm" || invoiceLayout === "pos-80mm";
 
-  const handleDownload = () => {
-    const invoiceWidth = getInvoiceWidth()
-    
-    // Create a printable HTML content
-    const printContent = document.getElementById("invoice-content")?.innerHTML || ""
-    const printWindow = window.open("", "_blank")
+  /**
+   * Extracts all compiled CSS from the current document's stylesheets.
+   * This captures Tailwind's generated classes, CSS variables, and any custom styles.
+   */
+  const extractPageStyles = (): string => {
+    let cssText = "";
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        for (const rule of Array.from(sheet.cssRules)) {
+          cssText += rule.cssText + "\n";
+        }
+      } catch {
+        // Skip cross-origin stylesheets that can't be read
+      }
+    }
+    return cssText;
+  };
+
+  /**
+   * Opens a new window with the invoice content and all page styles,
+   * then triggers the browser's print dialog.
+   */
+  const openPrintWindow = () => {
+    const invoiceWidth = getInvoiceWidth();
+    const isA4 = invoiceLayout === "pos-a4";
+
+    // Clone invoice content, stripping elements that should be hidden in print
+    const sourceEl = document.getElementById("invoice-content");
+    if (!sourceEl) return;
+    const clone = sourceEl.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll("[class*='print\\:hidden'], [class*='print:hidden']").forEach(el => el.remove());
+    const printContent = clone.innerHTML;
+
+    // Extract all CSS from the current page (includes Tailwind + CSS variables)
+    const pageStyles = extractPageStyles();
+
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
             <title>${isPurchase ? "Receipt" : "Invoice"} ${transaction?.id}</title>
+            <style>${pageStyles}</style>
             <style>
-              @page { size: ${invoiceLayout === "pos-a4" ? "A4" : "auto"}; margin: 0; }
-              body { 
-                font-family: Arial, sans-serif; 
-                padding: ${invoiceLayout === "pos-a4" ? "20px" : "10px"}; 
-                width: ${invoiceWidth};
-                margin: 0 auto;
+              @page {
+                size: ${isA4 ? "A4" : `${invoiceWidth} auto`};
+                margin: ${isA4 ? "5mm" : "1mm"};
               }
-              .invoice-header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-              .invoice-title { font-size: ${invoiceLayout === "pos-a4" ? "24px" : "18px"}; font-weight: bold; }
-              .invoice-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: ${invoiceLayout === "pos-a4" ? "14px" : "12px"}; }
-              .invoice-table th, .invoice-table td { padding: ${invoiceLayout === "pos-a4" ? "10px" : "6px"}; text-align: left; border-bottom: 1px solid #ddd; }
-              .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
-              .invoice-totals { margin-top: 20px; text-align: right; }
-              .invoice-footer { margin-top: 40px; text-align: center; color: #666; }
+              *, *::before, *::after {
+                box-sizing: border-box;
+              }
+              html, body {
+                background: white !important;
+                color: black !important;
+                margin: 0;
+                padding: 0;
+              }
+              #print-root {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: ${isA4 ? "22px 30px" : "34px 22px"};
+              }
             </style>
           </head>
           <body>
-            ${printContent}
+            <div id="print-root">
+              ${printContent}
+            </div>
           </body>
         </html>
-      `)
-      printWindow.document.close()
-      printWindow.print()
+      `);
+      printWindow.document.close();
+      // Small delay to let styles apply before triggering print
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
     }
-  }
+  };
 
-  if (!transaction) return null
-  
+  const handlePrint = () => {
+    openPrintWindow();
+  };
+
+  const handleDownload = () => {
+    openPrintWindow();
+  };
+
+  if (!transaction) return null;
+
   // Determine max width based on layout
+  // Important: These must override the base max-w-lg (512px) from DialogContent
   const getMaxWidthClass = () => {
     switch (invoiceLayout) {
       case "pos-58mm":
-        return "max-w-[58mm] print:max-w-[58mm]"
+        return "!max-w-[360px] w-[95vw]";
       case "pos-80mm":
-        return "max-w-[80mm] print:max-w-[80mm]"
+        return "!max-w-[480px] w-[95vw]";
       case "pos-a4":
-        return "max-w-[210mm] print:max-w-[210mm]"
+        return "!max-w-[900px] w-[95vw]";
       default:
-        return "max-w-[80mm] print:max-w-[80mm]"
+        return "!max-w-[480px] w-[95vw]";
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto print:max-h-none mx-auto`}>
+      <DialogContent
+        className={`${getMaxWidthClass()} max-h-[90vh] overflow-y-auto mx-auto`}
+      >
         {/* Accessibility: DialogContent requires DialogTitle */}
         <DialogHeader className="sr-only">
           <DialogTitle>{isPurchase ? "Receipt" : "Invoice"}</DialogTitle>
         </DialogHeader>
-        <div 
-          id="invoice-content" 
-          className={`p-6 print:p-0 ${
-            invoiceLayout === "pos-a4" 
-              ? "" 
+        <div
+          id="invoice-content"
+          className={`print:p-0 ${invoiceLayout === "pos-a4"
+              ? ""
               : invoiceLayout === "pos-80mm"
-              ? "text-sm"
-              : "text-xs"
-          }`}
+                ? "text-sm"
+                : "text-xs"
+            }`}
         >
+          {/* Action Buttons — hidden in print */}
+          <div className="flex items-center justify-end gap-2 mb-4 print:hidden">
+            {onOpenRecentTransactions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenRecentTransactions}
+              >
+                <History className="h-4 w-4 mr-2" />
+                Recent
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+
           {/* Invoice Header */}
-          <div className={`flex items-start justify-between ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}>
-            <div>
+          <div
+            className={`${isPosNarrow ? "flex flex-col gap-2" : "flex items-start justify-between"} ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}
+          >
+            <div className="min-w-0 flex-1">
               {/* Logo */}
               {generalSettings?.logoUrl && (
                 <div className={invoiceLayout === "pos-a4" ? "mb-4" : "mb-2"}>
@@ -199,7 +296,9 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
                   />
                 </div>
               )}
-              <h1 className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}>
+              <h1
+                className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}
+              >
                 {isPurchase ? "PURCHASE RECEIPT" : "INVOICE"}
               </h1>
               {isPurchase ? (
@@ -219,7 +318,7 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
                   )}
                 </>
               )}
-              
+
               {/* Receipt-style customer/supplier info */}
               {transaction.contact && (
                 <div className="mt-2 text-sm">
@@ -231,7 +330,9 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
                     {transaction.contact.phone || transaction.contact.email ? (
                       <span>
                         {transaction.contact.phone || ""}
-                        {transaction.contact.phone && transaction.contact.email ? " • " : ""}
+                        {transaction.contact.phone && transaction.contact.email
+                          ? " • "
+                          : ""}
                         {transaction.contact.email || ""}
                       </span>
                     ) : (
@@ -241,96 +342,111 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
                 </div>
               )}
             </div>
-            <div className="text-right">
-              <div className="flex gap-2 mb-2 print:hidden">
-                {onOpenRecentTransactions && (
-                  <Button variant="outline" size="sm" onClick={onOpenRecentTransactions}>
-                    <History className="h-4 w-4 mr-2" />
-                    Recent
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </div>
+            <div className={isPosNarrow ? "" : "text-right flex-shrink-0"}>
               <Badge
-                variant={transaction.paymentStatus === "PAID" ? "default" : "destructive"}
+                variant={
+                  transaction.paymentStatus === "PAID"
+                    ? "default"
+                    : "destructive"
+                }
                 className="text-sm"
               >
                 {transaction.paymentStatus === "PAID"
                   ? t("paymentStatusPaid")
                   : transaction.paymentStatus === "DUE"
-                  ? t("paymentStatusDue")
-                  : t("paymentStatusPartial")}
+                    ? t("paymentStatusDue")
+                    : t("paymentStatusPartial")}
               </Badge>
             </div>
           </div>
 
           {/* Items Table */}
-          <div className="mb-6">
+          <div className="mb-6 overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Item</th>
-                  <th className="text-left py-3 px-4 font-semibold">Description</th>
-                  <th className="text-center py-3 px-4 font-semibold">Qty</th>
-                  <th className="text-right py-3 px-4 font-semibold">Unit Price</th>
-                  {totals.discount > 0 && (
-                    <th className="text-right py-3 px-4 font-semibold">Discount</th>
+                  <th className={`text-left font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Item</th>
+                  {!isPosNarrow && (
+                    <th className="text-left py-3 px-4 font-semibold">
+                      Description
+                    </th>
                   )}
-                  <th className="text-right py-3 px-4 font-semibold">Total</th>
+                  <th className={`text-center font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Qty</th>
+                  <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                    Price
+                  </th>
+                  {totals.discount > 0 && (
+                    <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                      Disc.
+                    </th>
+                  )}
+                  <th className={`text-right font-semibold ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>Total</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr className="border-b">
-                    <td className="py-6 px-4 text-center text-muted-foreground" colSpan={totals.discount > 0 ? 6 : 5}>
+                    <td
+                      className={`text-center text-muted-foreground ${isPosNarrow ? "py-4 px-2" : "py-6 px-4"}`}
+                      colSpan={totals.discount > 0 ? (isPosNarrow ? 5 : 6) : (isPosNarrow ? 4 : 5)}
+                    >
                       No items found.
                     </td>
                   </tr>
-                ) : items.map((item, index) => {
-                  const itemSubtotal = item.price * item.quantity
-                  const itemDiscount =
-                    item.discountType === "PERCENTAGE"
-                      ? (itemSubtotal * (item.discountAmount || 0)) / 100
-                      : item.discountType === "FIXED"
-                      ? item.discountAmount || 0
-                      : 0
-                  const itemTotal = item.totalPrice || itemSubtotal - itemDiscount
+                ) : (
+                  items.map((item, index) => {
+                    const itemSubtotal = item.price * item.quantity;
+                    const itemDiscount =
+                      item.discountType === "PERCENTAGE"
+                        ? (itemSubtotal * (item.discountAmount || 0)) / 100
+                        : item.discountType === "FIXED"
+                          ? item.discountAmount || 0
+                          : 0;
+                    const itemTotal =
+                      item.totalPrice || itemSubtotal - itemDiscount;
 
-                  return (
-                    <tr key={index} className="border-b">
-                      <td className="py-3 px-4">
-                        <div className="font-medium">{item.itemName}</div>
-                        {item.sku && (
-                          <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground text-sm">
-                        {item.itemDescription || "-"}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {item.quantity} {item.unit}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {formatCurrency(item.price, { generalSettings })}
-                      </td>
-                      {totals.discount > 0 && (
-                        <td className="py-3 px-4 text-right">
-                          {itemDiscount > 0 ? `-${formatCurrency(itemDiscount, { generalSettings })}` : "-"}
+                    return (
+                      <tr key={index} className="border-b">
+                        <td className={isPosNarrow ? "py-2 px-2" : "py-3 px-4"}>
+                          <div className="font-medium">{item.itemName}</div>
+                          {item.sku && (
+                            <div className="text-xs text-muted-foreground">
+                              SKU: {item.sku}
+                            </div>
+                          )}
+                          {isPosNarrow && item.itemDescription && (
+                            <div className="text-xs text-muted-foreground mt-0.5" dangerouslySetInnerHTML={{ __html: item.itemDescription }} />
+                          )}
                         </td>
-                      )}
-                      <td className="py-3 px-4 text-right font-medium">
-                        {formatCurrency(itemTotal, { generalSettings })}
-                      </td>
-                    </tr>
-                  )
-                })}
+                        {!isPosNarrow && (
+                          <td className="py-3 px-4 text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: item.itemDescription || "-" }} />
+                        )}
+                        <td className={`text-center ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                          <div>{item.quantity} {item.unit}</div>
+                          {/* {(!isPurchase && (item.itemType === "FUEL" || item.productId?.startsWith("fuel-"))) && businessConfig?.showPointReducing && item.quantity > 0 && (
+                            <div className="text-xs text-muted-foreground mt-0.5" title="Actual Delivery"> */}
+                              {/* Use actualQuantity from item if backend provided it, otherwise calculate it */}
+                              {/* {(item.actualQuantity ?? calculateActualQuantity(item.quantity)).toFixed(2)} {item.unit}
+                            </div>
+                          )} */}
+                        </td>
+                        <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                          {formatCurrency(item.price, { generalSettings })}
+                        </td>
+                        {totals.discount > 0 && (
+                          <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                            {itemDiscount > 0
+                              ? `-${formatCurrency(itemDiscount, { generalSettings })}`
+                              : "-"}
+                          </td>
+                        )}
+                        <td className={`text-right font-medium ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
+                          {formatCurrency(itemTotal, { generalSettings })}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -340,12 +456,16 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
             <div className="w-full md:w-80 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span>{formatCurrency(totals.subtotal, { generalSettings })}</span>
+                <span>
+                  {formatCurrency(totals.subtotal, { generalSettings })}
+                </span>
               </div>
               {totals.discount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount:</span>
-                  <span className="text-green-600">-{formatCurrency(totals.discount, { generalSettings })}</span>
+                  <span className="text-green-600">
+                    -{formatCurrency(totals.discount, { generalSettings })}
+                  </span>
                 </div>
               )}
               {totals.tax > 0 && (
@@ -361,20 +481,24 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Paid:</span>
-                <span className="text-green-600">{formatCurrency(totals.paid, { generalSettings })}</span>
+                <span className="text-green-600">
+                  {formatCurrency(totals.paid, { generalSettings })}
+                </span>
               </div>
-              
+
               {totals.due > 0 && (
                 <div className="flex justify-between text-sm font-semibold text-red-600">
                   <span>Due:</span>
                   <span>{formatCurrency(totals.due, { generalSettings })}</span>
                 </div>
               )}
-              
+
               {totals.change > 0 && (
                 <div className="flex justify-between text-sm font-semibold text-blue-600">
                   <span>Change:</span>
-                  <span>{formatCurrency(totals.change, { generalSettings })}</span>
+                  <span>
+                    {formatCurrency(totals.change, { generalSettings })}
+                  </span>
                 </div>
               )}
             </div>
@@ -385,12 +509,13 @@ export function InvoiceDialog({ sale, purchase, open, onOpenChange, onOpenRecent
             <p>{invoiceSettings?.footer || "Thank you for your business!"}</p>
             {transaction.createdAt && (
               <p className="mt-2">
-                {isPurchase ? "Receipt" : "Invoice"} generated on {new Date(transaction.createdAt).toLocaleString()}
+                {isPurchase ? "Receipt" : "Invoice"} generated on{" "}
+                {new Date(transaction.createdAt).toLocaleString()}
               </p>
             )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

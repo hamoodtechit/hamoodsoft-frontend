@@ -34,6 +34,7 @@ import {
   useStockHistory,
   useStocks,
 } from "@/lib/hooks/use-stocks"
+import { useSettings } from "@/lib/hooks/use-settings"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Stock, StockHistory } from "@/types"
 import { ArrowDown, ArrowUp, History, MoreVertical, Package, Plus, Search } from "lucide-react"
@@ -59,6 +60,14 @@ export default function StocksPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [historyStock, setHistoryStock] = useState<Stock | null>(null)
   
+  const { data: settingsData } = useSettings()
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig")
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+    }
+  }, [settingsData])
+  
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -75,11 +84,11 @@ export default function StocksPage() {
   }, [viewMode])
 
   const { data: stocksData, isLoading } = useStocks(
-    selectedBranchId ? { branchId: selectedBranchId } : undefined
+    selectedBranchId ? { branchId: selectedBranchId, itemType: 'PRODUCT' } : undefined
   )
   const stocks = stocksData?.items || []
 
-  const { data: productsData } = useProducts()
+  const { data: productsData } = useProducts({ limit: 1000 })
   const products = productsData?.items || []
   const productMap = new Map(products.map((p) => [p.id, p]))
 
@@ -93,7 +102,7 @@ export default function StocksPage() {
   const filteredStocks = stocks.filter((stock) => {
     if (!search.trim()) return true
     const searchLower = search.toLowerCase()
-    const product = stock.product || productMap.get(stock.productId)
+    const product = stock.product || productMap.get(stock.productId ?? '')
     const productName = product?.name || ""
     return (
       productName.toLowerCase().includes(searchLower) ||
@@ -108,10 +117,17 @@ export default function StocksPage() {
       id: "product",
       header: t("product"),
       cell: (row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.name || row.productId
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.name || row.productId || '-'
       },
       sortable: false,
+    },
+    {
+      id: "sku",
+      header: t("sku") || "SKU",
+      cell: (row) => row.sku || row.product?.sku || '-',
+      sortable: true,
+      accessorKey: "sku",
     },
     {
       id: "quantity",
@@ -129,14 +145,20 @@ export default function StocksPage() {
       header: t("purchasePrice"),
       accessorKey: "purchasePrice",
       sortable: true,
-      cell: (row) => row.purchasePrice ?? "-",
+      cell: (row) => {
+        const product = row.product || productMap.get(row.productId ?? '')
+        return row.purchasePrice ?? product?.purchasePrice ?? "-"
+      },
     },
     {
       id: "salePrice",
       header: t("salePrice"),
       accessorKey: "salePrice",
       sortable: true,
-      cell: (row) => row.salePrice ?? "-",
+      cell: (row) => {
+        const product = row.product || productMap.get(row.productId ?? '')
+        return row.salePrice ?? product?.salePrice ?? "-"
+      },
     },
     {
       id: "unit",
@@ -162,17 +184,23 @@ export default function StocksPage() {
       header: "Product Name",
       width: 25,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.name || row.productId
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.name || row.productId || '-'
       },
+    },
+    {
+      key: "sku",
+      header: "SKU",
+      width: 20,
+      format: (value, row) => row.sku || row.product?.sku || '-',
     },
     {
       key: "productDescription",
       header: "Product Description",
       width: 40,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
-        return product?.description || "-"
+        const product = row.product || productMap.get(row.productId ?? '')
+        return product?.description || '-'
       },
     },
     {
@@ -184,13 +212,19 @@ export default function StocksPage() {
       key: "purchasePrice",
       header: "Purchase Price",
       width: 15,
-      format: (value) => value ?? "-",
+      format: (value, row) => {
+        const product = row.product || productMap.get(row.productId ?? '')
+        return row.purchasePrice ?? product?.purchasePrice ?? "-"
+      },
     },
     {
       key: "salePrice",
       header: "Sale Price",
       width: 15,
-      format: (value) => value ?? "-",
+      format: (value, row) => {
+        const product = row.product || productMap.get(row.productId ?? '')
+        return row.salePrice ?? product?.salePrice ?? "-"
+      },
     },
     {
       key: "unit",
@@ -221,7 +255,7 @@ export default function StocksPage() {
       header: "Product Categories",
       width: 30,
       format: (value, row) => {
-        const product = row.product || productMap.get(row.productId)
+        const product = row.product || productMap.get(row.productId ?? '')
         return product?.categories?.map((c) => c.name).join(", ") || "-"
       },
     },
@@ -384,8 +418,8 @@ export default function StocksPage() {
           ) : (
             <div className="space-y-3">
               {filteredStocks.map((stock) => {
-                const productHistory = getStockHistoryForProduct(stock.productId)
-                const product = stock.product || productMap.get(stock.productId)
+                const productHistory = getStockHistoryForProduct(stock.productId ?? '')
+                const product = stock.product || productMap.get(stock.productId ?? '')
                 return (
                   <Card key={stock.id} className="relative">
                     <CardContent className="py-4">
@@ -393,21 +427,22 @@ export default function StocksPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold truncate">
-                              {product?.name || stock.productId}
+                              {product?.name || stock.productId || 'Unknown Product'} 
+                              {(stock.sku || product?.sku) ? ` (SKU: ${stock.sku || product?.sku})` : ""}
                             </h4>
                             <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
                               {t("quantity")}: {stock.quantity}
                             </Badge>
                           </div>
                           <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            {stock.purchasePrice !== null && stock.purchasePrice !== undefined && (
+                            {(stock.purchasePrice ?? product?.purchasePrice) !== null && (stock.purchasePrice ?? product?.purchasePrice) !== undefined && (
                               <span>
-                                {t("purchasePrice")}: {stock.purchasePrice}
+                                {t("purchasePrice")}: {stock.purchasePrice ?? product?.purchasePrice}
                               </span>
                             )}
-                            {stock.salePrice !== null && stock.salePrice !== undefined && (
+                            {(stock.salePrice ?? product?.salePrice) !== null && (stock.salePrice ?? product?.salePrice) !== undefined && (
                               <span>
-                                {t("salePrice")}: {stock.salePrice}
+                                {t("salePrice")}: {stock.salePrice ?? product?.salePrice}
                               </span>
                             )}
                           </div>
@@ -456,7 +491,9 @@ export default function StocksPage() {
         open={isAdjustDialogOpen}
         onOpenChange={setIsAdjustDialogOpen}
         defaultBranchId={selectedStock?.branchId}
-        defaultProductId={selectedStock?.productId}
+        defaultProductId={selectedStock?.productId ?? undefined}
+        defaultUnitId={selectedStock?.unitId ?? undefined}
+        defaultStockId={selectedStock?.id}
       />
 
       <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
@@ -473,15 +510,26 @@ export default function StocksPage() {
           </SheetHeader>
           {historyStock ? (
             <div className="space-y-4 mt-4">
+              <div className="flex flex-wrap gap-4 text-sm font-medium p-3 bg-muted/50 rounded-lg border">
+                <div>
+                  <span className="text-muted-foreground">{t("purchasePrice")}: </span>
+                  {historyStock.purchasePrice ?? historyStock.product?.purchasePrice ?? "-"}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("salePrice")}: </span>
+                  {historyStock.salePrice ?? historyStock.product?.salePrice ?? "-"}
+                </div>
+              </div>
+
               {historyLoading ? (
                 <SkeletonList count={3} />
-              ) : getStockHistoryForProduct(historyStock.productId).length === 0 ? (
+              ) : getStockHistoryForProduct(historyStock.productId ?? '').length === 0 ? (
                 <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
                   {t("noHistory")}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getStockHistoryForProduct(historyStock.productId).map((h: StockHistory) => {
+                  {getStockHistoryForProduct(historyStock.productId ?? '').map((h: StockHistory) => {
                     const quantityChange = h.quantityChange ?? h.quantity
                     const stockQuantity = h.stock?.quantity
                     return (
@@ -501,11 +549,16 @@ export default function StocksPage() {
                                   {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
                                 </Badge>
                                 <span className="font-medium">
-                                  {t("quantity")}: {quantityChange}
+                                  {t("quantity")}: {Math.abs(businessConfig.showPointReducing ? quantityChange : (h.itemType === "FUEL" ? (h.namedQuantity ?? quantityChange) : quantityChange))}
                                 </span>
                                 {stockQuantity !== undefined && stockQuantity !== null && (
                                   <span className="text-sm text-muted-foreground">
                                     ({t("currentStock") || "Current Stock"}: {stockQuantity})
+                                  </span>
+                                )}
+                                {businessConfig.showPointReducing && h.itemType === "FUEL" && h.transactionType === "OUT" && h.namedQuantity && (
+                                  <span className="text-sm text-muted-foreground">
+                                    (Original: {h.namedQuantity})
                                   </span>
                                 )}
                               </div>

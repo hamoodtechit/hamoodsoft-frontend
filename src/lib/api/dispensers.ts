@@ -3,7 +3,7 @@ import apiClient from "./client"
 import { endpoints } from "./endpoints"
 
 export const dispensersApi = {
-  list: async (params?: { page?: number; limit?: number; search?: string; branchId?: string }): Promise<PaginatedResult<Dispenser>> => {
+  list: async (params?: { page?: number; limit?: number; search?: string; branchId?: string; status?: string }): Promise<PaginatedResult<Dispenser>> => {
     const response = await apiClient.get<ApiResponse<PaginatedResult<Dispenser>>>(endpoints.dispensers.list, { params })
     // console.log("[DISPENSER API] response.data.data:", JSON.stringify(response.data.data).substring(0, 500))
     return response.data.data

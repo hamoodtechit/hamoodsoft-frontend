@@ -27,7 +27,9 @@ import {
 } from "@/components/ui/select"
 import { useFuelTypes } from "@/lib/hooks/use-fuel-types"
 import { useCreateTanker, useUpdateTanker } from "@/lib/hooks/use-tankers"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { Tanker } from "@/types"
+import { toast } from "sonner"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -96,10 +98,18 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
     }
   }, [tanker, form, open])
 
+  // Get the selected branch from topbar
+  const { selectedBranchId } = useBranchSelection()
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (isEditing) {
+      if (!selectedBranchId) {
+        toast.error("Please select a branch first")
+        return
+      }
+
       updateMutation.mutate(
-        { id: tanker.id, data: values },
+        { id: tanker.id, data: { ...values, branchId: selectedBranchId } as any },
         {
           onSuccess: () => {
             onOpenChange(false)
@@ -107,7 +117,15 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
         }
       )
     } else {
-      createMutation.mutate(values, {
+      if (!selectedBranchId) {
+        toast.error("Please select a branch first")
+        return
+      }
+      
+      createMutation.mutate({
+        ...values,
+        branchId: selectedBranchId
+      } as any, {
         onSuccess: () => {
           onOpenChange(false)
         },
@@ -164,7 +182,7 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Fuel Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isEditing}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select fuel type" />

@@ -179,7 +179,11 @@
     "variantName": "ভ্যারিয়েন্টের নাম",
     "createUnit": "একক তৈরি করুন",
     "createBrand": "ব্র্যান্ড তৈরি করুন",
-    "createCategory": "ক্যাটাগরি তৈরি করুন"
+    "createCategory": "ক্যাটাগরি তৈরি করুন",
+    "quantity": "পরিমাণ",
+    "sku": "এসকেইউ",
+    "skuPlaceholder": "এসকেইউ লিখুন (স্বয়ংক্রিয়ভাবে তৈরি হতে খালি রাখুন)",
+    "stockDescription": "প্রতিটি নির্বাচিত শাখার জন্য স্টক তথ্য যোগ করুন"
   },
   "productVariants": {
     "createVariant": "ভ্যারিয়েন্ট তৈরি করুন",
@@ -267,6 +271,8 @@
     "reason": "কারণ",
     "reasonPlaceholder": "সমন্বয়ের কারণ লিখুন",
     "searchPlaceholder": "স্টক খুঁজুন...",
+    "sku": "এসকেইউ",
+    "skuPlaceholder": "এসকেইউ লিখুন (স্বয়ংক্রিয়ভাবে তৈরি হতে খালি রাখুন)",
     "productName": "পণ্য",
     "noStocks": "এখনো কোনো স্টক নেই",
     "noStocksDescription": "আপনার প্রথম স্টক এন্ট্রি তৈরি করে শুরু করুন",
@@ -276,7 +282,12 @@
     "stockHistory": "স্টক ইতিহাস",
     "stockHistoryDescription": "এই স্টকের লেনদেনের ইতিহাস দেখুন",
     "noHistory": "কোনো লেনদেনের ইতিহাস নেই",
-    "lastTransaction": "শেষ লেনদেন"
+    "lastTransaction": "শেষ লেনদেন",
+    "missingDetails": "স্টক বিবরণ অনুপস্থিত",
+    "quantityRequired": "পরিমাণ প্রয়োজন এবং অবশ্যই শূন্যের বেশি হতে হবে",
+    "purchasePriceRequired": "ক্রয় মূল্য প্রয়োজন",
+    "salePriceRequired": "বিক্রয় মূল্য প্রয়োজন",
+    "validationError": "দয়া করে স্টক ত্রুটিগুলি ঠিক করুন"
   },
   "purchases": {
     "title": "ক্রয়",
@@ -290,6 +301,7 @@
     "contact": "যোগাযোগ/সরবরাহকারী",
     "contactPlaceholder": "যোগাযোগ ID লিখুন",
     "status": "অবস্থা",
+    "statusOrdered": "অর্ডার করা হয়েছে",
     "statusPending": "বিচারাধীন",
     "statusCompleted": "সম্পন্ন",
     "statusCancelled": "বাতিল",

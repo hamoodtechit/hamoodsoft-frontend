@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { useCreateFuelType } from "@/lib/hooks/use-fuel-types"
+import { useCreateFuelType, useUpdateFuelType } from "@/lib/hooks/use-fuel-types"
 import { FuelType } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect } from "react"
@@ -30,7 +30,7 @@ import * as z from "zod"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   price: z.preprocess((val) => Number(val), z.number().min(0, "Price must be positive")),
-  isActive: z.boolean().default(true),
+  costPrice: z.preprocess((val) => Number(val), z.number().min(0, "Cost price must be positive")),
 })
 
 interface FuelTypeDialogProps {
@@ -42,16 +42,14 @@ interface FuelTypeDialogProps {
 export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogProps) {
   const isEditing = !!fuelType
   const createMutation = useCreateFuelType()
-  // Assuming we might need an update mutation later, but for now we follow the user request which only mentioned create and delete for fuel types. 
-  // However, it's good practice to have update. The user request showed CREATE as POST, LIST as GET, DELETE as DELETE.
-  // I'll stick to what was requested but usually editing is needed.
+  const updateMutation = useUpdateFuelType()
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       price: 0,
-      isActive: true,
+      costPrice: 0,
     },
   })
 
@@ -60,22 +58,24 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
       form.reset({
         name: fuelType.name,
         price: fuelType.price,
-        isActive: fuelType.isActive,
+        costPrice: fuelType.costPrice ?? 0,
       })
     } else {
       form.reset({
         name: "",
         price: 0,
-        isActive: true,
+        costPrice: 0,
       })
     }
   }, [fuelType, form, open])
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isEditing) {
-      // Update logic if added later
-      toast.info("Update logic not yet implemented in API")
-      onOpenChange(false)
+    if (isEditing && fuelType) {
+      updateMutation.mutate({ id: fuelType.id, data: values }, {
+        onSuccess: () => {
+          onOpenChange(false)
+        },
+      })
     } else {
       createMutation.mutate(values, {
         onSuccess: () => {
@@ -116,7 +116,7 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price per Liter</FormLabel>
+                  <FormLabel>Selling Price per Liter</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
                   </FormControl>
@@ -126,21 +126,18 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
             />
             <FormField
               control={form.control}
-              name="isActive"
+              name="costPrice"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Active Status</FormLabel>
-                  </div>
+                <FormItem>
+                  <FormLabel>Cost/Purchase Price per Liter</FormLabel>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Input type="number" step="0.01" {...field} />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button
                 type="button"
@@ -149,8 +146,8 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Saving..." : "Save"}
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </form>

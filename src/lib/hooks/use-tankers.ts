@@ -2,6 +2,7 @@ import { tankersApi } from "@/lib/api/tankers";
 import { CreateTankerInput, UpdateTankerInput } from "@/types";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { extractError } from "@/lib/utils/error";
 
 export function useTankers(params?: { page?: number; limit?: number; search?: string }) {
   const queryKey = ["tankers", params?.search ?? ""] as const
@@ -48,7 +49,7 @@ export function useCreateTanker() {
       toast.success("Tanker created successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create tanker")
+      toast.error(extractError(error, "Failed to create tanker"))
     },
   })
 }
@@ -63,7 +64,7 @@ export function useUpdateTanker() {
       toast.success("Tanker updated successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update tanker")
+      toast.error(extractError(error, "Failed to update tanker"))
     },
   })
 }
@@ -77,7 +78,7 @@ export function useDeleteTanker() {
       toast.success("Tanker deleted successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete tanker")
+      toast.error(extractError(error, "Failed to delete tanker"))
     },
   })
 }

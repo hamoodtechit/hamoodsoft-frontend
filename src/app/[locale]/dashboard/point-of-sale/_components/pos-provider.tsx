@@ -19,6 +19,7 @@ import { useCreateSale, useDeleteSale, useSales } from "@/lib/hooks/use-sales"
 import { useStocks } from "@/lib/hooks/use-stocks"
 import { useInfiniteDispensers } from "@/lib/hooks/use-dispensers"
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useSettings } from "@/lib/hooks/use-settings"
 import type { Product, ProductVariant, Sale, Stock, Dispenser, Account, Contact, Category, Branch } from "@/types"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -272,6 +273,16 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [discountType, setDiscountType] = useState<"NONE" | "PERCENTAGE" | "FIXED">("NONE")
   const [discountAmount, setDiscountAmount] = useState(0)
   const [taxRate, setTaxRate] = useState(defaultTaxRate)
+  
+  // Business config for point reducing
+  const { data: settingsData } = useSettings()
+  const businessConfig = useMemo(() => {
+    const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
+    return {
+      showPointReducing: setting?.configs?.showPointReducing ?? false,
+      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+    };
+  }, [settingsData]);
 
   useEffect(() => {
     if (taxSettings?.rate !== undefined) {
@@ -334,6 +345,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     limit: 50,
     search: searchQuery.trim() || undefined,
     branchId: selectedBranchId || undefined,
+    status: "ACTIVE",
   })
 
   const dispensers = useMemo(() => {
@@ -445,6 +457,21 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [accounts, cashAccounts, bankAccounts, paymentMethod, cashAccountId, bankAccountId])
 
+  // Set default customer (Walk-in) when none is selected
+  useEffect(() => {
+    if (!selectedContactId && contacts.length > 0) {
+      const walkIn = contacts.find((c) =>
+        c.name.toLowerCase().includes("walk-in") ||
+        c.name.toLowerCase().includes("walk in")
+      )
+      if (walkIn) {
+        setSelectedContactId(walkIn.id)
+      } else {
+        setSelectedContactId(contacts[0].id)
+      }
+    }
+  }, [contacts, selectedContactId])
+
   // Check access
   useEffect(() => {
     if (currentBusiness && !currentBusiness.modules?.includes("point-of-sale")) {
@@ -553,13 +580,26 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       if (branchStocks.length === 0) {
         return [{ sku: product.id, variant: null, stock: undefined }]
       }
-      const totalQty = branchStocks.reduce((sum, s) => sum + (s.quantity || 0), 0)
-      const baseStock = { ...branchStocks[0], quantity: totalQty }
-      return [{
-        sku: product.id,
+      
+      // Group by SKU to allow selecting different batches/serial numbers if they exist
+      const skuMap = new Map<string, Stock>()
+      branchStocks.forEach(stock => {
+        const skuKey = stock.sku || product.id
+        if (skuMap.has(skuKey)) {
+          const existing = skuMap.get(skuKey)!
+          existing.quantity = (existing.quantity || 0) + (stock.quantity || 0)
+        } else {
+          skuMap.set(skuKey, { ...stock })
+        }
+      })
+      
+      const results = Array.from(skuMap.values()).map(stock => ({
+        sku: stock.sku || product.id,
         variant: null,
-        stock: baseStock,
-      }]
+        stock: stock,
+      }))
+      
+      return results.sort((a, b) => (b.stock?.quantity || 0) - (a.stock?.quantity || 0))
     }
 
     const productVariants = product.productVariants || product.variants || []
@@ -1055,6 +1095,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         const sku = item.sku || item.productId || `temp-sku-${item.productId}-${Date.now()}`
         const isFuel = item.productId?.startsWith("fuel-")
 
+        let actualQuantity: number | undefined = undefined;
+        if (isFuel && businessConfig.showPointReducing && businessConfig.pointReducingAmountPerLiter > 0) {
+          actualQuantity = item.quantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000;
+        }
+
         const itemData = {
           sku: sku,
           productId: isFuel ? undefined : item.productId,
@@ -1064,6 +1109,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
           unit: item.unit,
           price: item.price,
           quantity: item.quantity,
+          actualQuantity,
           discountType: item.discountType,
           discountAmount: item.discountAmount,
           totalPrice: calculateItemTotalFn(item),

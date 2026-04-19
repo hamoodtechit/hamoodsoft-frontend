@@ -1,81 +1,101 @@
-"use client"
+"use client";
 
-import { ContactDialog } from "@/components/common/contact-dialog"
-import { DataTable, type Column } from "@/components/common/data-table"
-import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
-import { ExportButton } from "@/components/common/export-button"
-import { PageLayout } from "@/components/common/page-layout"
-import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
-import { SkeletonList } from "@/components/skeletons/skeleton-list"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ContactDialog } from "@/components/common/contact-dialog";
+import { DataTable, type Column } from "@/components/common/data-table";
+import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog";
+import { ExportButton } from "@/components/common/export-button";
+import { PageLayout } from "@/components/common/page-layout";
+import { ViewToggle, type ViewMode } from "@/components/common/view-toggle";
+import { SkeletonList } from "@/components/skeletons/skeleton-list";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
-import { type ContactsListParams } from "@/lib/api/contacts"
-import { useContacts, useDeleteContact } from "@/lib/hooks/use-contacts"
-import { type ExportColumn } from "@/lib/utils/export"
-import { Contact } from "@/types"
-import { Eye, Mail, MoreVertical, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
-import { useTranslations } from "next-intl"
-import { useMemo, useState } from "react"
+} from "@/components/ui/sheet";
+import { type ContactsListParams } from "@/lib/api/contacts";
+import { useContacts, useDeleteContact } from "@/lib/hooks/use-contacts";
+import { type ExportColumn } from "@/lib/utils/export";
+import { Contact } from "@/types";
+import {
+  Eye,
+  Mail,
+  MoreVertical,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  Trash2,
+  User,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 
 export default function ContactsPage() {
-  const t = useTranslations("contacts")
-  const tCommon = useTranslations("common")
+  const t = useTranslations("contacts");
+  const tCommon = useTranslations("common");
 
-  const [search, setSearch] = useState("")
-  const [page, setPage] = useState(1)
-  const [typeFilter, setTypeFilter] = useState<"CUSTOMER" | "SUPPLIER" | "">("")
-  const limit = 10
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState<"CUSTOMER" | "SUPPLIER" | "">(
+    "",
+  );
+  const limit = 10;
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("contacts-view-mode") as ViewMode) || "cards"
+      return (
+        (localStorage.getItem("contacts-view-mode") as ViewMode) || "cards"
+      );
     }
-    return "cards"
-  })
+    return "cards";
+  });
 
   const queryParams = useMemo<ContactsListParams>(() => {
-    const trimmed = search.trim()
+    const trimmed = search.trim();
     const params: ContactsListParams = {
       page,
       limit,
-    }
+    };
 
     if (trimmed) {
-      params.search = trimmed
+      params.search = trimmed;
     }
 
     if (typeFilter) {
-      params.type = typeFilter
+      params.type = typeFilter;
     }
 
-    return params
-  }, [page, limit, search, typeFilter])
+    return params;
+  }, [page, limit, search, typeFilter]);
 
-  const { data, isLoading } = useContacts(queryParams)
+  const { data, isLoading } = useContacts(queryParams);
 
-  const contacts = data?.items ?? []
-  const meta = data?.meta
-  const total = meta?.total ?? contacts.length
+  const contacts = data?.items ?? [];
+  const meta = data?.meta;
+  const total = meta?.total ?? contacts.length;
   const totalPages =
     meta?.totalPages ??
-    Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
-  const currentPage = meta?.page ?? page
+    Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)));
+  const currentPage = meta?.page ?? page;
 
   // Table columns configuration
   const tableColumns: Column<Contact>[] = useMemo(
@@ -93,16 +113,16 @@ export default function ContactsPage() {
           const typeColors = {
             CUSTOMER: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
             SUPPLIER: "bg-green-500/10 text-green-600 dark:text-green-400",
-          }
+          };
           const typeLabels = {
             CUSTOMER: t("typeCustomer"),
             SUPPLIER: t("typeSupplier"),
-          }
+          };
           return (
             <Badge className={typeColors[row.type] || ""}>
               {typeLabels[row.type] || row.type}
             </Badge>
-          )
+          );
         },
         sortable: true,
       },
@@ -130,12 +150,25 @@ export default function ContactsPage() {
         id: "balance",
         header: t("balance"),
         accessorKey: "balance",
-        cell: (row) => row.balance?.toFixed(2) || "0.00",
+        cell: (row) => {
+          const bal = row.balance || 0;
+          return (
+            <span
+              className={
+                bal < 0
+                  ? "text-destructive font-medium"
+                  : "text-emerald-500 font-medium"
+              }
+            >
+              {bal.toFixed(2)}
+            </span>
+          );
+        },
         sortable: true,
       },
     ],
-    [t, tCommon]
-  )
+    [t, tCommon],
+  );
 
   // Export columns configuration
   const exportColumns: ExportColumn<Contact>[] = useMemo(
@@ -186,60 +219,64 @@ export default function ContactsPage() {
         format: (value) => (value ? new Date(value).toLocaleString() : "-"),
       },
     ],
-    []
-  )
+    [],
+  );
 
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null)
-  const [viewContact, setViewContact] = useState<Contact | null>(null)
-  const [isViewOpen, setIsViewOpen] = useState(false)
-  const deleteMutation = useDeleteContact()
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [viewContact, setViewContact] = useState<Contact | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const deleteMutation = useDeleteContact();
 
   const handleCreate = () => {
-    setSelectedContact(null)
-    setIsDialogOpen(true)
-  }
+    setSelectedContact(null);
+    setIsDialogOpen(true);
+  };
 
   const handleEdit = (contact: Contact) => {
-    setSelectedContact(contact)
-    setIsDialogOpen(true)
-  }
+    setSelectedContact(contact);
+    setIsDialogOpen(true);
+  };
 
   const handleView = (contact: Contact) => {
-    setViewContact(contact)
-    setIsViewOpen(true)
-  }
+    setViewContact(contact);
+    setIsViewOpen(true);
+  };
 
   const handleDelete = (contact: Contact) => {
-    setContactToDelete(contact)
-    setIsDeleteDialogOpen(true)
-  }
+    setContactToDelete(contact);
+    setIsDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
-    if (!contactToDelete) return
+    if (!contactToDelete) return;
     deleteMutation.mutate(contactToDelete.id, {
       onSuccess: () => {
-        setIsDeleteDialogOpen(false)
-        setContactToDelete(null)
+        setIsDeleteDialogOpen(false);
+        setContactToDelete(null);
       },
-    })
-  }
+    });
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case "CUSTOMER":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
       case "SUPPLIER":
-        return "bg-green-500/10 text-green-600 dark:text-green-400"
+        return "bg-green-500/10 text-green-600 dark:text-green-400";
       default:
-        return ""
+        return "";
     }
-  }
+  };
 
   return (
-    <PageLayout title={t("title")} description={t("description")} maxWidth="full">
+    <PageLayout
+      title={t("title")}
+      description={t("description")}
+      maxWidth="full"
+    >
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -259,8 +296,8 @@ export default function ContactsPage() {
                 <Input
                   value={search}
                   onChange={(e) => {
-                    setSearch(e.target.value)
-                    setPage(1)
+                    setSearch(e.target.value);
+                    setPage(1);
                   }}
                   placeholder={t("searchPlaceholder")}
                   className="pl-9"
@@ -288,7 +325,9 @@ export default function ContactsPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <User className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">{t("noContacts")}</h3>
-              <p className="text-muted-foreground mb-4">{t("noContactsDescription")}</p>
+              <p className="text-muted-foreground mb-4">
+                {t("noContactsDescription")}
+              </p>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t("createContact")}
@@ -338,7 +377,9 @@ export default function ContactsPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <h4 className="font-semibold">{contact.name}</h4>
                           <Badge className={getTypeColor(contact.type)}>
-                            {contact.type === "CUSTOMER" ? t("typeCustomer") : t("typeSupplier")}
+                            {contact.type === "CUSTOMER"
+                              ? t("typeCustomer")
+                              : t("typeSupplier")}
                           </Badge>
                           {!contact.isIndividual && contact.companyName && (
                             <span className="text-sm text-muted-foreground">
@@ -350,13 +391,17 @@ export default function ContactsPage() {
                           {contact.email && (
                             <div className="flex items-center gap-2">
                               <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">{contact.email}</span>
+                              <span className="text-muted-foreground">
+                                {contact.email}
+                              </span>
                             </div>
                           )}
                           {contact.phone && (
                             <div className="flex items-center gap-2">
                               <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">{contact.phone}</span>
+                              <span className="text-muted-foreground">
+                                {contact.phone}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -367,17 +412,33 @@ export default function ContactsPage() {
                         )}
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <span className="text-muted-foreground">
-                            {t("balance")}: <span className="font-medium">{contact.balance?.toFixed(2) || "0.00"}</span>
+                            {t("balance")}:{" "}
+                            <span
+                              className={
+                                contact.balance !== null && contact.balance < 0
+                                  ? "text-destructive font-medium"
+                                  : "text-emerald-500 font-medium"
+                              }
+                            >
+                              {contact.balance?.toFixed(2) || "0.00"}
+                            </span>
                           </span>
                           <span className="text-muted-foreground">
-                            {t("creditLimit")}: <span className="font-medium">{contact.creditLimit?.toFixed(2) || "0.00"}</span>
+                            {t("creditLimit")}:{" "}
+                            <span className="font-medium">
+                              {contact.creditLimit?.toFixed(2) || "0.00"}
+                            </span>
                           </span>
                         </div>
                       </div>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -430,14 +491,20 @@ export default function ContactsPage() {
         </CardContent>
       </Card>
 
-      <ContactDialog contact={selectedContact} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <ContactDialog
+        contact={selectedContact}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
 
       <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
         title={t("deleteConfirmTitle")}
-        description={t("deleteConfirmDescription", { name: contactToDelete?.name || "" })}
+        description={t("deleteConfirmDescription", {
+          name: contactToDelete?.name || "",
+        })}
         isLoading={deleteMutation.isPending}
       />
 
@@ -457,7 +524,9 @@ export default function ContactsPage() {
                   <h3 className="text-lg font-semibold">{viewContact.name}</h3>
                   <div className="text-sm text-muted-foreground mt-1">
                     <Badge className={getTypeColor(viewContact.type)}>
-                      {viewContact.type === "CUSTOMER" ? t("typeCustomer") : t("typeSupplier")}
+                      {viewContact.type === "CUSTOMER"
+                        ? t("typeCustomer")
+                        : t("typeSupplier")}
                     </Badge>
                   </div>
                 </div>
@@ -466,19 +535,25 @@ export default function ContactsPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 {viewContact.email && (
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">{t("email")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("email")}
+                    </p>
                     <p className="font-medium">{viewContact.email}</p>
                   </div>
                 )}
                 {viewContact.phone && (
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">{t("phone")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("phone")}
+                    </p>
                     <p className="font-medium">{viewContact.phone}</p>
                   </div>
                 )}
                 {viewContact.address && (
                   <div className="rounded-lg border p-3 sm:col-span-2">
-                    <p className="text-xs text-muted-foreground">{t("address")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("address")}
+                    </p>
                     <p className="font-medium">{viewContact.address}</p>
                   </div>
                 )}
@@ -490,20 +565,30 @@ export default function ContactsPage() {
                   <div className="grid sm:grid-cols-2 gap-4">
                     {viewContact.companyName && (
                       <div className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">{t("companyName")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("companyName")}
+                        </p>
                         <p className="font-medium">{viewContact.companyName}</p>
                       </div>
                     )}
                     {viewContact.companyPhone && (
                       <div className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">{t("companyPhone")}</p>
-                        <p className="font-medium">{viewContact.companyPhone}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("companyPhone")}
+                        </p>
+                        <p className="font-medium">
+                          {viewContact.companyPhone}
+                        </p>
                       </div>
                     )}
                     {viewContact.companyAddress && (
                       <div className="rounded-lg border p-3 sm:col-span-2">
-                        <p className="text-xs text-muted-foreground">{t("companyAddress")}</p>
-                        <p className="font-medium">{viewContact.companyAddress}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("companyAddress")}
+                        </p>
+                        <p className="font-medium">
+                          {viewContact.companyAddress}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -512,13 +597,19 @@ export default function ContactsPage() {
 
               <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{t("balance")}</p>
-                  <p className="font-medium text-lg">
+                  <p className="text-xs text-muted-foreground">
+                    {t("balance")}
+                  </p>
+                  <p
+                    className={`font-medium text-lg ${(viewContact.balance || 0) < 0 ? "text-destructive" : "text-emerald-500"}`}
+                  >
                     {viewContact.balance?.toFixed(2) || "0.00"}
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{t("creditLimit")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("creditLimit")}
+                  </p>
                   <p className="font-medium text-lg">
                     {viewContact.creditLimit?.toFixed(2) || "0.00"}
                   </p>
@@ -527,7 +618,9 @@ export default function ContactsPage() {
 
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground border-t pt-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wide">{tCommon("createdAt")}</p>
+                  <p className="text-xs uppercase tracking-wide">
+                    {tCommon("createdAt")}
+                  </p>
                   <p className="font-medium text-foreground">
                     {viewContact.createdAt
                       ? new Date(viewContact.createdAt).toLocaleString()
@@ -535,7 +628,9 @@ export default function ContactsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide">{tCommon("updatedAt")}</p>
+                  <p className="text-xs uppercase tracking-wide">
+                    {tCommon("updatedAt")}
+                  </p>
                   <p className="font-medium text-foreground">
                     {viewContact.updatedAt
                       ? new Date(viewContact.updatedAt).toLocaleString()
@@ -548,5 +643,5 @@ export default function ContactsPage() {
         </SheetContent>
       </Sheet>
     </PageLayout>
-  )
+  );
 }

@@ -2,17 +2,18 @@ import { dispensersApi } from "@/lib/api/dispensers"
 import { CreateDispenserInput, UpdateDispenserInput } from "@/types"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
-export function useDispensers(params?: { page?: number; limit?: number; search?: string; branchId?: string }) {
+export function useDispensers(params?: { page?: number; limit?: number; search?: string; branchId?: string; status?: string }) {
   return useQuery({
-    queryKey: ["dispensers", params?.search ?? "", params?.branchId ?? "", params?.page ?? 1, params?.limit ?? 10],
+    queryKey: ["dispensers", params?.search ?? "", params?.branchId ?? "", params?.status ?? "", params?.page ?? 1, params?.limit ?? 10],
     queryFn: () => dispensersApi.list(params),
   })
 }
 
-export function useInfiniteDispensers(params?: { limit?: number; search?: string; branchId?: string }) {
+export function useInfiniteDispensers(params?: { limit?: number; search?: string; branchId?: string; status?: string }) {
   return useInfiniteQuery({
-    queryKey: ["dispensers", "infinite", params?.search ?? "", params?.branchId ?? "", params?.limit ?? 10],
+    queryKey: ["dispensers", "infinite", params?.search ?? "", params?.branchId ?? "", params?.status ?? "", params?.limit ?? 10],
     queryFn: ({ pageParam = 1 }) => dispensersApi.list({ ...params, page: pageParam }),
     getNextPageParam: (lastPage, allPages) => {
       const morePagesExist = lastPage.items.length === (params?.limit ?? 10)
@@ -39,7 +40,7 @@ export function useCreateDispenser() {
       toast.success("Dispenser created successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create dispenser")
+      toast.error(extractError(error, "Failed to create dispenser"))
     },
   })
 }
@@ -54,7 +55,7 @@ export function useUpdateDispenser() {
       toast.success("Dispenser updated successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update dispenser")
+      toast.error(extractError(error, "Failed to update dispenser"))
     },
   })
 }
@@ -68,7 +69,7 @@ export function useDeleteDispenser() {
       toast.success("Dispenser deleted successfully")
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete dispenser")
+      toast.error(extractError(error, "Failed to delete dispenser"))
     },
   })
 }

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useAccounts } from "@/lib/hooks/use-accounts"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCreatePayment } from "@/lib/hooks/use-payments"
 import { usePurchases } from "@/lib/hooks/use-purchases"
 import { useSales } from "@/lib/hooks/use-sales"
@@ -64,6 +65,7 @@ export function PaymentDialog({
   const t = useTranslations("payments")
   const tCommon = useTranslations("common")
   const createMutation = useCreatePayment()
+  const { selectedBranchId } = useBranchSelection()
   const { data: accountsData } = useAccounts({ limit: 1000 })
   const accounts = accountsData?.items ?? []
   const { generalSettings } = useAppSettings()
@@ -99,6 +101,7 @@ export function PaymentDialog({
   const { data: purchasesData } = usePurchases({
     limit: 100,
     status: "COMPLETED", // Only show completed purchases
+    branchId: selectedBranchId || undefined,
   })
   const purchases = purchasesData?.items ?? []
 
@@ -112,7 +115,11 @@ export function PaymentDialog({
 
   const onSubmit = async (data: CreatePaymentInput) => {
     try {
-      await createMutation.mutateAsync(data)
+      const payload = {
+        ...data,
+        occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
+      }
+      await createMutation.mutateAsync(payload)
       onOpenChange(false)
       form.reset()
     } catch (error) {
@@ -198,10 +205,22 @@ export function PaymentDialog({
                       type="number"
                       step="0.01"
                       {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      max={defaultAmount !== undefined ? defaultAmount : undefined}
+                      onChange={(e) => {
+                        let val = parseFloat(e.target.value) || 0;
+                        if (defaultAmount !== undefined && val > defaultAmount) {
+                          val = defaultAmount;
+                        }
+                        field.onChange(val);
+                      }}
                       placeholder="0.00"
                     />
                   </FormControl>
+                  {defaultAmount !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tCommon("remainingAmount") || "Remaining"}: {formatCurrency(defaultAmount, { generalSettings })}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

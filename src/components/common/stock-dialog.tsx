@@ -60,9 +60,10 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
       branchId: defaultBranchId || "",
       productId: defaultProductId || "",
       unitId: "",
+      sku: "",
       quantity: 0,
-      purchasePrice: undefined,
-      salePrice: undefined,
+      purchasePrice: undefined as any,
+      salePrice: undefined as any,
     }
   }, [defaultBranchId, defaultProductId])
 
@@ -86,9 +87,13 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
         // User can still edit it afterward
         form.setValue("salePrice", selectedProduct.price, { shouldValidate: false })
       }
+      if (selectedProduct?.unitId) {
+        form.setValue("unitId", selectedProduct.unitId, { shouldValidate: false })
+      }
     } else {
       // Clear sale price when no product is selected
-      form.setValue("salePrice", undefined, { shouldValidate: false })
+      form.setValue("salePrice", undefined as any, { shouldValidate: false })
+      form.setValue("unitId", "", { shouldValidate: false })
     }
   }, [productId, products, form])
 
@@ -178,7 +183,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("unit")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectUnit")} />
@@ -192,6 +197,24 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("sku")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("skuPlaceholder") || "Enter SKU (leave blank to auto-generate)"}
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -225,7 +248,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("purchasePrice")} ({tCommon("optional")})
+                        {t("purchasePrice")}
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -251,7 +274,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("salePrice")} ({tCommon("optional")})
+                        {t("salePrice")}
                       </FormLabel>
                       <FormControl>
                         <Input
