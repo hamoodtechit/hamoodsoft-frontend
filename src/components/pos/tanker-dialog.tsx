@@ -182,7 +182,7 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Fuel Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={isEditing}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select fuel type" />
