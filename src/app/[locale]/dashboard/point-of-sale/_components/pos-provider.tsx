@@ -457,6 +457,21 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [accounts, cashAccounts, bankAccounts, paymentMethod, cashAccountId, bankAccountId])
 
+  // Set default customer (Walk-in) when none is selected
+  useEffect(() => {
+    if (!selectedContactId && contacts.length > 0) {
+      const walkIn = contacts.find((c) =>
+        c.name.toLowerCase().includes("walk-in") ||
+        c.name.toLowerCase().includes("walk in")
+      )
+      if (walkIn) {
+        setSelectedContactId(walkIn.id)
+      } else {
+        setSelectedContactId(contacts[0].id)
+      }
+    }
+  }, [contacts, selectedContactId])
+
   // Check access
   useEffect(() => {
     if (currentBusiness && !currentBusiness.modules?.includes("point-of-sale")) {
