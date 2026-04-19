@@ -103,7 +103,7 @@ export function VariantPickerDialog() {
                     {/* Variant Info */}
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
-                        {variant?.variantName || (variantData.sku !== selectedProductForSku.id ? "Main Stock / Batch" : selectedProductForSku.name)}
+                        {variant?.variantName || (variantData.sku !== selectedProductForSku.id ? `SKU: ${variantData.sku}` : selectedProductForSku.name)}
                       </div>
                       {optionsText && (
                         <div className="flex flex-wrap gap-1.5 mb-2">

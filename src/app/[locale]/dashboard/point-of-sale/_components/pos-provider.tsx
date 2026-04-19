@@ -580,13 +580,26 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       if (branchStocks.length === 0) {
         return [{ sku: product.id, variant: null, stock: undefined }]
       }
-      const totalQty = branchStocks.reduce((sum, s) => sum + (s.quantity || 0), 0)
-      const baseStock = { ...branchStocks[0], quantity: totalQty }
-      return [{
-        sku: product.id,
+      
+      // Group by SKU to allow selecting different batches/serial numbers if they exist
+      const skuMap = new Map<string, Stock>()
+      branchStocks.forEach(stock => {
+        const skuKey = stock.sku || product.id
+        if (skuMap.has(skuKey)) {
+          const existing = skuMap.get(skuKey)!
+          existing.quantity = (existing.quantity || 0) + (stock.quantity || 0)
+        } else {
+          skuMap.set(skuKey, { ...stock })
+        }
+      })
+      
+      const results = Array.from(skuMap.values()).map(stock => ({
+        sku: stock.sku || product.id,
         variant: null,
-        stock: baseStock,
-      }]
+        stock: stock,
+      }))
+      
+      return results.sort((a, b) => (b.stock?.quantity || 0) - (a.stock?.quantity || 0))
     }
 
     const productVariants = product.productVariants || product.variants || []
