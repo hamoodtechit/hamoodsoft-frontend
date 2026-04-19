@@ -492,6 +492,8 @@ export default function StocksPage() {
         onOpenChange={setIsAdjustDialogOpen}
         defaultBranchId={selectedStock?.branchId}
         defaultProductId={selectedStock?.productId ?? undefined}
+        defaultUnitId={selectedStock?.unitId ?? undefined}
+        defaultStockId={selectedStock?.id}
       />
 
       <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>

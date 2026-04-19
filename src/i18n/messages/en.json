@@ -233,6 +233,8 @@
     "addImages": "Add Images",
     "stockDescription": "Add stock information for each selected branch",
     "quantity": "Quantity",
+    "sku": "SKU",
+    "skuPlaceholder": "Enter SKU (leave blank to auto-generate)",
     "image": "Image"
   },
   "productVariants": {
@@ -326,7 +328,8 @@
     "reason": "Reason",
     "reasonPlaceholder": "Enter reason for adjustment",
     "searchPlaceholder": "Search stocks...",
-    "sku": "Sku",
+    "sku": "SKU",
+    "skuPlaceholder": "Enter SKU (leave blank to auto-generate)",
     "productName": "Product",
     "noStocks": "No stocks yet",
     "noStocksDescription": "Get started by creating your first stock entry",

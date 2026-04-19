@@ -43,6 +43,8 @@ interface AdjustStockDialogProps {
   onOpenChange: (open: boolean) => void
   defaultBranchId?: string
   defaultProductId?: string
+  defaultUnitId?: string
+  defaultStockId?: string
 }
 
 export function AdjustStockDialog({
@@ -50,6 +52,8 @@ export function AdjustStockDialog({
   onOpenChange,
   defaultBranchId,
   defaultProductId,
+  defaultUnitId,
+  defaultStockId,
 }: AdjustStockDialogProps) {
   const t = useTranslations("stocks")
   const tCommon = useTranslations("common")
@@ -65,12 +69,13 @@ export function AdjustStockDialog({
     return {
       branchId: defaultBranchId || "",
       productId: defaultProductId || "",
-      unitId: "",
+      unitId: defaultUnitId || "",
+      stockId: defaultStockId || undefined,
       transactionType: "IN" as "IN" | "OUT",
       quantity: 0,
       reason: "",
     }
-  }, [defaultBranchId, defaultProductId])
+  }, [defaultBranchId, defaultProductId, defaultUnitId, defaultStockId])
 
   const form = useForm<AdjustStockInput>({
     resolver: zodResolver(adjustStockSchema),
@@ -115,7 +120,7 @@ export function AdjustStockDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("branch")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!!defaultStockId}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectBranch")} />
@@ -140,7 +145,7 @@ export function AdjustStockDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!!defaultStockId}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectProduct")} />
@@ -165,7 +170,7 @@ export function AdjustStockDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("unit")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!!defaultStockId}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectUnit")} />

@@ -374,8 +374,10 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
-  // Stock entries per branch: { branchId: { quantity, purchasePrice, salePrice, unitId } }
-  const [stockEntries, setStockEntries] = useState<Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string }>>({})
+  // Stock entries per branch: { branchId: { quantity, purchasePrice, salePrice, unitId, sku } }
+  const [stockEntries, setStockEntries] = useState<Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string; sku?: string }>>({})
+  // Track which branch stock sale prices have been manually edited by the user
+  const [salePriceTouched, setSalePriceTouched] = useState<Record<string, boolean>>({})
   const createAttributeMutation = useCreateAttribute()
   const createUnitMutation = useCreateUnit()
   const createBrandMutation = useCreateBrand()
@@ -814,8 +816,9 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 unitId: stock.unitId,
                 itemType: 'PRODUCT' as const,
                 quantity: stock.quantity,
-                purchasePrice: stock.purchasePrice,
-                salePrice: stock.salePrice,
+                purchasePrice: stock.purchasePrice ?? 0,
+                salePrice: stock.salePrice ?? 0,
+                sku: stock.sku || undefined,
               }).catch((error) => {
                 console.error(`Error creating stock for branch ${branchId}:`, error)
                 return null
@@ -854,6 +857,29 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     control: form.control,
     name: "branchIds",
   }) || []
+
+  // Watch product price to auto-fill sale price in stock entries
+  const watchedProductPrice = useWatch({
+    control: form.control,
+    name: "price",
+  })
+
+  // Auto-fill sale price from product price for untouched entries
+  useEffect(() => {
+    if (watchedProductPrice !== undefined && watchedProductPrice !== null) {
+      setStockEntries(prev => {
+        const updated = { ...prev }
+        let changed = false
+        for (const branchId of Object.keys(updated)) {
+          if (!salePriceTouched[branchId]) {
+            updated[branchId] = { ...updated[branchId], salePrice: Number(watchedProductPrice) }
+            changed = true
+          }
+        }
+        return changed ? updated : prev
+      })
+    }
+  }, [watchedProductPrice, salePriceTouched])
 
   // Flatten categories to include all (parent + children) for selection
   const flattenCategoriesForSelection = useMemo(() => {
@@ -1274,7 +1300,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                                     if (val && !stockEntries[b.id]) {
                                       setStockEntries(prev => ({
                                         ...prev,
-                                        [b.id]: { quantity: 0, unitId: form.getValues("unitId") || "" }
+                                        [b.id]: { quantity: 0, unitId: form.getValues("unitId") || "", salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined }
                                       }))
                                     } else if (!val) {
                                       // Remove stock entry when branch is unchecked
@@ -1341,6 +1367,21 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                               />
                             </div>
                             <div>
+                              <Label className="text-xs text-muted-foreground">{t("sku") || "SKU"}</Label>
+                              <Input
+                                value={stock.sku || ""}
+                                onChange={(e) => {
+                                  setStockEntries(prev => ({
+                                    ...prev,
+                                    [branchId]: { ...prev[branchId], sku: e.target.value || undefined }
+                                  }))
+                                }}
+                                placeholder={t("skuPlaceholder")}
+                                disabled={isLoading}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
                               <Label className="text-xs text-muted-foreground">{t("unit") || "Unit"}</Label>
                               <select
                                 value={stock.unitId || form.getValues("unitId") || ""}
@@ -1367,7 +1408,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                             </div>
                             <div>
                               <Label className="text-xs text-muted-foreground">
-                                {t("purchasePrice") || "Purchase Price"} ({tCommon("optional")})
+                                {t("purchasePrice") || "Purchase Price"} <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 type="number"
@@ -1387,14 +1428,15 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                             </div>
                             <div>
                               <Label className="text-xs text-muted-foreground">
-                                {t("salePrice") || "Sale Price"} ({tCommon("optional")})
+                                {t("salePrice") || "Sale Price"} <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={stock.salePrice || form.getValues("price") || ""}
+                                value={stock.salePrice ?? ""}
                                 onChange={(e) => {
+                                  setSalePriceTouched(prev => ({ ...prev, [branchId]: true }))
                                   setStockEntries(prev => ({
                                     ...prev,
                                     [branchId]: { ...prev[branchId], salePrice: e.target.value ? parseFloat(e.target.value) : undefined }

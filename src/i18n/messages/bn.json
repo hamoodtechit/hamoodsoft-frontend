@@ -179,7 +179,11 @@
     "variantName": "ভ্যারিয়েন্টের নাম",
     "createUnit": "একক তৈরি করুন",
     "createBrand": "ব্র্যান্ড তৈরি করুন",
-    "createCategory": "ক্যাটাগরি তৈরি করুন"
+    "createCategory": "ক্যাটাগরি তৈরি করুন",
+    "quantity": "পরিমাণ",
+    "sku": "এসকেইউ",
+    "skuPlaceholder": "এসকেইউ লিখুন (স্বয়ংক্রিয়ভাবে তৈরি হতে খালি রাখুন)",
+    "stockDescription": "প্রতিটি নির্বাচিত শাখার জন্য স্টক তথ্য যোগ করুন"
   },
   "productVariants": {
     "createVariant": "ভ্যারিয়েন্ট তৈরি করুন",
@@ -268,6 +272,7 @@
     "reasonPlaceholder": "সমন্বয়ের কারণ লিখুন",
     "searchPlaceholder": "স্টক খুঁজুন...",
     "sku": "এসকেইউ",
+    "skuPlaceholder": "এসকেইউ লিখুন (স্বয়ংক্রিয়ভাবে তৈরি হতে খালি রাখুন)",
     "productName": "পণ্য",
     "noStocks": "এখনো কোনো স্টক নেই",
     "noStocksDescription": "আপনার প্রথম স্টক এন্ট্রি তৈরি করে শুরু করুন",
