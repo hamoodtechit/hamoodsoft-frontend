@@ -339,7 +339,12 @@
     "stockHistory": "Stock History",
     "stockHistoryDescription": "View transaction history for this stock",
     "noHistory": "No transaction history",
-    "lastTransaction": "Last Transaction"
+    "lastTransaction": "Last Transaction",
+    "missingDetails": "Stock details are missing",
+    "quantityRequired": "Quantity is required and must be greater than zero",
+    "purchasePriceRequired": "Purchase price is required",
+    "salePriceRequired": "Sale price is required",
+    "validationError": "Please fix stock errors"
   },
   "purchases": {
     "title": "Purchases",

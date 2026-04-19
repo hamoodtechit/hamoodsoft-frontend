@@ -282,7 +282,12 @@
     "stockHistory": "স্টক ইতিহাস",
     "stockHistoryDescription": "এই স্টকের লেনদেনের ইতিহাস দেখুন",
     "noHistory": "কোনো লেনদেনের ইতিহাস নেই",
-    "lastTransaction": "শেষ লেনদেন"
+    "lastTransaction": "শেষ লেনদেন",
+    "missingDetails": "স্টক বিবরণ অনুপস্থিত",
+    "quantityRequired": "পরিমাণ প্রয়োজন এবং অবশ্যই শূন্যের বেশি হতে হবে",
+    "purchasePriceRequired": "ক্রয় মূল্য প্রয়োজন",
+    "salePriceRequired": "বিক্রয় মূল্য প্রয়োজন",
+    "validationError": "দয়া করে স্টক ত্রুটিগুলি ঠিক করুন"
   },
   "purchases": {
     "title": "ক্রয়",

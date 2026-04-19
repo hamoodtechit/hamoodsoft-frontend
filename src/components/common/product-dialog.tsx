@@ -63,6 +63,7 @@ import { ChevronDown, Image as ImageIcon, Package, Plus, Search, X } from "lucid
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 
 interface ProductDialogProps {
   product: Product | null
@@ -227,6 +228,7 @@ function RichTextEditor({ field, isLoading, placeholder }: { field: any; isLoadi
 
 export function ProductDialog({ product, open, onOpenChange }: ProductDialogProps) {
   const t = useTranslations("products")
+  const tStocks = useTranslations("stocks")
   const tCommon = useTranslations("common")
   const tAttributes = useTranslations("attributes")
   const { data: units = [] } = useUnits()
@@ -672,6 +674,37 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }, [selectedAttributeIds, selectedAttributeValues, availableAttributes])
 
   const onSubmit = (data: CreateProductInput | UpdateProductInput) => {
+    // Validate stock entries for selected branches
+    if (!isEdit && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0) {
+      const stockErrors: string[] = []
+      
+      selectedBranchIds.forEach((branchId) => {
+        const branch = branchOptions.find((b) => b.id === branchId)
+        const stock = stockEntries[branchId]
+        const branchName = branch?.name || branchId
+
+        if (!stock) {
+          stockErrors.push(`${branchName}: ${tStocks("missingDetails") || "Stock details are missing"}`)
+          return
+        }
+
+        if (!stock.quantity || stock.quantity <= 0) {
+          stockErrors.push(`${branchName}: ${tStocks("quantityRequired") || "Quantity is required and must be greater than zero"}`)
+        }
+        if (!stock.purchasePrice || stock.purchasePrice <= 0) {
+          stockErrors.push(`${branchName}: ${tStocks("purchasePriceRequired") || "Purchase price is required"}`)
+        }
+        if (!stock.salePrice || stock.salePrice <= 0) {
+          stockErrors.push(`${branchName}: ${tStocks("salePriceRequired") || "Sale price is required"}`)
+        }
+      })
+
+      if (stockErrors.length > 0) {
+        toast.error(`${tStocks("validationError") || "Please fix stock errors"}:\n${stockErrors.join("\n")}`)
+        return
+      }
+    }
+
 
     // Clean up empty strings - convert to undefined for optional fields
     if (data.description === "" || data.description === null) {
@@ -880,6 +913,29 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       })
     }
   }, [watchedProductPrice, salePriceTouched])
+
+  // Watch unitId from the main form to auto-fill branch stock units
+  const watchedUnitId = useWatch({
+    control: form.control,
+    name: "unitId",
+  })
+
+  // Auto-fill unitId into all stock entries
+  useEffect(() => {
+    if (watchedUnitId) {
+      setStockEntries(prev => {
+        const updated = { ...prev }
+        let changed = false
+        for (const branchId of Object.keys(updated)) {
+          if (updated[branchId].unitId !== watchedUnitId) {
+            updated[branchId] = { ...updated[branchId], unitId: watchedUnitId }
+            changed = true
+          }
+        }
+        return changed ? updated : prev
+      })
+    }
+  }, [watchedUnitId])
 
   // Flatten categories to include all (parent + children) for selection
   const flattenCategoriesForSelection = useMemo(() => {
@@ -1349,7 +1405,9 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
-                              <Label className="text-xs text-muted-foreground">{t("quantity") || "Quantity"}</Label>
+                              <Label className="text-xs text-muted-foreground">
+                                {t("quantity") || "Quantity"} <span className="text-red-500">*</span>
+                              </Label>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -1391,7 +1449,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                                     [branchId]: { ...prev[branchId], unitId: e.target.value }
                                   }))
                                 }}
-                                disabled={isLoading}
+                                disabled={true}
                                 className={cn(
                                   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
                                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
