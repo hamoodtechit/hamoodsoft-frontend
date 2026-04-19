@@ -594,9 +594,7 @@ export default function ProductsPage() {
                             )}
                           </div>
                           {p.description ? (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {p.description}
-                            </p>
+                            <div className="text-sm text-muted-foreground mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: p.description }} />
                           ) : null}
                           <div className="flex flex-wrap gap-2 mt-2 items-center">
                             {p.categories && p.categories.length > 0 && (
@@ -795,9 +793,7 @@ export default function ProductsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold">{viewProduct.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {viewProduct.description || t("descriptionPlaceholder")}
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1" dangerouslySetInnerHTML={{ __html: viewProduct.description || t("descriptionPlaceholder") }} />
                 </div>
                 <div className="text-right">
                   <div className="font-semibold">

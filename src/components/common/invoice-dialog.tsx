@@ -415,15 +415,11 @@ export function InvoiceDialog({
                             </div>
                           )}
                           {isPosNarrow && item.itemDescription && (
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {item.itemDescription}
-                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5" dangerouslySetInnerHTML={{ __html: item.itemDescription }} />
                           )}
                         </td>
                         {!isPosNarrow && (
-                          <td className="py-3 px-4 text-muted-foreground text-sm">
-                            {item.itemDescription || "-"}
-                          </td>
+                          <td className="py-3 px-4 text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: item.itemDescription || "-" }} />
                         )}
                         <td className={`text-center ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           <div>{item.quantity} {item.unit}</div>
