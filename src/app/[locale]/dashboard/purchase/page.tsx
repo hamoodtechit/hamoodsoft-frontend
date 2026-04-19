@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useAccounts } from "@/lib/hooks/use-accounts"
 
 export default function PurchasePage() {
   const t = useTranslations("purchases")
@@ -58,6 +59,8 @@ export default function PurchasePage() {
   const { selectedBranchId } = useBranchSelection()
   const { generalSettings } = useAppSettings()
   const deleteMutation = useDeletePurchase()
+  const { data: accountsData } = useAccounts({ limit: 1000 })
+  const accounts = accountsData?.items || []
 
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
@@ -877,7 +880,7 @@ export default function PurchasePage() {
                               </Badge>
                               {payment.accountId && (
                                 <span className="text-sm text-muted-foreground">
-                                  Account: {payment.accountId.slice(0, 8)}...
+                                  Account: {accounts.find(a => a.id === payment.accountId)?.name || `${payment.accountId.slice(0, 8)}...`}
                                 </span>
                               )}
                             </div>
