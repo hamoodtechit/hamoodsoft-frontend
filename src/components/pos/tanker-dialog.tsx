@@ -103,8 +103,13 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (isEditing) {
+      if (!selectedBranchId) {
+        toast.error("Please select a branch first")
+        return
+      }
+
       updateMutation.mutate(
-        { id: tanker.id, data: values },
+        { id: tanker.id, data: { ...values, branchId: selectedBranchId } as any },
         {
           onSuccess: () => {
             onOpenChange(false)
