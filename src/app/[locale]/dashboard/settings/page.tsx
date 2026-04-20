@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useUpdateSetting } from "@/lib/hooks/use-settings"
 import { useAppSettings } from "@/lib/providers/settings-provider"
@@ -41,6 +42,16 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
+interface BusinessConfig {
+  showPointReducing: boolean
+  pointReducingAmountPerLiter: number // in milliliters
+}
+
+const DEFAULT_CONFIG: BusinessConfig = {
+  showPointReducing: false,
+  pointReducingAmountPerLiter: 0,
+}
+
 export default function BusinessSettingsPage() {
   const t = useTranslations("settings")
   const { settings, isLoading, generalSettings, taxSettings, invoiceSettings } = useAppSettings()
@@ -48,6 +59,10 @@ export default function BusinessSettingsPage() {
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isMediaDialogOpen, setIsMediaDialogOpen] = useState(false)
+
+  // Business config state (for Fuel Point Reducing)
+  const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(DEFAULT_CONFIG)
+  const [businessConfigHasChanges, setBusinessConfigHasChanges] = useState(false)
 
   const form = useForm<UpdateSettingInput>({
     resolver: zodResolver(require("@/lib/validations/settings").updateSettingSchema),
@@ -59,6 +74,14 @@ export default function BusinessSettingsPage() {
 
   const handleEdit = (setting: Setting) => {
     setEditingSetting(setting)
+    if (setting.name === "businessConfig") {
+      // For businessConfig, sync local state from the setting's configs
+      setBusinessConfig({
+        showPointReducing: setting.configs?.showPointReducing ?? false,
+        pointReducingAmountPerLiter: setting.configs?.pointReducingAmountPerLiter ?? 0,
+      })
+      setBusinessConfigHasChanges(false)
+    }
     form.reset({
       name: setting.name,
       configs: setting.configs || {},
@@ -68,6 +91,26 @@ export default function BusinessSettingsPage() {
 
   const handleSubmit = (data: UpdateSettingInput) => {
     if (!editingSetting) return
+
+    // For businessConfig, use the local state instead of the form
+    if (editingSetting.name === "businessConfig") {
+      const configs = {
+        showPointReducing: businessConfig.showPointReducing,
+        pointReducingAmountPerLiter: businessConfig.pointReducingAmountPerLiter,
+      }
+      updateMutation.mutate(
+        { id: editingSetting.id, data: { name: "businessConfig", configs } },
+        {
+          onSuccess: () => {
+            setIsDialogOpen(false)
+            setEditingSetting(null)
+            setBusinessConfigHasChanges(false)
+            form.reset()
+          },
+        }
+      )
+      return
+    }
 
     updateMutation.mutate(
       {
@@ -91,6 +134,7 @@ export default function BusinessSettingsPage() {
       invoice: "Invoice Settings",
       email: "Email Settings",
       sms: "SMS Settings",
+      businessConfig: "Business Config",
     }
     return names[name] || name.charAt(0).toUpperCase() + name.slice(1)
   }
@@ -102,6 +146,7 @@ export default function BusinessSettingsPage() {
       invoice: "Configure invoice prefix, layout, footer, and numbering",
       email: "Configure email server settings (SMTP)",
       sms: "Configure SMS provider settings (Nexmo, Twilio)",
+      businessConfig: "Configure fuel point reducing settings",
     }
     return descriptions[name] || "Configure this setting"
   }
@@ -218,6 +263,22 @@ export default function BusinessSettingsPage() {
                           Click edit to configure
                         </div>
                       )}
+                      {setting.name === "businessConfig" && (
+                        <>
+                          <div>
+                            <span className="text-muted-foreground">Show Point Reducing: </span>
+                            <span className="font-medium">
+                              {setting.configs?.showPointReducing ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Reducing Amount: </span>
+                            <span className="font-medium">
+                              {setting.configs?.pointReducingAmountPerLiter ?? 0} ml / liter
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -226,6 +287,7 @@ export default function BusinessSettingsPage() {
           )}
         </CardContent>
       </Card>
+
 
       {/* Edit Setting Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -724,6 +786,69 @@ export default function BusinessSettingsPage() {
                         )}
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Business Config Settings */}
+              {editingSetting?.name === "businessConfig" && (
+                <div className="space-y-4">
+                  {/* Show Point Reducing Toggle */}
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                    <div className="space-y-1 pr-4">
+                      <Label htmlFor="showPointReducing" className="text-sm font-medium">
+                        Show Point Reducing
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, the actual (reduced) quantity is shown in the sales UI.
+                        When disabled, the named/told quantity is displayed instead.
+                      </p>
+                    </div>
+                    <Switch
+                      id="showPointReducing"
+                      checked={businessConfig.showPointReducing}
+                      onCheckedChange={(checked) => {
+                        setBusinessConfig((prev) => ({ ...prev, showPointReducing: checked }))
+                        setBusinessConfigHasChanges(true)
+                      }}
+                    />
+                  </div>
+
+                  {/* Reducing Amount Per Liter */}
+                  <div className="space-y-3 p-4 rounded-lg bg-muted/50 border">
+                    <div className="space-y-1">
+                      <Label htmlFor="reducingAmount" className="text-sm font-medium">
+                        Reducing Amount per Liter (ml)
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Amount in milliliters to reduce per liter when dispensing fuel.
+                        For example, entering <strong>20</strong> means each liter sold will actually dispense 980ml.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 max-w-[280px]">
+                      <Input
+                        id="reducingAmount"
+                        type="number"
+                        min={0}
+                        max={1000}
+                        step={1}
+                        value={businessConfig.pointReducingAmountPerLiter}
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0
+                          setBusinessConfig((prev) => ({ ...prev, pointReducingAmountPerLiter: val }))
+                          setBusinessConfigHasChanges(true)
+                        }}
+                        className="w-[140px]"
+                      />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">ml / liter</span>
+                    </div>
+                    {businessConfig.pointReducingAmountPerLiter > 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-md">
+                        ⚡ Each liter sold will actually dispense{" "}
+                        <strong>{(1000 - businessConfig.pointReducingAmountPerLiter).toFixed(0)} ml</strong>{" "}
+                        ({((1000 - businessConfig.pointReducingAmountPerLiter) / 1000 * 100).toFixed(1)}% of 1L)
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
