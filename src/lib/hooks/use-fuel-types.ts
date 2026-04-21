@@ -19,7 +19,7 @@ export function useCreateFuelType() {
       queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
       toast.success("Fuel type created successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to create fuel type"))
     },
   })
@@ -33,7 +33,7 @@ export function useUpdateFuelType() {
       queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
       toast.success("Fuel type updated successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to update fuel type"))
     },
   })
@@ -47,7 +47,7 @@ export function useDeleteFuelType() {
       queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
       toast.success("Fuel type deleted successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to delete fuel type"))
     },
   })

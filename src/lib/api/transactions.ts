@@ -23,11 +23,11 @@ type TransactionsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
-function normalizeTransaction(transaction: any): Transaction {
+function normalizeTransaction(transaction: Record<string, unknown>): Transaction {
   // Normalize type: "IN" -> "INCOME", "EX" -> "EXPENSE"
   let normalizedType: "INCOME" | "EXPENSE" = "INCOME"
   if (transaction.type === "IN") {
@@ -48,8 +48,8 @@ function normalizeTransaction(transaction: any): Transaction {
     incomeExpenseCategory: transaction.incomeExpenseCategory || null,
     account: transaction.account || null,
     branch: transaction.branch || null,
-    contact: transaction.contact || null,
-  } as Transaction
+    contact: (transaction.contact as Record<string, unknown>) || null,
+  } as unknown as Transaction
 }
 
 function normalizeTransactionsList(data: PaginatedResult<Transaction> | TransactionsResponseShape | Transaction[]): PaginatedResult<Transaction> {
@@ -92,7 +92,7 @@ function normalizeTransactionsList(data: PaginatedResult<Transaction> | Transact
 
 export const transactionsApi = {
   getTransactions: async (params?: TransactionsListParams): Promise<PaginatedResult<Transaction>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof TransactionsListParams]

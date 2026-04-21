@@ -65,7 +65,7 @@ export function useCreateProduct() {
       queryClient.invalidateQueries({ queryKey: ["products"] })
       toast.success("Product created successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
@@ -86,7 +86,7 @@ export function useUpdateProduct() {
       queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.id] })
       toast.success("Product updated successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
@@ -105,7 +105,7 @@ export function useDeleteProduct() {
       queryClient.invalidateQueries({ queryKey: ["products"] })
       toast.success("Product deleted successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||

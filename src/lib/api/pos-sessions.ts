@@ -17,9 +17,10 @@ export const posSessionsApi = {
     try {
       const response = await apiClient.get<ApiResponse<POSSession | null>>(endpoints.pos.sessions.current(branchId))
       return response.data.data
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } }
       // If 404 or specifically "no active session", return null instead of throwing
-      if (error?.response?.status === 404) {
+      if (err?.response?.status === 404) {
         return null
       }
       throw error

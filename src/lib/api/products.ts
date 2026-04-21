@@ -19,14 +19,14 @@ type ProductsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
-function normalizeProduct(product: any): Product {
+function normalizeProduct(product: Product): Product {
   // Normalize productVariants to variants
   if (product.productVariants && !product.variants) {
-    product.variants = product.productVariants.map((pv: any) => ({
+    product.variants = (product.productVariants as Array<{ id: string; variantName: string; sku: string; price: number; unitId: string; options: Record<string, unknown>; thumbnailUrl?: string; images?: string[] }>).map((pv) => ({
       id: pv.id,
       variantName: pv.variantName,
       sku: pv.sku,
@@ -86,7 +86,7 @@ export const productsApi = {
 
   getProducts: async (params?: ProductsListParams): Promise<PaginatedResult<Product>> => {
     // Clean params - remove undefined/null/empty values
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof ProductsListParams]
@@ -95,7 +95,7 @@ export const productsApi = {
         }
       })
     }
-    
+
     const response = await apiClient.get<ApiResponse<PaginatedResult<Product> | ProductsResponseShape | Product[]>>(
       endpoints.products.list,
       { params: cleanParams }
@@ -104,7 +104,7 @@ export const productsApi = {
   },
 
   getProductById: async (id: string): Promise<Product> => {
-    const response = await apiClient.get<ApiResponse<any>>(endpoints.products.getById(id))
+    const response = await apiClient.get<ApiResponse<Product>>(endpoints.products.getById(id))
     return normalizeProduct(response.data.data)
   },
 

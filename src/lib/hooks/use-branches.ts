@@ -5,6 +5,7 @@ import { CreateBranchInput, UpdateBranchInput } from "@/lib/validations/branches
 import { Branch } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useBranches() {
   return useQuery({
@@ -30,12 +31,8 @@ export function useCreateBranch() {
       queryClient.invalidateQueries({ queryKey: ["branches"] })
       toast.success("Branch created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create branch. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create branch. Please try again."))
     },
   })
 }
@@ -51,12 +48,8 @@ export function useUpdateBranch() {
       queryClient.invalidateQueries({ queryKey: ["branch", updatedBranch.id] })
       toast.success("Branch updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update branch. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update branch. Please try again."))
     },
   })
 }
@@ -70,12 +63,8 @@ export function useDeleteBranch() {
       queryClient.invalidateQueries({ queryKey: ["branches"] })
       toast.success("Branch deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete branch. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete branch. Please try again."))
     },
   })
 }

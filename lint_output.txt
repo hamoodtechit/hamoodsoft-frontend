@@ -1,0 +1,593 @@
+
+> hamood-tech-frontend@0.1.0 lint
+> next lint
+
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+
+./src/app/[locale]/dashboard/accounting/page.tsx
+38:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+39:10  Warning: 'PermissionGuard' is defined but never used.  @typescript-eslint/no-unused-vars
+55:10  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+59:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+60:9  Warning: 'locale' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+61:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+62:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+76:29  Warning: 'setViewTransactionId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+81:9  Warning: 'canCreateAccount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+82:9  Warning: 'canUpdateAccount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+83:9  Warning: 'canDeleteAccount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+91:9  Warning: The 'accounts' logical expression could make the dependencies of useMemo Hook (at line 270) change on every render. To fix this, wrap the initialization of 'accounts' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+108:9  Warning: The 'accountTransactions' logical expression could make the dependencies of useMemo Hook (at line 114) change on every render. To fix this, wrap the initialization of 'accountTransactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+287:22  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+332:68  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+556:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+558:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+561:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+561:103  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+563:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+627:107  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+628:94  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+634:130  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+635:92  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+666:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+666:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+672:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+677:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+683:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+689:70  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+690:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+694:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+698:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+702:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+706:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+715:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/[locale]/dashboard/attributes/page.tsx
+24:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+25:10  Warning: 'PermissionGuard' is defined but never used.  @typescript-eslint/no-unused-vars
+42:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+43:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+44:11  Warning: 'selectedBranchId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+46:9  Warning: The 'attributes' logical expression could make the dependencies of useMemo Hook (at line 79) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'attributes' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+83:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+84:9  Warning: 'canUpdate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+85:9  Warning: 'canDelete' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+141:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+150:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+163:45  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+225:52  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+./src/app/[locale]/dashboard/brands/page.tsx
+22:21  Warning: 'useCreateBrand' is defined but never used.  @typescript-eslint/no-unused-vars
+22:53  Warning: 'useUpdateBrand' is defined but never used.  @typescript-eslint/no-unused-vars
+23:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+41:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+42:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+43:11  Warning: 'selectedBranchId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+45:9  Warning: The 'brands' logical expression could make the dependencies of useMemo Hook (at line 76) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'brands' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+80:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+81:9  Warning: 'canUpdate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+82:9  Warning: 'canDelete' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+138:31  Warning: 'data' is defined but never used.  @typescript-eslint/no-unused-vars
+138:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+144:31  Warning: 'id' is defined but never used.  @typescript-eslint/no-unused-vars
+144:43  Warning: 'data' is defined but never used.  @typescript-eslint/no-unused-vars
+144:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+151:41  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+207:48  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+./src/app/[locale]/dashboard/categories/page.tsx
+25:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+26:10  Warning: 'PermissionGuard' is defined but never used.  @typescript-eslint/no-unused-vars
+44:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+50:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+51:9  Warning: 'canUpdate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+52:9  Warning: 'canDelete' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+83:3  Error: React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+93:51  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+94:43  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+95:55  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+96:51  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+97:31  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+100:35  Error: React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+108:3  Error: React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+115:29  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+127:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+127:60  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+127:86  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+128:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+144:38  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+154:37  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+166:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+166:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+167:36  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+214:51  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+253:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+253:60  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+253:86  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+254:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+272:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+272:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+272:84  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+273:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+285:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+287:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+291:59  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+304:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+346:68  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+350:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+351:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+351:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+362:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+366:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+369:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+370:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+386:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+386:81  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+413:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+422:3  Error: React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+435:44  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+./src/app/[locale]/dashboard/contacts/page.tsx
+57:22  Warning: 'setTypeFilter' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[locale]/dashboard/crm/page.tsx
+15:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+31:22  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/[locale]/dashboard/expense/page.tsx
+20:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+35:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:9  Warning: 'tCommon' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+46:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+57:9  Warning: The 'allTransactions' logical expression could make the dependencies of useMemo Hook (at line 65) change on every render. To fix this, wrap the initialization of 'allTransactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+57:9  Warning: The 'allTransactions' logical expression could make the dependencies of useMemo Hook (at line 71) change on every render. To fix this, wrap the initialization of 'allTransactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+62:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+88:22  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+142:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+144:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+147:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+147:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+149:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+261:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+261:97  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:114  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/[locale]/dashboard/income/page.tsx
+20:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+35:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:9  Warning: 'tCommon' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+46:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+57:9  Warning: The 'allTransactions' logical expression could make the dependencies of useMemo Hook (at line 65) change on every render. To fix this, wrap the initialization of 'allTransactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+57:9  Warning: The 'allTransactions' logical expression could make the dependencies of useMemo Hook (at line 71) change on every render. To fix this, wrap the initialization of 'allTransactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+62:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+88:22  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+142:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+144:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+147:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+147:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+149:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+261:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+261:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:112  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/[locale]/dashboard/oil-filling-station/page.tsx
+28:37  Warning: 'Gauge' is defined but never used.  @typescript-eslint/no-unused-vars
+67:17  Warning: 'readingsData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+67:42  Warning: 'isLoadingReadings' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+77:81  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+78:26  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+237:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+279:9  Warning: 'readingColumns' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+293:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+350:22  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/[locale]/dashboard/point-of-sale/_components/pos-provider.tsx
+330:9  Warning: The 'contacts' logical expression could make the dependencies of useEffect Hook (at line 473) change on every render. To fix this, wrap the initialization of 'contacts' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+1215:6  Warning: React Hook useCallback has missing dependencies: 'businessConfig.pointReducingAmountPerLiter' and 'businessConfig.showPointReducing'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/[locale]/dashboard/point-of-sale/page.tsx
+44:5  Warning: 'showRecentTransactions' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[locale]/dashboard/products/page.tsx
+33:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+46:9  Warning: 'tAttributes' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+54:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+60:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+108:9  Warning: The 'products' logical expression could make the dependencies of useEffect Hook (at line 372) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+114:9  Warning: 'currentPage' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+181:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+298:6  Warning: React Hook useMemo has a missing dependency: 'getProductQuantity'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+361:41  Warning: 'isEditProductLoading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+375:9  Warning: The 'branches' conditional could make the dependencies of useMemo Hook (at line 380) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'branches' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+377:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+378:26  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+564:29  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+764:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+781:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+894:90  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/[locale]/dashboard/profile/page.tsx
+222:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/[locale]/dashboard/purchase/page.tsx
+340:3  Error: React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render.  react-hooks/rules-of-hooks
+
+./src/app/[locale]/dashboard/sales/page.tsx
+55:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+105:9  Warning: The 'allProducts' logical expression could make the dependencies of useMemo Hook (at line 124) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'allProducts' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+117:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+136:41  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+194:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+378:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+379:9  Warning: 'canUpdate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+380:9  Warning: 'canDelete' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+883:35  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/[locale]/dashboard/settings/page.tsx
+65:10  Warning: 'businessConfigHasChanges' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+68:27  Error: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+206:31  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+334:35  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/[locale]/dashboard/stocks/page.tsx
+29:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+47:9  Warning: 'tCommon' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+53:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+92:9  Warning: The 'products' logical expression could make the dependencies of useMemo Hook (at line 178) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+92:9  Warning: The 'products' logical expression could make the dependencies of useMemo Hook (at line 274) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+93:9  Warning: The 'productMap' object construction makes the dependencies of useMemo Hook (at line 178) change on every render. To fix this, wrap the initialization of 'productMap' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+93:9  Warning: The 'productMap' object construction makes the dependencies of useMemo Hook (at line 274) change on every render. To fix this, wrap the initialization of 'productMap' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./src/app/[locale]/dashboard/units/page-translated.tsx
+31:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[locale]/dashboard/units/page.tsx
+23:10  Warning: 'useHasModuleAccess' is defined but never used.  @typescript-eslint/no-unused-vars
+24:10  Warning: 'PermissionGuard' is defined but never used.  @typescript-eslint/no-unused-vars
+41:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+42:9  Warning: 'currentBusiness' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+79:9  Warning: 'canCreate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+80:9  Warning: 'canUpdate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+81:9  Warning: 'canDelete' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+140:40  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+195:47  Error: React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+./src/app/[locale]/layout.tsx
+20:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/[locale]/register-business/page.tsx
+49:9  Warning: 'tCommon' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+53:11  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[locale]/select-apps/page.tsx
+14:3  Warning: 'FormControl' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/account-dialog.tsx
+30:10  Warning: 'useAccounts' is defined but never used.  @typescript-eslint/no-unused-vars
+78:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+100:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/adjust-stock-dialog.tsx
+85:9  Warning: 'transactionType' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/assign-user-dialog.tsx
+88:43  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+88:56  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/common/attribute-dialog.tsx
+69:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/brand-dialog.tsx
+75:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/business-edit-dialog.tsx
+44:9  Warning: 'tModules' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/business-switcher.tsx
+23:9  Warning: 't' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+40:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/category-dialog.tsx
+29:10  Warning: 'cn' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/category-select.tsx
+73:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/data-table.tsx
+127:9  Warning: 'someSelected' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/export-button.tsx
+16:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+23:81  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+71:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/income-expense-category-dialog.tsx
+108:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/invoice-dialog.tsx
+41:9  Warning: 'calculateActualQuantity' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+118:6  Warning: React Hook useMemo has a missing dependency: 'isPurchase'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+292:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/common/language-switcher.tsx
+14:10  Warning: 'config' is defined but never used.  @typescript-eslint/no-unused-vars
+29:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+36:9  Warning: 'currentLanguage' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/media-dialog.tsx
+235:59  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+312:29  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/common/payment-dialog.tsx
+125:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/product-dialog.tsx
+106:3  Warning: 'placeholder' is defined but never used.  @typescript-eslint/no-unused-vars
+404:9  Warning: 'createUnitMutation' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+406:9  Warning: 'createCategoryMutation' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+525:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+547:6  Warning: React Hook useEffect has missing dependencies: 'defaultValues', 'product', and 'selectedAttributeValues'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+566:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+573:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+682:30  Warning: 'attributeId' is defined but never used.  @typescript-eslint/no-unused-vars
+757:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+846:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1033:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1033:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1034:17  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1049:9  Warning: 'selectedAttributes' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1728:29  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+1783:33  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+2173:41  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+2229:45  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/common/product-variant-dialog.tsx
+50:3  Warning: 'productId' is defined but never used.  @typescript-eslint/no-unused-vars
+122:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+144:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+151:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+325:31  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/common/purchase-dialog.tsx
+13:3  Warning: 'Dialog' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'DialogContent' is defined but never used.  @typescript-eslint/no-unused-vars
+116:9  Warning: The 'accounts' logical expression could make the dependencies of useEffect Hook (at line 262) change on every render. To fix this, wrap the initialization of 'accounts' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+124:9  Warning: The 'tankers' logical expression could make the dependencies of useEffect Hook (at line 255) change on every render. To fix this, wrap the initialization of 'tankers' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+179:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+193:22  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+198:20  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+219:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+224:23  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+285:39  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+301:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+503:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+509:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+590:31  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+598:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+667:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+668:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+669:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+687:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+715:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+745:43  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+746:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+755:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+756:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+757:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+778:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+800:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+896:41  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+925:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+944:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+945:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+946:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+958:41  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+959:63  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+960:67  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+962:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+975:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+976:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+977:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+999:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1003:9  Warning: The 'watchedItems' logical expression could make the dependencies of useEffect Hook (at line 1041) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'watchedItems' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+1003:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1004:9  Warning: 'watchedDiscountType' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1004:60  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1005:9  Warning: 'watchedDiscountAmount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1005:64  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1006:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1020:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1034:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1036:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1046:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1055:6  Warning: React Hook useEffect has a missing dependency: 'fuelItems.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+1085:99  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1090:32  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1112:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1125:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1139:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1140:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1679:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1738:89  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1739:101  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1740:90  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1741:91  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1742:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1743:95  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1744:94  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1768:87  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1769:99  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1770:88  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1770:105  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1771:89  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1772:93  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1773:93  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1774:92  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1801:69  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1821:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1839:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1872:59  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1894:69  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1895:72  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1939:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1941:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1986:56  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2001:56  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2058:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2073:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2231:64  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2237:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/role-dialog.tsx
+86:6  Warning: React Hook useEffect has a missing dependency: 'permissionPattern'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+131:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/sale-dialog.tsx
+53:3  Warning: 'FileText' is defined but never used.  @typescript-eslint/no-unused-vars
+64:10  Warning: 'cn' is defined but never used.  @typescript-eslint/no-unused-vars
+187:9  Warning: The 'products' logical expression could make the dependencies of useMemo Hook (at line 229) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+193:9  Warning: The 'stocks' logical expression could make the dependencies of useMemo Hook (at line 229) change on every render. To fix this, wrap the initialization of 'stocks' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+350:22  Error: Expected a `const` instead of a literal type assertion.  @typescript-eslint/prefer-as-const
+379:9  Warning: 'paidAmount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+381:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+389:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+435:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+443:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+473:24  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+503:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+522:27  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+523:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+524:29  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+551:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+606:71  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+608:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+685:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+714:41  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+715:59  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+716:63  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+718:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+735:9  Warning: The 'watchedItems' logical expression could make the dependencies of useEffect Hook (at line 770) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'watchedItems' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+735:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+736:60  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+737:64  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+738:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+742:56  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+764:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+766:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+775:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1228:64  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1265:76  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1287:81  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1291:70  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1299:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1309:71  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1321:71  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1330:71  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1344:78  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1350:78  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1440:63  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1457:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1464:60  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1485:69  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1514:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1555:69  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1562:72  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1575:76  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1581:76  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1662:61  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1687:62  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1721:71  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1741:63  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1767:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1798:76  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1827:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1836:70  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1871:72  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+2128:41  Warning: 'remaining' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/search-modal.tsx
+24:9  Warning: 't' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/stock-dialog.tsx
+52:9  Warning: The 'products' logical expression could make the dependencies of useEffect Hook (at line 98) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+65:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+66:31  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+95:47  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/common/theme-toggle.tsx
+15:21  Warning: 'theme' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/common/transaction-dialog.tsx
+123:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/layout/dashboard-header.tsx
+26:10  Warning: 'NotificationPanel' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/layout/mobile-sidebar-content.tsx
+21:3  Warning: 'Receipt' is defined but never used.  @typescript-eslint/no-unused-vars
+55:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+110:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+124:124  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+266:6  Warning: React Hook useMemo has a missing dependency: 't'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/pos/fuel-type-dialog.tsx
+21:10  Warning: 'Switch' is defined but never used.  @typescript-eslint/no-unused-vars
+27:10  Warning: 'toast' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/ui/collapsible.tsx
+3:13  Warning: 'React' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/constants/apps.ts
+4:3  Warning: 'LayoutDashboard' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/i18n/config.ts
+10:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/api/auth.ts
+36:13  Warning: 'confirmPassword' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/api/roles.ts
+10:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+12:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+12:68  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+35:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/hooks/use-auth.ts
+165:6  Warning: React Hook useEffect has a missing dependency: 'storeUser'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/hooks/use-branches.ts
+5:10  Warning: 'Branch' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/providers/permissions-provider.tsx
+6:16  Warning: 'Permission' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/providers/settings-provider.tsx
+14:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+32:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+33:31  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+52:9  Warning: The 'settings' logical expression could make the dependencies of useMemo Hook (at line 112) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'settings' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+59:61  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/utils/error.ts
+1:37  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/utils/export.ts
+3:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+7:20  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+16:56  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+23:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+59:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/store/use-auth-store.ts
+15:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

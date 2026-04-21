@@ -5,6 +5,7 @@ import { UpdateMediaInput, UploadMediaInput } from "@/lib/validations/media"
 import { Media } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useMedia(params?: MediaListParams) {
   return useQuery({
@@ -34,12 +35,8 @@ export function useUploadMedia() {
       queryClient.invalidateQueries({ queryKey: ["media"] })
       toast.success("Media uploaded successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to upload media. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to upload media. Please try again."))
     },
   })
 }
@@ -55,12 +52,8 @@ export function useUpdateMedia() {
       queryClient.invalidateQueries({ queryKey: ["media", updated.id] })
       toast.success("Media updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update media. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update media. Please try again."))
     },
   })
 }
@@ -74,12 +67,8 @@ export function useDeleteMedia() {
       queryClient.invalidateQueries({ queryKey: ["media"] })
       toast.success("Media deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete media. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete media. Please try again."))
     },
   })
 }

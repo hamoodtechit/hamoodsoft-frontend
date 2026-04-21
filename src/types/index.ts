@@ -7,7 +7,8 @@ export interface User {
   avatar?: string
   roleId?: string | null
   currentBusinessId?: string | null
-  preferences?: Record<string, any> | null
+  preferences?: Record<string, unknown> | null
+  role?: Role | null
   createdAt?: string
   updatedAt?: string
 }
@@ -24,7 +25,7 @@ export interface Business {
   updatedAt?: string
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T
   message?: string
   success: boolean
@@ -154,6 +155,7 @@ export interface ProductVariant {
   thumbnailUrl?: string | null
   images?: string[]
   unit?: Unit
+  stocks?: Stock[]
   createdAt?: string
   updatedAt?: string
 }
@@ -211,6 +213,7 @@ export interface StockHistory {
   tankerId?: string | null
   itemType?: ItemType | null
   unitId?: string | null
+  variantId?: string | null
   transactionType: "IN" | "OUT"
   quantity: number
   quantityChange?: number
@@ -254,6 +257,7 @@ export interface PurchaseItem {
   tankerId?: string
   itemType?: ItemType
   productId?: string
+  variantId?: string
   actualQuantity?: number
 }
 
@@ -307,6 +311,7 @@ export interface SaleItem {
   actualQuantity?: number
   itemType?: ItemType
   productId?: string
+  variantId?: string
   fuelTypeId?: string
   tankerId?: string
   dispenserId?: string
@@ -419,7 +424,7 @@ export interface Setting {
   id: string
   businessId?: string
   name: string
-  configs: Record<string, any> // configs can have different structures based on setting type
+  configs: Record<string, unknown> // configs can have different structures based on setting type
   createdAt?: string
   updatedAt?: string
 }
@@ -536,7 +541,7 @@ export interface PaginatedResult<T> {
     limit: number
     total: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -589,6 +594,7 @@ export interface CreateTankerInput {
   pressure: number
   temperature: number
   location: string
+  branchId?: string
 }
 
 export interface UpdateTankerInput {
@@ -600,6 +606,7 @@ export interface UpdateTankerInput {
   pressure?: number
   temperature?: number
   location?: string
+  branchId?: string
 }
 
 // Dispenser Types

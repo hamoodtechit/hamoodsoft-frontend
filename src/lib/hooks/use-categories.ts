@@ -4,6 +4,7 @@ import { categoriesApi } from "@/lib/api/categories"
 import { CreateCategoryInput, UpdateCategoryInput } from "@/lib/validations/categories"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useCategories(branchId?: string) {
   return useQuery({
@@ -29,12 +30,8 @@ export function useCreateCategory() {
       queryClient.invalidateQueries({ queryKey: ["categories"] })
       toast.success("Category created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create category. Please try again."))
     },
   })
 }
@@ -50,12 +47,8 @@ export function useUpdateCategory() {
       queryClient.invalidateQueries({ queryKey: ["category", updatedCategory.id] })
       toast.success("Category updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update category. Please try again."))
     },
   })
 }
@@ -69,12 +62,8 @@ export function useDeleteCategory() {
       queryClient.invalidateQueries({ queryKey: ["categories"] })
       toast.success("Category deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete category. Please try again."))
     },
   })
 }

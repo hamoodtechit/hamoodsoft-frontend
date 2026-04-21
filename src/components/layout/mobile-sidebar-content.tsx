@@ -8,23 +8,23 @@ import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
 import {
-    BookOpen,
-    Building2,
-    ChevronDown,
-    ChevronRight,
-    CreditCard,
-    FolderTree,
-    Fuel,
-    LayoutDashboard,
-    Package,
-    Plus,
-    Receipt,
-    Ruler,
-    Settings,
-    Shield,
-    ShoppingCart,
-    Users,
-    Wallet,
+  BookOpen,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  CreditCard,
+  FolderTree,
+  Fuel,
+  LayoutDashboard,
+  Package,
+  Plus,
+  Receipt,
+  Ruler,
+  Settings,
+  Shield,
+  ShoppingCart,
+  Users,
+  Wallet,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
@@ -142,7 +142,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
 
     // Management modules
     const managementItems: (NavItem | NavItemWithSubmenu)[] = []
-    
+
     // Inventory with submenu (no main page, only submenu items)
     if (enabledModules.includes('inventory')) {
       const inventorySubmenu: NavItem[] = [
@@ -316,7 +316,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
               const SubIcon = subItem.icon
               const subFullHref = `/${locale}${subItem.href}`
               const isSubActive = pathname?.startsWith(subFullHref)
-              
+
               return (
                 <Link key={subItem.href} href={subFullHref} onClick={onLinkClick}>
                   <Button
@@ -398,7 +398,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
             </div>
           </div>
         ))}
-        
+
         {/* Settings at the bottom */}
         <div className="pt-4 border-t">
           <Link href={`/${locale}${settingsItem.href}`} onClick={onLinkClick}>

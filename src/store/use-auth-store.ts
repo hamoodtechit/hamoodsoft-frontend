@@ -24,10 +24,10 @@ export const useAuthStore = create<AuthState>()(
         window.addEventListener("auth-token-refreshed", ((event: CustomEvent<{ token: string; refreshToken?: string }>) => {
           const { token, refreshToken } = event.detail
           const { user } = get()
-          set({ 
-            token, 
+          set({
+            token,
             refreshToken: refreshToken || get().refreshToken,
-            isAuthenticated: !!(token && user && user.id) 
+            isAuthenticated: !!(token && user && user.id)
           })
         }) as EventListener)
       }
@@ -62,12 +62,12 @@ export const useAuthStore = create<AuthState>()(
             })
           }
         },
-        logout: () => set({ 
-          user: null, 
-          token: null, 
+        logout: () => set({
+          user: null,
+          token: null,
           refreshToken: null,
           businesses: [],
-          isAuthenticated: false 
+          isAuthenticated: false
         }),
       }
     },

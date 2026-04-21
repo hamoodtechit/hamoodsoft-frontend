@@ -69,7 +69,7 @@ export const mediaApi = {
   },
 
   list: async (params?: MediaListParams): Promise<PaginatedResult<Media>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {

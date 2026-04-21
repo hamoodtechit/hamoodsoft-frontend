@@ -25,7 +25,7 @@ type AccountsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -74,7 +74,7 @@ export const accountsApi = {
   },
 
   getAccounts: async (params?: AccountsListParams): Promise<PaginatedResult<Account>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, unknown> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof AccountsListParams]
@@ -109,7 +109,7 @@ export const accountsApi = {
   },
 
   getAccountLedger: async (id: string, params?: AccountLedgerParams): Promise<AccountLedgerResponse> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, unknown> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof AccountLedgerParams]

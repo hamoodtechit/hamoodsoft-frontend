@@ -44,7 +44,7 @@ import {
   type CreateSaleInput,
   type UpdateSaleInput,
 } from "@/lib/validations/sales";
-import { Product, ProductVariant, Sale, FuelType, Tanker } from "@/types";
+import { Product, ProductVariant, Sale, FuelType, Tanker, Stock } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CreditCard,
@@ -174,7 +174,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   }, [sale, selectedBranchId]);
 
   const form = useForm<CreateSaleInput | UpdateSaleInput>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues,
   });
 
@@ -194,10 +194,10 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
   // Create stock map by SKU and productId for quick lookup
   const stockMapBySku = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<string, Stock>();
 
     // Add stocks from separate query
-    stocks.forEach((stock: any) => {
+    stocks.forEach((stock) => {
       if (stock.sku) {
         map.set(stock.sku, stock);
       }
@@ -210,7 +210,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
     // Also add stocks from product.stocks array (if available)
     products.forEach((product) => {
       if (product.stocks && Array.isArray(product.stocks)) {
-        product.stocks.forEach((stock: any) => {
+        product.stocks.forEach((stock) => {
           if (stock.sku) {
             // Only add if not already in map (separate query takes precedence)
             if (!map.has(stock.sku)) {
@@ -232,7 +232,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const findStock = (
     product: Product,
     variant?: ProductVariant | null,
-  ): any => {
+  ): Stock | undefined => {
     const currentBranchId = branchId || selectedBranchId;
 
     if (variant) {
@@ -245,14 +245,14 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       // Strategy 2: Find by SKU in product.stocks
       if (!stock && product.stocks && Array.isArray(product.stocks)) {
         stock = product.stocks.find(
-          (s: any) => s.sku === sku && s.branchId === currentBranchId,
+          (s) => s.sku === sku && s.branchId === currentBranchId,
         );
       }
 
       // Strategy 3: Try from separate stocks query by SKU
       if (!stock) {
         stock = stocks.find(
-          (s: any) => s.sku === sku && s.branchId === currentBranchId,
+          (s) => s.sku === sku && s.branchId === currentBranchId,
         );
       }
 
@@ -260,11 +260,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       if (!stock && product.isVariable) {
         stock =
           product.stocks?.find(
-            (s: any) =>
+            (s) =>
               s.branchId === currentBranchId && s.productId === product.id,
           ) ||
           stocks.find(
-            (s: any) =>
+            (s) =>
               s.productId === product.id && s.branchId === currentBranchId,
           );
       }
@@ -278,7 +278,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       // Strategy 2: Find in product.stocks by productId and branchId
       if (!stock && product.stocks && Array.isArray(product.stocks)) {
         stock = product.stocks.find(
-          (s: any) =>
+          (s) =>
             s.productId === product.id && s.branchId === currentBranchId,
         );
       }
@@ -286,7 +286,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
       // Strategy 3: Try from separate stocks query
       if (!stock) {
         stock = stocks.find(
-          (s: any) =>
+          (s) =>
             s.productId === product.id && s.branchId === currentBranchId,
         );
       }
@@ -347,7 +347,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "items" as any,
+    name: "items" as "items",
   });
 
   // Track selected products and variants for each item

@@ -5,6 +5,7 @@ import { UpdateSettingInput } from "@/lib/validations/settings"
 import { Setting } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useSettings(enabled: boolean = true) {
   return useQuery({
@@ -37,12 +38,8 @@ export function useUpdateSetting() {
       queryClient.invalidateQueries({ queryKey: ["setting", updated.id] })
       toast.success("Setting updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update setting. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update setting. Please try again."))
     },
   })
 }
@@ -51,18 +48,14 @@ export function useCreateSetting() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { name: string; configs: Record<string, any> }) =>
+    mutationFn: (data: { name: string; configs: Record<string, unknown> }) =>
       settingsApi.createSetting(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] })
       toast.success("Setting created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create setting. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create setting. Please try again."))
     },
   })
 }

@@ -54,7 +54,7 @@ import {
   type CreateProductInput,
   type UpdateProductInput,
 } from "@/lib/validations/products"
-import { Branch, Brand, Category, Product, Unit } from "@/types"
+import { Branch, Brand, Category, Product, ProductVariant, ProductVariantInput, Stock, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "@tiptap/extension-link"
 import { EditorContent, useEditor } from "@tiptap/react"
@@ -69,6 +69,17 @@ interface ProductDialogProps {
   product: Product | null
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+type PRODUCT_VARIANT_FIELDS = {
+  id?: string
+  variantName: string
+  sku: string
+  price: number
+  unitId?: string
+  options: Record<string, string>
+  thumbnailUrl?: string | null
+  images?: string[]
 }
 
 // Helper function to generate cartesian product
@@ -89,7 +100,15 @@ function cartesianProduct<T>(arrays: T[][]): T[][] {
 }
 
 // Rich Text Editor Component
-function RichTextEditor({ field, isLoading, placeholder }: { field: any; isLoading: boolean; placeholder?: string }) {
+function RichTextEditor({
+  field,
+  isLoading,
+  placeholder,
+}: {
+  field: { value: string; onChange: (value: string) => void }
+  isLoading: boolean
+  placeholder?: string
+}) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -266,17 +285,17 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       }
     }
     // Handle both variants and productVariants from API
-    const variantsRaw = (product as any).productVariants || product.variants || []
-    
+    const variantsRaw = product.productVariants || product.variants || []
+
     console.log("🔍 Product Dialog - Loading variants for edit:", {
       productId: product.id,
       productName: product.name,
       variantsRaw,
       variantsRawLength: variantsRaw.length,
     })
-    
+
     // Normalize variants to ensure they have the correct structure for the form
-    const variants = variantsRaw.map((v: any, index: number) => {
+    const variants = (variantsRaw as (ProductVariant | ProductVariantInput)[]).map((v, index) => {
       const normalized = {
         id: v.id,
         variantName: v.variantName || "",
@@ -317,7 +336,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }, [product])
 
   const form = useForm<CreateProductInput | UpdateProductInput>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues,
     mode: "onChange", // Enable validation on change
   })
@@ -376,10 +395,11 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
-  // Stock entries per branch: { branchId: { quantity, purchasePrice, salePrice, unitId, sku } }
-  const [stockEntries, setStockEntries] = useState<Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string; sku?: string }>>({})
+  // Stock entries per branch and per variant: { branchId: { [variantKey]: { quantity, purchasePrice, salePrice, unitId, sku } } }
+  // variantKey is "main" for non-variable products, or "index_N" for new variants
+  const [stockEntries, setStockEntries] = useState<Record<string, Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string; sku?: string }>>>({})
   // Track which branch stock sale prices have been manually edited by the user
-  const [salePriceTouched, setSalePriceTouched] = useState<Record<string, boolean>>({})
+  const [salePriceTouched, setSalePriceTouched] = useState<Record<string, Record<string, boolean>>>({})
   const createAttributeMutation = useCreateAttribute()
   const createUnitMutation = useCreateUnit()
   const createBrandMutation = useCreateBrand()
@@ -415,18 +435,24 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     }
     
     // Handle both variants and productVariants from API
-    const existingVariants = (product as any)?.productVariants || product?.variants || []
-    
+    const existingVariants = product?.productVariants || product?.variants || []
+
     // Only initialize if we have variants, attributes are loaded, and haven't initialized yet
     // Wait for attributes to be available before trying to match them
     // Also ensure product exists (for edit mode)
-    if (product && existingVariants.length > 0 && availableAttributes.length > 0 && !hasInitializedFromProduct.current && open) {
+    if (
+      product &&
+      existingVariants.length > 0 &&
+      availableAttributes.length > 0 &&
+      !hasInitializedFromProduct.current &&
+      open
+    ) {
       // Extract selected attributes and values from existing variants
       // Options keys might be in format: "attr-color", "attr-size", or attribute IDs, or attribute names
       const attrIds = new Set<string>()
       const attrValuesMap: Record<string, Set<string>> = {}
-      
-      existingVariants.forEach((v: any) => {
+
+      ;(existingVariants as (ProductVariant | ProductVariantInput)[]).forEach((v) => {
         Object.entries(v.options || {}).forEach(([key, value]) => {
           let attr: { id: string; name: string } | undefined
           
@@ -479,10 +505,11 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
           })),
         })
         lastProcessedAttributesRef.current = initAttributesKey
-        
+
         // Load existing variants into the form (preserve ALL fields including id for updates)
-        replace(existingVariants.map((v: any) => ({
-          id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
+        replace(
+          (existingVariants as (ProductVariant & PRODUCT_VARIANT_FIELDS)[]).map((v) => ({
+            id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
           variantName: v.variantName || "",
           sku: v.sku || "",
           price: v.price ?? 0, // Price is required
@@ -680,23 +707,28 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       
       selectedBranchIds.forEach((branchId) => {
         const branch = branchOptions.find((b) => b.id === branchId)
-        const stock = stockEntries[branchId]
+        const branchStocks = stockEntries[branchId]
         const branchName = branch?.name || branchId
 
-        if (!stock) {
+        if (!branchStocks || Object.keys(branchStocks).length === 0) {
           stockErrors.push(`${branchName}: ${tStocks("missingDetails") || "Stock details are missing"}`)
           return
         }
 
-        if (!stock.quantity || stock.quantity <= 0) {
-          stockErrors.push(`${branchName}: ${tStocks("quantityRequired") || "Quantity is required and must be greater than zero"}`)
-        }
-        if (!stock.purchasePrice || stock.purchasePrice <= 0) {
-          stockErrors.push(`${branchName}: ${tStocks("purchasePriceRequired") || "Purchase price is required"}`)
-        }
-        if (!stock.salePrice || stock.salePrice <= 0) {
-          stockErrors.push(`${branchName}: ${tStocks("salePriceRequired") || "Sale price is required"}`)
-        }
+        // Validate each variant's stock for this branch
+        Object.entries(branchStocks).forEach(([variantKey, stock]) => {
+          const variantNameSuffix = variantKey === "main" ? "" : ` (${variantKey})`
+          
+          if (!stock.quantity || stock.quantity <= 0) {
+            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("quantityRequired") || "Quantity is required and must be greater than zero"}`)
+          }
+          if (!stock.purchasePrice || stock.purchasePrice <= 0) {
+            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("purchasePriceRequired") || "Purchase price is required"}`)
+          }
+          if (!stock.salePrice || stock.salePrice <= 0) {
+            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("salePriceRequired") || "Sale price is required"}`)
+          }
+        })
       })
 
       if (stockErrors.length > 0) {
@@ -721,10 +753,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     }
 
     // Remove pricing fields that are managed in stock, not product
-    delete (data as any).purchasePrice
-    delete (data as any).salePrice
-    delete (data as any).profitMarginAmount
-    delete (data as any).profitMarginPercent
+    // Remove fields that are not part of updateProductSchema if they exist
+    const cleanedData = { ...data } as any
+    delete cleanedData.purchasePrice
+    delete cleanedData.salePrice
+    delete cleanedData.profitMarginAmount
+    delete cleanedData.profitMarginPercent
 
     // Clean up empty variants array
     if (data.variants && data.variants.length === 0) {
@@ -767,48 +801,49 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         }
 
         // Build the variant object - only include fields with valid values
-        const cleanedVariant: any = {
-          variantName: variant.variantName || "",
+        const v = variant as unknown as PRODUCT_VARIANT_FIELDS
+        const cleanedVariant: Record<string, unknown> = {
+          variantName: v.variantName || "",
           // Don't send SKU to backend - it's managed by backend
-          price: Math.round(variant.price ?? 0), // Price is required, must be integer, default to 0 if not set
+          price: Math.round(v.price ?? 0), // Price is required, must be integer, default to 0 if not set
           options: Object.keys(cleanedOptions).length > 0 ? cleanedOptions : {}, // Ensure options is always an object
         }
-        
+
         // Include id for updates - backend uses this to identify which variants to update
         // For existing variants during product update, include id so backend knows to update them
         // For new variants added during edit, id will be undefined, so backend will create them
-        if ((variant as any).id && typeof (variant as any).id === "string") {
-          cleanedVariant.id = (variant as any).id
+        if (v.id && typeof v.id === "string") {
+          cleanedVariant.id = v.id
         }
-        
+
         // Only include optional fields if they have valid non-empty values
         // thumbnailUrl must be min 1 character if present
-        const thumbnailUrl = typeof (variant as any).thumbnailUrl === "string" && (variant as any).thumbnailUrl.trim().length > 0
-          ? (variant as any).thumbnailUrl.trim()
-          : null
+        const thumbnailUrl =
+          typeof v.thumbnailUrl === "string" && v.thumbnailUrl.trim().length > 0 ? v.thumbnailUrl.trim() : null
         if (thumbnailUrl) {
           cleanedVariant.thumbnailUrl = thumbnailUrl
         }
-        
+
         // images must be a non-empty array if present
-        const imagesRaw = (variant as any).images
-        const images = Array.isArray(imagesRaw) && imagesRaw.length > 0
-          ? imagesRaw
-              .filter((u: any): u is string => typeof u === "string" && u.trim().length > 0)
-              .map((u: string) => u.trim())
-          : null
+        const imagesRaw = v.images
+        const images =
+          Array.isArray(imagesRaw) && imagesRaw.length > 0
+            ? imagesRaw
+                .filter((u: unknown): u is string => typeof u === "string" && u.trim().length > 0)
+                .map((u: string) => u.trim())
+            : null
         if (images && images.length > 0) {
           cleanedVariant.images = images
         }
-        
+
         // unitId must be a valid non-empty string if present
-        const unitId = (variant as any).unitId
+        const unitId = v.unitId
         if (unitId && typeof unitId === "string" && unitId.trim().length > 0) {
           cleanedVariant.unitId = unitId.trim()
         }
-        
+
         return cleanedVariant
-      }).filter((variant) => variant.variantName && variant.variantName.length > 0) // Remove variants with empty names
+      }).filter((v: any) => v.variantName && v.variantName.length > 0) // Remove variants with empty names
     }
 
     // Always set barcodeType to EAN_13
@@ -838,33 +873,51 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
 
     createMutation.mutate(data as CreateProductInput, {
       onSuccess: async (createdProduct) => {
-        // Create stock entries for each selected branch
+        // Create stock entries for each selected branch and variant
         if (createdProduct && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0) {
-          const stockPromises = selectedBranchIds.map((branchId: string) => {
-            const stock = stockEntries[branchId]
-            if (stock && stock.quantity > 0 && stock.unitId) {
-              return createStockMutation.mutateAsync({
-                branchId,
-                productId: createdProduct.id,
-                unitId: stock.unitId,
-                itemType: 'PRODUCT' as const,
-                quantity: stock.quantity,
-                purchasePrice: stock.purchasePrice ?? 0,
-                salePrice: stock.salePrice ?? 0,
-                sku: stock.sku || undefined,
-              }).catch((error) => {
-                console.error(`Error creating stock for branch ${branchId}:`, error)
-                return null
-              })
-            }
-            return Promise.resolve(null)
+          const variants = createdProduct.productVariants || []
+          const stockPromises: Promise<(Stock & { consolidated?: boolean }) | null>[] = []
+
+          selectedBranchIds.forEach((branchId: string) => {
+            const branchStocks = stockEntries[branchId] || {}
+            
+            Object.entries(branchStocks).forEach(([variantKey, stock]) => {
+              if (stock && stock.quantity > 0 && stock.unitId) {
+                let variantId: string | undefined
+                
+                if (variantKey === "main") {
+                  // Single product, no variantId needed
+                } else if (variantKey.startsWith("index_")) {
+                  const idx = parseInt(variantKey.replace("index_", ""), 10)
+                  variantId = variants[idx]?.id
+                }
+
+                stockPromises.push(
+                  createStockMutation.mutateAsync({
+                    branchId,
+                    productId: createdProduct.id,
+                    variantId,
+                    unitId: stock.unitId,
+                    itemType: 'PRODUCT' as const,
+                    quantity: stock.quantity,
+                    purchasePrice: stock.purchasePrice ?? 0,
+                    salePrice: stock.salePrice ?? 0,
+                    sku: stock.sku || undefined,
+                  }).catch((error) => {
+                    console.error(`Error creating stock for branch ${branchId}, variant ${variantKey}:`, error)
+                    return null
+                  })
+                )
+              }
+            })
           })
           
           try {
-            await Promise.all(stockPromises)
+            if (stockPromises.length > 0) {
+              await Promise.all(stockPromises)
+            }
           } catch (error) {
             console.error("Error creating stock entries:", error)
-            // Still close dialog even if stock creation fails
           }
         }
         
@@ -904,9 +957,15 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         const updated = { ...prev }
         let changed = false
         for (const branchId of Object.keys(updated)) {
-          if (!salePriceTouched[branchId]) {
-            updated[branchId] = { ...updated[branchId], salePrice: Number(watchedProductPrice) }
-            changed = true
+          const branchStocks = updated[branchId]
+          for (const variantKey of Object.keys(branchStocks)) {
+            if (!salePriceTouched[branchId]?.[variantKey]) {
+              branchStocks[variantKey] = { 
+                ...branchStocks[variantKey], 
+                salePrice: Number(watchedProductPrice) 
+              }
+              changed = true
+            }
           }
         }
         return changed ? updated : prev
@@ -927,9 +986,12 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         const updated = { ...prev }
         let changed = false
         for (const branchId of Object.keys(updated)) {
-          if (updated[branchId].unitId !== watchedUnitId) {
-            updated[branchId] = { ...updated[branchId], unitId: watchedUnitId }
-            changed = true
+          const branchStocks = updated[branchId]
+          for (const variantKey of Object.keys(branchStocks)) {
+            if (branchStocks[variantKey].unitId !== watchedUnitId) {
+              branchStocks[variantKey] = { ...branchStocks[variantKey], unitId: watchedUnitId }
+              changed = true
+            }
           }
         }
         return changed ? updated : prev
@@ -951,8 +1013,9 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         })
         
         // Recursively traverse children if they exist
-        if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
-          traverse((cat as any).children, level + 1, cat.name)
+        const catWithChildren = cat as Category & { children?: Category[] }
+        if (catWithChildren.children && Array.isArray(catWithChildren.children) && catWithChildren.children.length > 0) {
+          traverse(catWithChildren.children, level + 1, cat.name)
         }
       })
     }
@@ -1354,9 +1417,34 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                                     field.onChange(next)
                                     // Initialize stock entry for new branch
                                     if (val && !stockEntries[b.id]) {
+                                      const variants = form.getValues("variants") || []
+                                      interface StockEntryValue {
+                                        quantity: number;
+                                        unitId: string;
+                                        salePrice?: number;
+                                        sku?: string;
+                                      }
+                                      const initialBranchStocks: Record<string, StockEntryValue> = {}
+                                      
+                                      if (variants.length === 0) {
+                                        initialBranchStocks["main"] = { 
+                                          quantity: 0, 
+                                          unitId: form.getValues("unitId") || "", 
+                                          salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined 
+                                        }
+                                      } else {
+                                        variants.forEach((_, idx) => {
+                                          initialBranchStocks[`index_${idx}`] = { 
+                                            quantity: 0, 
+                                            unitId: form.getValues("unitId") || "", 
+                                            salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined 
+                                          }
+                                        })
+                                      }
+                                      
                                       setStockEntries(prev => ({
                                         ...prev,
-                                        [b.id]: { quantity: 0, unitId: form.getValues("unitId") || "", salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined }
+                                        [b.id]: initialBranchStocks
                                       }))
                                     } else if (!val) {
                                       // Remove stock entry when branch is unchecked
@@ -1396,116 +1484,227 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 <div className="space-y-4">
                   {selectedBranchIds.map((branchId: string) => {
                     const branch = branchOptions.find(b => b.id === branchId)
-                    const stock = stockEntries[branchId] || { quantity: 0, unitId: form.getValues("unitId") || "" }
+                    const variants = form.watch("variants") || []
+                    const branchStocks = stockEntries[branchId] || {}
+                    
                     return (
                       <Card key={branchId} className="p-4">
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <Label className="font-medium">{branch?.name || "Branch"}</Label>
+                            <Label className="font-bold text-lg text-primary">{branch?.name || "Branch"}</Label>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                {t("quantity") || "Quantity"} <span className="text-red-500">*</span>
-                              </Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={stock.quantity || ""}
-                                onChange={(e) => {
-                                  setStockEntries(prev => ({
-                                    ...prev,
-                                    [branchId]: { ...prev[branchId], quantity: parseFloat(e.target.value) || 0 }
-                                  }))
-                                }}
-                                placeholder="0"
-                                disabled={isLoading}
-                                className="mt-1"
-                              />
+                          
+                          {variants.length === 0 ? (
+                            // Non-variable product stock input
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  {t("quantity") || "Quantity"} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={branchStocks["main"]?.quantity || ""}
+                                  onChange={(e) => {
+                                    setStockEntries(prev => ({
+                                      ...prev,
+                                      [branchId]: { 
+                                        ...prev[branchId], 
+                                        ["main"]: { ...prev[branchId]?.["main"], quantity: parseFloat(e.target.value) || 0 } 
+                                      }
+                                    }))
+                                  }}
+                                  placeholder="0"
+                                  disabled={isLoading}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">{t("sku") || "SKU"}</Label>
+                                <Input
+                                  value={branchStocks["main"]?.sku || ""}
+                                  onChange={(e) => {
+                                    setStockEntries(prev => ({
+                                      ...prev,
+                                      [branchId]: { 
+                                        ...prev[branchId], 
+                                        ["main"]: { ...prev[branchId]?.["main"], sku: e.target.value || undefined } 
+                                      }
+                                    }))
+                                  }}
+                                  placeholder={t("skuPlaceholder")}
+                                  disabled={isLoading}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  {t("purchasePrice") || "Purchase Price"} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={branchStocks["main"]?.purchasePrice || ""}
+                                  onChange={(e) => {
+                                    setStockEntries(prev => ({
+                                      ...prev,
+                                      [branchId]: { 
+                                        ...prev[branchId], 
+                                        ["main"]: { ...prev[branchId]?.["main"], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
+                                      }
+                                    }))
+                                  }}
+                                  placeholder="0.00"
+                                  disabled={isLoading}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">
+                                  {t("salePrice") || "Sale Price"} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={branchStocks["main"]?.salePrice ?? ""}
+                                  onChange={(e) => {
+                                    setSalePriceTouched(prev => ({ 
+                                      ...prev, 
+                                      [branchId]: { ...prev[branchId], ["main"]: true } 
+                                    }))
+                                    setStockEntries(prev => ({
+                                      ...prev,
+                                      [branchId]: { 
+                                        ...prev[branchId], 
+                                        ["main"]: { ...prev[branchId]?.["main"], salePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
+                                      }
+                                    }))
+                                  }}
+                                  placeholder={form.getValues("price")?.toString() || "0.00"}
+                                  disabled={isLoading}
+                                  className="mt-1"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">{t("sku") || "SKU"}</Label>
-                              <Input
-                                value={stock.sku || ""}
-                                onChange={(e) => {
-                                  setStockEntries(prev => ({
-                                    ...prev,
-                                    [branchId]: { ...prev[branchId], sku: e.target.value || undefined }
-                                  }))
-                                }}
-                                placeholder={t("skuPlaceholder")}
-                                disabled={isLoading}
-                                className="mt-1"
-                              />
+                          ) : (
+                            // Variable product - Stock per variant
+                            <div className="space-y-4 border rounded-md p-3 bg-muted/20">
+                              {variants.map((v, idx) => {
+                                const variantKey = `index_${idx}`
+                                const stock = branchStocks[variantKey] || { 
+                                  quantity: 0, 
+                                  unitId: form.getValues("unitId") || "",
+                                  salePrice: v.price
+                                }
+                                
+                                return (
+                                  <div key={variantKey} className={cn("p-3 rounded-lg border bg-background", idx !== 0 && "mt-3")}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                                        {v.variantName || `Variant ${idx + 1}`}
+                                      </Badge>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                      <div>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                          {t("quantity") || "Qty"} <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={stock.quantity || ""}
+                                          onChange={(e) => {
+                                            setStockEntries(prev => ({
+                                              ...prev,
+                                              [branchId]: { 
+                                                ...prev[branchId], 
+                                                [variantKey]: { ...prev[branchId]?.[variantKey], quantity: parseFloat(e.target.value) || 0 } 
+                                              }
+                                            }))
+                                          }}
+                                          placeholder="0"
+                                          disabled={isLoading}
+                                          className="h-8 mt-1"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">{t("sku") || "SKU"}</Label>
+                                        <Input
+                                          value={stock.sku || ""}
+                                          onChange={(e) => {
+                                            setStockEntries(prev => ({
+                                              ...prev,
+                                              [branchId]: { 
+                                                ...prev[branchId], 
+                                                [variantKey]: { ...prev[branchId]?.[variantKey], sku: e.target.value || undefined } 
+                                              }
+                                            }))
+                                          }}
+                                          placeholder="Variant SKU"
+                                          disabled={isLoading}
+                                          className="h-8 mt-1"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                          {t("purchasePrice") || "Purchase"} <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={stock.purchasePrice || ""}
+                                          onChange={(e) => {
+                                            setStockEntries(prev => ({
+                                              ...prev,
+                                              [branchId]: { 
+                                                ...prev[branchId], 
+                                                [variantKey]: { ...prev[branchId]?.[variantKey], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
+                                              }
+                                            }))
+                                          }}
+                                          placeholder="0.00"
+                                          disabled={isLoading}
+                                          className="h-8 mt-1"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                          {t("salePrice") || "Sale"} <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={stock.salePrice ?? ""}
+                                          onChange={(e) => {
+                                            setSalePriceTouched(prev => ({ 
+                                              ...prev, 
+                                              [branchId]: { ...prev[branchId], [variantKey]: true } 
+                                            }))
+                                            setStockEntries(prev => ({
+                                              ...prev,
+                                              [branchId]: { 
+                                                ...prev[branchId], 
+                                                [variantKey]: { ...prev[branchId]?.[variantKey], salePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
+                                              }
+                                            }))
+                                          }}
+                                          placeholder={v.price?.toString() || "0.00"}
+                                          disabled={isLoading}
+                                          className="h-8 mt-1"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
                             </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">{t("unit") || "Unit"}</Label>
-                              <select
-                                value={stock.unitId || form.getValues("unitId") || ""}
-                                onChange={(e) => {
-                                  setStockEntries(prev => ({
-                                    ...prev,
-                                    [branchId]: { ...prev[branchId], unitId: e.target.value }
-                                  }))
-                                }}
-                                disabled={true}
-                                className={cn(
-                                  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                  "disabled:cursor-not-allowed disabled:opacity-50 mt-1"
-                                )}
-                              >
-                                <option value="">{t("selectUnit") || "Select unit"}</option>
-                                {unitOptions.map((unit) => (
-                                  <option key={unit.id} value={unit.id}>
-                                    {unit.name} ({unit.suffix})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                {t("purchasePrice") || "Purchase Price"} <span className="text-red-500">*</span>
-                              </Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={stock.purchasePrice || ""}
-                                onChange={(e) => {
-                                  setStockEntries(prev => ({
-                                    ...prev,
-                                    [branchId]: { ...prev[branchId], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined }
-                                  }))
-                                }}
-                                placeholder="0.00"
-                                disabled={isLoading}
-                                className="mt-1"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                {t("salePrice") || "Sale Price"} <span className="text-red-500">*</span>
-                              </Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={stock.salePrice ?? ""}
-                                onChange={(e) => {
-                                  setSalePriceTouched(prev => ({ ...prev, [branchId]: true }))
-                                  setStockEntries(prev => ({
-                                    ...prev,
-                                    [branchId]: { ...prev[branchId], salePrice: e.target.value ? parseFloat(e.target.value) : undefined }
-                                  }))
-                                }}
-                                placeholder={form.getValues("price")?.toString() || "0.00"}
-                                disabled={isLoading}
-                                className="mt-1"
-                              />
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </Card>
                     )

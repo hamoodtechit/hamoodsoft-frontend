@@ -5,6 +5,8 @@ import { UpdateUserInput } from "@/lib/validations/users"
 import { useAuthStore } from "@/store"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { User } from "@/types"
+import { extractError } from "@/lib/utils/error"
 
 export function useUsers() {
   return useQuery({
@@ -20,7 +22,7 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: (data: UpdateUserInput) => {
       // Get user from query cache first, fallback to store
-      const cachedUser = queryClient.getQueryData<any>(["auth", "profile"])
+      const cachedUser = queryClient.getQueryData<User>(["auth", "profile"])
       const user = cachedUser || storeUser
       
       if (!user?.id) {
@@ -33,28 +35,19 @@ export function useUpdateUser() {
       queryClient.setQueryData(["auth", "profile"], updatedUser)
       toast.success("Profile updated successfully!")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Update user error:", error)
-      console.error("Error response:", error?.response?.data)
-      console.error("Error status:", error?.response?.status)
-      console.error("Request URL:", error?.config?.url)
-      console.error("Request data:", error?.config?.data)
-      
-      const message =
-        error?.response?.data?.message || 
-        error?.message ||
-        "Failed to update profile. Please try again."
-      toast.error(message)
+      toast.error(extractError(error, "Failed to update profile. Please try again."))
     },
   })
 }
 
 export function useUpdatePreferences() {
   const queryClient = useQueryClient()
-  const { user: storeUser, updateUserPreferences } = useAuthStore()
+  const { updateUserPreferences } = useAuthStore()
 
   return useMutation({
-    mutationFn: (preferences: Record<string, any>) => {
+    mutationFn: (preferences: Record<string, unknown>) => {
       return usersApi.updatePreferences(preferences)
     },
     onMutate: async (newPreferences) => {
@@ -63,13 +56,13 @@ export function useUpdatePreferences() {
         updateUserPreferences(newPreferences)
       }
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Refresh profile data or let it be
       queryClient.invalidateQueries({ queryKey: ["auth", "profile"] })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Update preferences error:", error)
-      toast.error("Failed to save layout preferences")
+      toast.error(extractError(error, "Failed to save layout preferences"))
     },
   })
 }

@@ -4,6 +4,7 @@ import { incomeExpenseCategoriesApi, type IncomeExpenseCategoriesListParams } fr
 import { CreateIncomeExpenseCategoryInput, UpdateIncomeExpenseCategoryInput } from "@/lib/validations/income-expense-categories"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useIncomeExpenseCategories(params?: IncomeExpenseCategoriesListParams) {
   const queryKey = [
@@ -40,12 +41,8 @@ export function useCreateIncomeExpenseCategory() {
       queryClient.invalidateQueries({ queryKey: ["income-expense-categories"] })
       toast.success("Category created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create category. Please try again."))
     },
   })
 }
@@ -61,12 +58,8 @@ export function useUpdateIncomeExpenseCategory() {
       queryClient.invalidateQueries({ queryKey: ["income-expense-category"] })
       toast.success("Category updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update category. Please try again."))
     },
   })
 }
@@ -80,12 +73,8 @@ export function useDeleteIncomeExpenseCategory() {
       queryClient.invalidateQueries({ queryKey: ["income-expense-categories"] })
       toast.success("Category deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete category. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete category. Please try again."))
     },
   })
 }

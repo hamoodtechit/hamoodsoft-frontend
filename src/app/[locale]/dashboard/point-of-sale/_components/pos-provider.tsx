@@ -1239,6 +1239,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
         return {
           sku: sku,
+          variantId: item.variantId,
           itemName: item.itemName,
           itemDescription: item.itemDescription || "",
           unit: item.unit,

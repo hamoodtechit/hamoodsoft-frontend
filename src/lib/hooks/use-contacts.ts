@@ -5,6 +5,7 @@ import { CreateContactInput, UpdateContactInput } from "@/lib/validations/contac
 import { Contact } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useContacts(params?: ContactsListParams) {
   const queryKey = [
@@ -41,12 +42,8 @@ export function useCreateContact() {
       queryClient.invalidateQueries({ queryKey: ["contacts"] })
       toast.success("Contact created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create contact. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create contact. Please try again."))
     },
   })
 }
@@ -62,12 +59,8 @@ export function useUpdateContact() {
       queryClient.invalidateQueries({ queryKey: ["contact", updatedContact.id] })
       toast.success("Contact updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update contact. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update contact. Please try again."))
     },
   })
 }
@@ -81,12 +74,8 @@ export function useDeleteContact() {
       queryClient.invalidateQueries({ queryKey: ["contacts"] })
       toast.success("Contact deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete contact. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete contact. Please try again."))
     },
   })
 }

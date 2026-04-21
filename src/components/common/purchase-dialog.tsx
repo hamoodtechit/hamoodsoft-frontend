@@ -1723,85 +1723,69 @@ export function PurchaseDialog({
                                         {t("noResults") || "No product found."}
                                       </CommandEmpty>
                                       <CommandGroup>
-                                        {products.map((product) => (
-                                          <CommandItem
-                                            value={`${product.name} ${product.barcode || ""} ${product.description || ""}`}
-                                            key={product.id}
-                                            onSelect={() => {
-                                              setSelectedProducts((prev) => ({
-                                                ...prev,
-                                                [index]: product,
-                                              }));
-                                              field.onChange(product.name);
-                                              const sku =
-                                                product.barcode ||
-                                                `SKU-${product.id}`;
-                                              form.setValue(
-                                                `items.${index}.sku` as any,
-                                                sku,
-                                              );
-                                              form.setValue(
-                                                `items.${index}.itemDescription` as any,
-                                                product.description || "",
-                                              );
-                                              form.setValue(
-                                                `items.${index}.unit` as any,
-                                                product.unit?.suffix || "",
-                                              );
-                                              form.setValue(
-                                                `items.${index}.price` as any,
-                                                product.price ?? 0,
-                                              );
-                                              form.setValue(
-                                                `items.${index}.discountType` as any,
-                                                "NONE",
-                                              );
-                                              form.setValue(
-                                                `items.${index}.discountAmount` as any,
-                                                0,
-                                              );
-                                              form.setValue(
-                                                `items.${index}.productId` as any,
-                                                product.id,
-                                              );
-                                              form.setValue(
-                                                `items.${index}.itemType` as any,
-                                                "PRODUCT",
-                                              );
+                                        {products.map((product) => {
+                                          const productVariants = product.productVariants || product.variants || []
+                                          
+                                          // If product has no variants, show as a single item
+                                          if (productVariants.length === 0) {
+                                            return (
+                                              <CommandItem
+                                                value={`${product.name} ${product.barcode || ""} ${product.id}`}
+                                                key={product.id}
+                                                onSelect={() => {
+                                                  setSelectedProducts((prev) => ({ ...prev, [index]: product }));
+                                                  field.onChange(product.name);
+                                                  form.setValue(`items.${index}.sku` as any, product.barcode || `SKU-${product.id}`);
+                                                  form.setValue(`items.${index}.itemDescription` as any, product.description || "");
+                                                  form.setValue(`items.${index}.unit` as any, product.unit?.suffix || "");
+                                                  form.setValue(`items.${index}.price` as any, product.price ?? 0);
+                                                  form.setValue(`items.${index}.productId` as any, product.id);
+                                                  form.setValue(`items.${index}.variantId` as any, undefined);
+                                                  form.setValue(`items.${index}.itemType` as any, "PRODUCT");
+                                                  setComboboxOpen((prev) => ({ ...prev, [index]: false }));
+                                                }}
+                                              >
+                                                <Check className={cn("mr-2 h-4 w-4", selectedProducts[index]?.id === product.id ? "opacity-100" : "opacity-0")} />
+                                                <div className="flex flex-col w-full text-sm">
+                                                  <div className="flex justify-between w-full">
+                                                    <span className="font-medium">{product.name}</span>
+                                                    <span className="text-muted-foreground">{product.price} {product.unit?.suffix}</span>
+                                                  </div>
+                                                  {product.barcode && <span className="text-xs text-muted-foreground font-mono">{product.barcode}</span>}
+                                                </div>
+                                              </CommandItem>
+                                            )
+                                          }
 
-                                              setComboboxOpen((prev) => ({
-                                                ...prev,
-                                                [index]: false,
-                                              }));
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                selectedProducts[index]?.id ===
-                                                  product.id
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                            <div className="flex flex-col w-full">
-                                              <div className="flex justify-between w-full">
-                                                <span className="font-medium">
-                                                  {product.name}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                  {product.price}{" "}
-                                                  {product.unit?.suffix || ""}
-                                                </span>
+                                          // If product has variants, show each variant
+                                          return productVariants.map((variant) => (
+                                            <CommandItem
+                                              value={`${product.name} ${variant.variantName} ${variant.sku || ""} ${variant.id}`}
+                                              key={variant.id}
+                                              onSelect={() => {
+                                                setSelectedProducts((prev) => ({ ...prev, [index]: { ...product, selectedVariant: variant } }));
+                                                field.onChange(`${product.name} - ${variant.variantName}`);
+                                                form.setValue(`items.${index}.sku` as any, variant.sku || `SKU-${variant.id}`);
+                                                form.setValue(`items.${index}.itemDescription` as any, product.description || "");
+                                                form.setValue(`items.${index}.unit` as any, (variant as any).unit?.suffix || product.unit?.suffix || "");
+                                                form.setValue(`items.${index}.price` as any, variant.price ?? product.price ?? 0);
+                                                form.setValue(`items.${index}.productId` as any, product.id);
+                                                form.setValue(`items.${index}.variantId` as any, variant.id);
+                                                form.setValue(`items.${index}.itemType` as any, "PRODUCT");
+                                                setComboboxOpen((prev) => ({ ...prev, [index]: false }));
+                                              }}
+                                            >
+                                              <Check className={cn("mr-2 h-4 w-4", selectedProducts[index]?.selectedVariant?.id === variant.id ? "opacity-100" : "opacity-0")} />
+                                              <div className="flex flex-col w-full text-sm">
+                                                <div className="flex justify-between w-full">
+                                                  <span className="font-medium">{product.name} - {variant.variantName}</span>
+                                                  <span className="text-muted-foreground">{variant.price ?? product.price} {product.unit?.suffix}</span>
+                                                </div>
+                                                {variant.sku && <span className="text-xs text-muted-foreground font-mono">{variant.sku}</span>}
                                               </div>
-                                              {product.barcode && (
-                                                <span className="text-xs text-muted-foreground font-mono">
-                                                  {product.barcode}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </CommandItem>
-                                        ))}
+                                            </CommandItem>
+                                          ))
+                                        })}
                                       </CommandGroup>
                                     </CommandList>
                                   </Command>

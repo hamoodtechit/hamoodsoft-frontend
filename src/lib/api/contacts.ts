@@ -18,7 +18,7 @@ type ContactsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -63,7 +63,7 @@ export const contactsApi = {
 
   getContacts: async (params?: ContactsListParams): Promise<PaginatedResult<Contact>> => {
     // Clean params - remove undefined/null/empty values
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof ContactsListParams]

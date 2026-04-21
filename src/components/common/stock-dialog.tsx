@@ -59,6 +59,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
     return {
       branchId: defaultBranchId || "",
       productId: defaultProductId || "",
+      variantId: "",
       unitId: "",
       sku: "",
       quantity: 0,
@@ -72,30 +73,48 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
     defaultValues,
   })
 
-  // Watch productId to auto-fill sale price
-  const productId = useWatch({
+  // Watch productId and variantId to auto-fill prices
+  const watchedFields = useWatch({
     control: form.control,
-    name: "productId",
+    name: ["productId", "variantId"],
   })
+  const productId = watchedFields[0]
+  const variantId = watchedFields[1]
 
-  // Auto-fill sale price when product is selected
+  // Auto-fill price and unit when product/variant is selected
   useEffect(() => {
     if (productId) {
       const selectedProduct = products.find((p) => p.id === productId)
-      if (selectedProduct?.price !== undefined) {
-        // Always populate sale price with product price when product is selected
-        // User can still edit it afterward
-        form.setValue("salePrice", selectedProduct.price, { shouldValidate: false })
+      
+      // If product changed, reset variantId if it doesn't belong to new product
+      if (variantId && selectedProduct && !selectedProduct.variants?.some(v => v.id === variantId)) {
+        form.setValue("variantId", "")
       }
-      if (selectedProduct?.unitId) {
-        form.setValue("unitId", selectedProduct.unitId, { shouldValidate: false })
+
+      if (selectedProduct) {
+        // If variant is selected, use variant price, otherwise use product price
+        const selectedVariant = selectedProduct.variants?.find(v => v.id === variantId)
+        const price = selectedVariant?.price ?? selectedProduct.price
+        const sku = selectedVariant?.sku ?? selectedProduct.sku ?? ""
+        const unitId = selectedVariant?.unitId ?? selectedProduct.unitId
+
+        if (price !== undefined) {
+          form.setValue("salePrice", price, { shouldValidate: false })
+        }
+        if (unitId) {
+          form.setValue("unitId", unitId, { shouldValidate: false })
+        }
+        if (sku) {
+          form.setValue("sku", sku, { shouldValidate: false })
+        }
       }
     } else {
-      // Clear sale price when no product is selected
       form.setValue("salePrice", undefined as any, { shouldValidate: false })
       form.setValue("unitId", "", { shouldValidate: false })
+      form.setValue("sku", "", { shouldValidate: false })
+      form.setValue("variantId", "")
     }
-  }, [productId, products, form])
+  }, [productId, variantId, products, form])
 
   useEffect(() => {
     if (open) {
@@ -158,7 +177,13 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          form.setValue("variantId", "") // Reset variant when product changes
+                        }} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectProduct")} />
@@ -176,6 +201,33 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                     </FormItem>
                   )}
                 />
+
+                {productId && products.find(p => p.id === productId)?.isVariable && (
+                  <FormField
+                    control={form.control}
+                    name="variantId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("variant") || "Variant"}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("selectVariant") || "Select a variant"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.find(p => p.id === productId)?.variants?.map((variant) => (
+                              <SelectItem key={variant.id} value={variant.id}>
+                                {variant.variantName} {variant.sku ? `(${variant.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
