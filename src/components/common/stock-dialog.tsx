@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/select"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useProducts } from "@/lib/hooks/use-products"
-import { useCreateStock } from "@/lib/hooks/use-stocks"
+import { useCreateStock, useStocks } from "@/lib/hooks/use-stocks"
 import { useUnits } from "@/lib/hooks/use-units"
 import { createStockSchema, type CreateStockInput } from "@/lib/validations/stocks"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Package } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 
 interface StockDialogProps {
@@ -42,6 +42,34 @@ interface StockDialogProps {
   onOpenChange: (open: boolean) => void
   defaultBranchId?: string
   defaultProductId?: string
+}
+
+/**
+ * Generates the next available unique SKU by examining existing stock SKUs.
+ * Given a base SKU like "PROD-001", it finds all stocks matching the pattern
+ * "PROD-001", "PROD-001-001", "PROD-001-002", etc. and returns the next suffix.
+ */
+function generateNextSku(baseSku: string, existingSkus: string[]): string {
+  if (!baseSku) return ""
+
+  // Check if the base SKU itself is already taken
+  const isBaseTaken = existingSkus.some(s => s === baseSku)
+  if (!isBaseTaken) return baseSku
+
+  // Find all existing suffixed variants matching the pattern: baseSku-NNN
+  const suffixPattern = new RegExp(`^${baseSku.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d{3})$`)
+  let maxSuffix = 0
+
+  existingSkus.forEach(sku => {
+    const match = sku.match(suffixPattern)
+    if (match) {
+      const num = parseInt(match[1], 10)
+      if (num > maxSuffix) maxSuffix = num
+    }
+  })
+
+  const nextSuffix = (maxSuffix + 1).toString().padStart(3, '0')
+  return `${baseSku}-${nextSuffix}`
 }
 
 export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProductId }: StockDialogProps) {
@@ -81,6 +109,27 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
   const productId = watchedFields[0]
   const variantId = watchedFields[1]
 
+  // Fetch existing stocks for the selected product (business-wide) to determine unique SKU suffix
+  const { data: existingStocksData } = useStocks({
+    productId: productId || undefined,
+    limit: 200,
+  })
+
+  // Collect all existing stock SKUs for the current product
+  const existingStockSkus = useMemo(() => {
+    const skus: string[] = []
+    if (existingStocksData?.items) {
+      existingStocksData.items.forEach(stock => {
+        if (stock.sku) skus.push(stock.sku)
+      })
+    }
+    return skus
+  }, [existingStocksData])
+
+  const getUniqueSku = useCallback((baseSku: string) => {
+    return generateNextSku(baseSku, existingStockSkus)
+  }, [existingStockSkus])
+
   // Auto-fill price and unit when product/variant is selected
   useEffect(() => {
     if (productId) {
@@ -95,7 +144,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
         // If variant is selected, use variant price, otherwise use product price
         const selectedVariant = selectedProduct.variants?.find(v => v.id === variantId)
         const price = selectedVariant?.price ?? selectedProduct.price
-        const sku = selectedVariant?.sku ?? selectedProduct.sku ?? ""
+        const baseSku = selectedVariant?.sku ?? selectedProduct.sku ?? ""
         const unitId = selectedVariant?.unitId ?? selectedProduct.unitId
 
         if (price !== undefined) {
@@ -104,8 +153,10 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
         if (unitId) {
           form.setValue("unitId", unitId, { shouldValidate: false })
         }
-        if (sku) {
-          form.setValue("sku", sku, { shouldValidate: false })
+        if (baseSku) {
+          // Generate a unique SKU by appending a suffix if the base SKU is already taken
+          const uniqueSku = getUniqueSku(baseSku)
+          form.setValue("sku", uniqueSku, { shouldValidate: false })
         }
       }
     } else {
@@ -114,7 +165,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
       form.setValue("sku", "", { shouldValidate: false })
       form.setValue("variantId", "")
     }
-  }, [productId, variantId, products, form])
+  }, [productId, variantId, products, form, getUniqueSku])
 
   useEffect(() => {
     if (open) {

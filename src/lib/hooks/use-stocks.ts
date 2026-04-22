@@ -12,7 +12,7 @@ export function useStocks(params?: StocksListParams) {
     queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId, params?.fuelTypeId, params?.tankerId, params?.itemType],
     queryFn: () => stocksApi.list(params),
     refetchOnWindowFocus: true,
-    enabled: !!params?.branchId,
+    enabled: !!(params?.branchId || params?.productId),
   })
 }
 
