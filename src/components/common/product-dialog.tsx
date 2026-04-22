@@ -41,12 +41,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAttributes, useCreateAttribute } from "@/lib/hooks/use-attributes"
-import { useBranches } from "@/lib/hooks/use-branches"
+
 import { useBrands, useCreateBrand } from "@/lib/hooks/use-brands"
-import { useCategories, useCreateCategory } from "@/lib/hooks/use-categories"
+import { useCategories } from "@/lib/hooks/use-categories"
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products"
-import { useCreateStock } from "@/lib/hooks/use-stocks"
-import { useCreateUnit, useUnits } from "@/lib/hooks/use-units"
+
+import { useUnits } from "@/lib/hooks/use-units"
 import { cn } from "@/lib/utils"
 import {
   createProductSchema,
@@ -54,7 +54,7 @@ import {
   type CreateProductInput,
   type UpdateProductInput,
 } from "@/lib/validations/products"
-import { Branch, Brand, Category, Product, ProductVariant, ProductVariantInput, Stock, Unit } from "@/types"
+import { Brand, Category, Product, ProductVariant, ProductVariantInput, Unit } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "@tiptap/extension-link"
 import { EditorContent, useEditor } from "@tiptap/react"
@@ -63,7 +63,7 @@ import { ChevronDown, Image as ImageIcon, Package, Plus, Search, X } from "lucid
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
-import { toast } from "sonner"
+
 
 interface ProductDialogProps {
   product: Product | null
@@ -99,15 +99,12 @@ function cartesianProduct<T>(arrays: T[][]): T[][] {
   return result
 }
 
-// Rich Text Editor Component
 function RichTextEditor({
   field,
   isLoading,
-  placeholder,
 }: {
   field: { value: string; onChange: (value: string) => void }
   isLoading: boolean
-  placeholder?: string
 }) {
   const editor = useEditor({
     extensions: [
@@ -247,18 +244,16 @@ function RichTextEditor({
 
 export function ProductDialog({ product, open, onOpenChange }: ProductDialogProps) {
   const t = useTranslations("products")
-  const tStocks = useTranslations("stocks")
+
   const tCommon = useTranslations("common")
   const tAttributes = useTranslations("attributes")
   const { data: units = [] } = useUnits()
   const { data: categories = [] } = useCategories()
-  const { data: branches = [] } = useBranches()
   const { data: brandsData } = useBrands()
   const brands = brandsData?.items || []
   
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
-  const createStockMutation = useCreateStock()
 
   const isEdit = !!product
   const isLoading = createMutation.isPending || updateMutation.isPending
@@ -287,36 +282,19 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     // Handle both variants and productVariants from API
     const variantsRaw = product.productVariants || product.variants || []
 
-    console.log("🔍 Product Dialog - Loading variants for edit:", {
-      productId: product.id,
-      productName: product.name,
-      variantsRaw,
-      variantsRawLength: variantsRaw.length,
-    })
+
 
     // Normalize variants to ensure they have the correct structure for the form
-    const variants = (variantsRaw as (ProductVariant | ProductVariantInput)[]).map((v, index) => {
-      const normalized = {
-        id: v.id,
-        variantName: v.variantName || "",
-        sku: v.sku || "",
-        price: v.price ?? 0,
-        unitId: v.unitId || "",
-        options: v.options || {},
-        thumbnailUrl: v.thumbnailUrl || undefined,
-        images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
-      }
-      
-      console.log(`  Variant ${index}:`, {
-        original: v,
-        normalized,
-        hasThumbnail: !!normalized.thumbnailUrl,
-        hasImages: !!normalized.images,
-        imagesCount: normalized.images?.length || 0,
-      })
-      
-      return normalized
-    })
+    const variants = (variantsRaw as (ProductVariant | ProductVariantInput)[]).map((v) => ({
+      id: v.id,
+      variantName: v.variantName || "",
+      sku: v.sku || "",
+      price: v.price ?? 0,
+      unitId: v.unitId || "",
+      options: v.options || {},
+      thumbnailUrl: v.thumbnailUrl || undefined,
+      images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
+    }))
     return {
       name: product.name || "",
       description: product.description || "",
@@ -395,25 +373,23 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
-  // Stock entries per branch and per variant: { branchId: { [variantKey]: { quantity, purchasePrice, salePrice, unitId, sku } } }
-  // variantKey is "main" for non-variable products, or "index_N" for new variants
-  const [stockEntries, setStockEntries] = useState<Record<string, Record<string, { quantity: number; purchasePrice?: number; salePrice?: number; unitId: string; sku?: string }>>>({})
-  // Track which branch stock sale prices have been manually edited by the user
-  const [salePriceTouched, setSalePriceTouched] = useState<Record<string, Record<string, boolean>>>({})
+
   const createAttributeMutation = useCreateAttribute()
-  const createUnitMutation = useCreateUnit()
   const createBrandMutation = useCreateBrand()
-  const createCategoryMutation = useCreateCategory()
   const lastProcessedAttributesRef = useRef<string>("")
 
   // Track if we've initialized from product variants (to prevent resetting user selections)
   const hasInitializedFromProduct = useRef(false)
+  // Track if user has manually changed attribute selections after initialization
+  const userHasModifiedSelections = useRef(false)
   const previousProductIdRef = useRef<string | null>(null)
 
+  // Effect 1: Initialize form and attribute selections when dialog opens for editing
   useEffect(() => {
     // Only reset form when product changes or dialog opens/closes
     if (!open) {
       hasInitializedFromProduct.current = false
+      userHasModifiedSelections.current = false
       previousProductIdRef.current = null
       return
     }
@@ -438,8 +414,6 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     const existingVariants = product?.productVariants || product?.variants || []
 
     // Only initialize if we have variants, attributes are loaded, and haven't initialized yet
-    // Wait for attributes to be available before trying to match them
-    // Also ensure product exists (for edit mode)
     if (
       product &&
       existingVariants.length > 0 &&
@@ -448,7 +422,6 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       open
     ) {
       // Extract selected attributes and values from existing variants
-      // Options keys might be in format: "attr-color", "attr-size", or attribute IDs, or attribute names
       const attrIds = new Set<string>()
       const attrValuesMap: Record<string, Set<string>> = {}
 
@@ -459,7 +432,6 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
           // Handle "attr-{name}" format (e.g., "attr-color" -> "Color")
           if (key.startsWith("attr-")) {
             const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
-            // Convert to title case: "color" -> "Color", "size" -> "Size"
             const normalizedName = attrName
               .split(" ")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -468,10 +440,8 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
               (a) => a.name.toLowerCase() === normalizedName.toLowerCase()
             )
           } else {
-            // Try to find attribute by name (if API returns names as keys)
             attr = availableAttributes.find((a) => a.name === key)
             if (!attr) {
-              // Otherwise, assume it's an ID
               attr = availableAttributes.find((a) => a.id === key)
             }
           }
@@ -486,17 +456,18 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         })
       })
       
-      // Only set selections if we found matching attributes
+      // Mark as initialized BEFORE setting state to prevent re-entry
+      hasInitializedFromProduct.current = true
+
       if (attrIds.size > 0) {
         setSelectedAttributeIds(Array.from(attrIds))
-        // Convert Sets to arrays for selectedAttributeValues
         const selectedValues: Record<string, string[]> = {}
         Object.entries(attrValuesMap).forEach(([attrId, values]) => {
           selectedValues[attrId] = Array.from(values)
         })
         setSelectedAttributeValues(selectedValues)
         
-        // Set the processed attributes ref to prevent immediate regeneration during initialization
+        // Set the processed attributes ref to prevent immediate regeneration
         const initAttributesKey = JSON.stringify({
           ids: Array.from(attrIds).sort(),
           values: Object.entries(attrValuesMap).map(([attrId, values]) => ({
@@ -509,21 +480,20 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         // Load existing variants into the form (preserve ALL fields including id for updates)
         replace(
           (existingVariants as (ProductVariant & PRODUCT_VARIANT_FIELDS)[]).map((v) => ({
-            id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
-          variantName: v.variantName || "",
-          sku: v.sku || "",
-          price: v.price ?? 0, // Price is required
-          unitId: v.unitId || undefined,
-          options: v.options || {},
-          thumbnailUrl: v.thumbnailUrl || undefined,
-          images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
-        })))
-        
-        hasInitializedFromProduct.current = true
+            id: v.id,
+            variantName: v.variantName || "",
+            sku: v.sku || "",
+            price: v.price ?? 0,
+            unitId: v.unitId || undefined,
+            options: v.options || {},
+            thumbnailUrl: v.thumbnailUrl || undefined,
+            images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
+          }))
+        )
       } else {
-        // No matching attributes found, but still load variants (preserve ALL fields including id)
-        replace(existingVariants.map((v: any) => ({
-          id: v.id, // CRITICAL: Preserve id for updates - backend uses this to identify existing variants
+        // No matching attributes found, but still load variants
+        replace(existingVariants.map((v) => ({
+          id: v.id,
           variantName: v.variantName || "",
           sku: v.sku || "",
           price: v.price ?? 0,
@@ -532,94 +502,33 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
           thumbnailUrl: v.thumbnailUrl || undefined,
           images: v.images && Array.isArray(v.images) && v.images.length > 0 ? v.images : undefined,
         })))
-        hasInitializedFromProduct.current = true
       }
-    } else if (!product) {
-      // For new products, only clear on initial open if no selections exist
-      // This preserves user selections when they scroll/interact with form
-      if (!hasInitializedFromProduct.current && Object.keys(selectedAttributeValues).length === 0) {
-        setSelectedAttributeIds([])
-        setSelectedAttributeValues({})
-        replace([])
-        hasInitializedFromProduct.current = true
-      }
+    } else if (!product && !hasInitializedFromProduct.current) {
+      // For new products, clear on initial open
+      setSelectedAttributeIds([])
+      setSelectedAttributeValues({})
+      replace([])
+      hasInitializedFromProduct.current = true
     }
-  }, [open, product?.id, form, replace, availableAttributes, attributesData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, product, availableAttributes])
 
   // Reset state when dialog closes completely
   useEffect(() => {
     if (!open) {
-      // Reset flag when dialog closes so state can be re-initialized on next open
       hasInitializedFromProduct.current = false
-      // Clear selections when dialog closes
+      userHasModifiedSelections.current = false
       setSelectedAttributeIds([])
       setSelectedAttributeValues({})
       lastProcessedAttributesRef.current = ""
     }
   }, [open])
 
-  // Auto-generate variants when attributes are selected
+  // Effect 2: Auto-generate variants when user manually changes attribute selections
   useEffect(() => {
-    // Skip variant generation if we're still initializing from existing product
-    // This prevents regeneration during the initial load
-    if (hasInitializedFromProduct.current && product) {
-      const existingVariants = (product as any)?.productVariants || product?.variants || []
-      if (existingVariants.length > 0) {
-        const currentVariants = form.getValues("variants") || []
-        // Only skip if variants are loaded and selections haven't changed
-        if (currentVariants.length > 0) {
-          // Check if selected values match existing variant options
-          const existingValuesMap: Record<string, Set<string>> = {}
-          existingVariants.forEach((v: any) => {
-            Object.entries(v.options || {}).forEach(([key, value]) => {
-              let attr: { id: string; name: string } | undefined
-              
-              if (key.startsWith("attr-")) {
-                const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
-                const normalizedName = attrName
-                  .split(" ")
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                  .join(" ")
-                attr = availableAttributes.find(
-                  (a) => a.name.toLowerCase() === normalizedName.toLowerCase()
-                )
-              } else {
-                attr = availableAttributes.find((a) => a.name === key || a.id === key)
-              }
-              
-              if (attr) {
-                if (!existingValuesMap[attr.id]) {
-                  existingValuesMap[attr.id] = new Set<string>()
-                }
-                existingValuesMap[attr.id].add(value as string)
-              }
-            })
-          })
-          
-          // Compare with selected values
-          const selectedValuesMatch = Object.keys(existingValuesMap).every((attrId) => {
-            const existingValues = Array.from(existingValuesMap[attrId] || []).sort()
-            const selectedValues = (selectedAttributeValues[attrId] || []).sort()
-            return (
-              existingValues.length === selectedValues.length &&
-              existingValues.every((val) => selectedValues.includes(val))
-            )
-          })
-          
-          // If they match and same number of attributes, don't regenerate (user hasn't changed selections yet)
-          if (selectedValuesMatch && Object.keys(existingValuesMap).length === Object.keys(selectedAttributeValues).length) {
-            // Mark that initialization is complete, allow future regenerations
-            hasInitializedFromProduct.current = false
-            return
-          } else {
-            // Selections have changed, allow regeneration
-            hasInitializedFromProduct.current = false
-          }
-        }
-      } else {
-        // No existing variants, allow regeneration
-        hasInitializedFromProduct.current = false
-      }
+    // Skip during initial load - Effect 1 handles loading existing variants
+    if (!userHasModifiedSelections.current) {
+      return
     }
 
     // Create a key from selected attribute IDs and their values
@@ -630,7 +539,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       ids: selectedAttributeIds.sort(),
       values: selectedAttributes.map((attr) => ({
         id: attr.id,
-        values: (selectedAttributeValues[attr.id] || []).sort(), // Use SELECTED values, not all values
+        values: (selectedAttributeValues[attr.id] || []).sort(),
       })),
     })
 
@@ -679,8 +588,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       const options: Record<string, string> = {}
       const variantNameParts: string[] = []
 
-      combination.forEach(({ attributeId, attributeName, value }) => {
-        // Use "attr-{name}" format as key (e.g., "attr-color", "attr-size") - matches backend DTO example
+      combination.forEach(({ attributeName, value }) => {
         const key = `attr-${attributeName.toLowerCase().replace(/\s+/g, "-")}`
         options[key] = value
         variantNameParts.push(value)
@@ -689,8 +597,8 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
       return {
         variantName: variantNameParts.join(" / "),
         options,
-        sku: "", // Empty SKU - user can fill or auto-generate
-        price: 0, // Required - default to 0, user must set
+        sku: "",
+        price: 0,
         thumbnailUrl: "",
         images: [],
       }
@@ -701,41 +609,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }, [selectedAttributeIds, selectedAttributeValues, availableAttributes])
 
   const onSubmit = (data: CreateProductInput | UpdateProductInput) => {
-    // Validate stock entries for selected branches
-    if (!isEdit && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0) {
-      const stockErrors: string[] = []
-      
-      selectedBranchIds.forEach((branchId) => {
-        const branch = branchOptions.find((b) => b.id === branchId)
-        const branchStocks = stockEntries[branchId]
-        const branchName = branch?.name || branchId
 
-        if (!branchStocks || Object.keys(branchStocks).length === 0) {
-          stockErrors.push(`${branchName}: ${tStocks("missingDetails") || "Stock details are missing"}`)
-          return
-        }
-
-        // Validate each variant's stock for this branch
-        Object.entries(branchStocks).forEach(([variantKey, stock]) => {
-          const variantNameSuffix = variantKey === "main" ? "" : ` (${variantKey})`
-          
-          if (!stock.quantity || stock.quantity <= 0) {
-            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("quantityRequired") || "Quantity is required and must be greater than zero"}`)
-          }
-          if (!stock.purchasePrice || stock.purchasePrice <= 0) {
-            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("purchasePriceRequired") || "Purchase price is required"}`)
-          }
-          if (!stock.salePrice || stock.salePrice <= 0) {
-            stockErrors.push(`${branchName}${variantNameSuffix}: ${tStocks("salePriceRequired") || "Sale price is required"}`)
-          }
-        })
-      })
-
-      if (stockErrors.length > 0) {
-        toast.error(`${tStocks("validationError") || "Please fix stock errors"}:\n${stockErrors.join("\n")}`)
-        return
-      }
-    }
 
 
     // Clean up empty strings - convert to undefined for optional fields
@@ -754,7 +628,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
 
     // Remove pricing fields that are managed in stock, not product
     // Remove fields that are not part of updateProductSchema if they exist
-    const cleanedData = { ...data } as any
+    const cleanedData = { ...data } as CreateProductInput & { purchasePrice?: number; salePrice?: number; profitMarginAmount?: number; profitMarginPercent?: number }
     delete cleanedData.purchasePrice
     delete cleanedData.salePrice
     delete cleanedData.profitMarginAmount
@@ -843,7 +717,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         }
 
         return cleanedVariant
-      }).filter((v: any) => v.variantName && v.variantName.length > 0) // Remove variants with empty names
+      }).filter((v) => v.variantName && (v.variantName as string).length > 0) // Remove variants with empty names
     }
 
     // Always set barcodeType to EAN_13
@@ -872,59 +746,10 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     }
 
     createMutation.mutate(data as CreateProductInput, {
-      onSuccess: async (createdProduct) => {
-        // Create stock entries for each selected branch and variant
-        if (createdProduct && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0) {
-          const variants = createdProduct.productVariants || []
-          const stockPromises: Promise<(Stock & { consolidated?: boolean }) | null>[] = []
-
-          selectedBranchIds.forEach((branchId: string) => {
-            const branchStocks = stockEntries[branchId] || {}
-            
-            Object.entries(branchStocks).forEach(([variantKey, stock]) => {
-              if (stock && stock.quantity > 0 && stock.unitId) {
-                let variantId: string | undefined
-                
-                if (variantKey === "main") {
-                  // Single product, no variantId needed
-                } else if (variantKey.startsWith("index_")) {
-                  const idx = parseInt(variantKey.replace("index_", ""), 10)
-                  variantId = variants[idx]?.id
-                }
-
-                stockPromises.push(
-                  createStockMutation.mutateAsync({
-                    branchId,
-                    productId: createdProduct.id,
-                    variantId,
-                    unitId: stock.unitId,
-                    itemType: 'PRODUCT' as const,
-                    quantity: stock.quantity,
-                    purchasePrice: stock.purchasePrice ?? 0,
-                    salePrice: stock.salePrice ?? 0,
-                    sku: stock.sku || undefined,
-                  }).catch((error) => {
-                    console.error(`Error creating stock for branch ${branchId}, variant ${variantKey}:`, error)
-                    return null
-                  })
-                )
-              }
-            })
-          })
-          
-          try {
-            if (stockPromises.length > 0) {
-              await Promise.all(stockPromises)
-            }
-          } catch (error) {
-            console.error("Error creating stock entries:", error)
-          }
-        }
-        
+      onSuccess: async () => {
         onOpenChange(false)
         form.reset()
         setSelectedAttributeIds([])
-        setStockEntries({})
       },
       onError: (error) => {
         if (process.env.NODE_ENV === "development") {
@@ -935,69 +760,11 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
   }
 
   const unitOptions = units as Unit[]
-  const branchOptions = branches as Branch[]
   const brandOptions = brands as Brand[]
   
-  // Watch branchIds to get selected branches for stock section
-  const selectedBranchIds = useWatch({
-    control: form.control,
-    name: "branchIds",
-  }) || []
 
-  // Watch product price to auto-fill sale price in stock entries
-  const watchedProductPrice = useWatch({
-    control: form.control,
-    name: "price",
-  })
 
-  // Auto-fill sale price from product price for untouched entries
-  useEffect(() => {
-    if (watchedProductPrice !== undefined && watchedProductPrice !== null) {
-      setStockEntries(prev => {
-        const updated = { ...prev }
-        let changed = false
-        for (const branchId of Object.keys(updated)) {
-          const branchStocks = updated[branchId]
-          for (const variantKey of Object.keys(branchStocks)) {
-            if (!salePriceTouched[branchId]?.[variantKey]) {
-              branchStocks[variantKey] = { 
-                ...branchStocks[variantKey], 
-                salePrice: Number(watchedProductPrice) 
-              }
-              changed = true
-            }
-          }
-        }
-        return changed ? updated : prev
-      })
-    }
-  }, [watchedProductPrice, salePriceTouched])
 
-  // Watch unitId from the main form to auto-fill branch stock units
-  const watchedUnitId = useWatch({
-    control: form.control,
-    name: "unitId",
-  })
-
-  // Auto-fill unitId into all stock entries
-  useEffect(() => {
-    if (watchedUnitId) {
-      setStockEntries(prev => {
-        const updated = { ...prev }
-        let changed = false
-        for (const branchId of Object.keys(updated)) {
-          const branchStocks = updated[branchId]
-          for (const variantKey of Object.keys(branchStocks)) {
-            if (branchStocks[variantKey].unitId !== watchedUnitId) {
-              branchStocks[variantKey] = { ...branchStocks[variantKey], unitId: watchedUnitId }
-              changed = true
-            }
-          }
-        }
-        return changed ? updated : prev
-      })
-    }
-  }, [watchedUnitId])
 
   // Flatten categories to include all (parent + children) for selection
   const flattenCategoriesForSelection = useMemo(() => {
@@ -1030,8 +797,9 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     
     const getChildrenIds = (cat: Category): string[] => {
       const childrenIds: string[] = []
-      if ((cat as any).children && Array.isArray((cat as any).children)) {
-        (cat as any).children.forEach((child: Category) => {
+      const catWithChildren = cat as Category & { children?: Category[] }
+      if (catWithChildren.children && Array.isArray(catWithChildren.children)) {
+        catWithChildren.children.forEach((child: Category) => {
           childrenIds.push(child.id)
           childrenIds.push(...getChildrenIds(child))
         })
@@ -1046,9 +814,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
     return map
   }, [flattenCategoriesForSelection])
 
-  const selectedAttributes = availableAttributes.filter((attr) =>
-    selectedAttributeIds.includes(attr.id)
-  )
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1094,7 +860,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                 <FormItem>
                   <FormLabel>{t("descriptionLabel")}</FormLabel>
                   <FormControl>
-                    <RichTextEditor field={field} isLoading={isLoading} placeholder={t("descriptionPlaceholder")} />
+                    <RichTextEditor field={field} isLoading={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1190,6 +956,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                           const newBrandId = e.target.value
                           field.onChange(newBrandId)
                           // Clear selected attributes when brand changes (but don't reset form)
+                          userHasModifiedSelections.current = true
                           setSelectedAttributeIds([])
                           setSelectedAttributeValues({})
                           replace([])
@@ -1385,333 +1152,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
               }}
             />
 
-            <FormField
-              control={form.control}
-              name="branchIds"
-              render={({ field }) => {
-                const selected = Array.isArray(field.value) ? field.value : []
-                return (
-                  <FormItem>
-                    <FormLabel>{t("branchesOptional")}</FormLabel>
-                    <FormControl>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {branchOptions.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">{t("noBranchesHint")}</p>
-                        ) : (
-                          branchOptions.map((b) => {
-                            const checked = selected.includes(b.id)
-                            return (
-                              <label
-                                key={b.id}
-                                className={cn(
-                                  "flex items-center gap-2 rounded-md border p-2",
-                                  checked ? "border-primary bg-primary/5" : "border-border"
-                                )}
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(val) => {
-                                    const next = val
-                                      ? [...selected, b.id]
-                                      : selected.filter((id) => id !== b.id)
-                                    field.onChange(next)
-                                    // Initialize stock entry for new branch
-                                    if (val && !stockEntries[b.id]) {
-                                      const variants = form.getValues("variants") || []
-                                      interface StockEntryValue {
-                                        quantity: number;
-                                        unitId: string;
-                                        salePrice?: number;
-                                        sku?: string;
-                                      }
-                                      const initialBranchStocks: Record<string, StockEntryValue> = {}
-                                      
-                                      if (variants.length === 0) {
-                                        initialBranchStocks["main"] = { 
-                                          quantity: 0, 
-                                          unitId: form.getValues("unitId") || "", 
-                                          salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined 
-                                        }
-                                      } else {
-                                        variants.forEach((_, idx) => {
-                                          initialBranchStocks[`index_${idx}`] = { 
-                                            quantity: 0, 
-                                            unitId: form.getValues("unitId") || "", 
-                                            salePrice: form.getValues("price") ? Number(form.getValues("price")) : undefined 
-                                          }
-                                        })
-                                      }
-                                      
-                                      setStockEntries(prev => ({
-                                        ...prev,
-                                        [b.id]: initialBranchStocks
-                                      }))
-                                    } else if (!val) {
-                                      // Remove stock entry when branch is unchecked
-                                      setStockEntries(prev => {
-                                        const updated = { ...prev }
-                                        delete updated[b.id]
-                                        return updated
-                                      })
-                                    }
-                                  }}
-                                  disabled={isLoading}
-                                />
-                                <span className="text-sm">{b.name}</span>
-                              </label>
-                            )
-                          })
-                        )}
-                      </div>
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">{t("branchesHint")}</p>
-                    <FormMessage />
-                  </FormItem>
-                )
-              }}
-            />
 
-            {/* Stock Section - Only show when creating (not editing) */}
-            {!isEdit && Array.isArray(selectedBranchIds) && selectedBranchIds.length > 0 && (
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  <Label className="text-base font-semibold">{t("stock") || "Stock Information"}</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("stockDescription") || "Add stock information for each selected branch"}
-                </p>
-                <div className="space-y-4">
-                  {selectedBranchIds.map((branchId: string) => {
-                    const branch = branchOptions.find(b => b.id === branchId)
-                    const variants = form.watch("variants") || []
-                    const branchStocks = stockEntries[branchId] || {}
-                    
-                    return (
-                      <Card key={branchId} className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label className="font-bold text-lg text-primary">{branch?.name || "Branch"}</Label>
-                          </div>
-                          
-                          {variants.length === 0 ? (
-                            // Non-variable product stock input
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                              <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  {t("quantity") || "Quantity"} <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={branchStocks["main"]?.quantity || ""}
-                                  onChange={(e) => {
-                                    setStockEntries(prev => ({
-                                      ...prev,
-                                      [branchId]: { 
-                                        ...prev[branchId], 
-                                        ["main"]: { ...prev[branchId]?.["main"], quantity: parseFloat(e.target.value) || 0 } 
-                                      }
-                                    }))
-                                  }}
-                                  placeholder="0"
-                                  disabled={isLoading}
-                                  className="mt-1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-muted-foreground">{t("sku") || "SKU"}</Label>
-                                <Input
-                                  value={branchStocks["main"]?.sku || ""}
-                                  onChange={(e) => {
-                                    setStockEntries(prev => ({
-                                      ...prev,
-                                      [branchId]: { 
-                                        ...prev[branchId], 
-                                        ["main"]: { ...prev[branchId]?.["main"], sku: e.target.value || undefined } 
-                                      }
-                                    }))
-                                  }}
-                                  placeholder={t("skuPlaceholder")}
-                                  disabled={isLoading}
-                                  className="mt-1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  {t("purchasePrice") || "Purchase Price"} <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={branchStocks["main"]?.purchasePrice || ""}
-                                  onChange={(e) => {
-                                    setStockEntries(prev => ({
-                                      ...prev,
-                                      [branchId]: { 
-                                        ...prev[branchId], 
-                                        ["main"]: { ...prev[branchId]?.["main"], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
-                                      }
-                                    }))
-                                  }}
-                                  placeholder="0.00"
-                                  disabled={isLoading}
-                                  className="mt-1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-muted-foreground">
-                                  {t("salePrice") || "Sale Price"} <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={branchStocks["main"]?.salePrice ?? ""}
-                                  onChange={(e) => {
-                                    setSalePriceTouched(prev => ({ 
-                                      ...prev, 
-                                      [branchId]: { ...prev[branchId], ["main"]: true } 
-                                    }))
-                                    setStockEntries(prev => ({
-                                      ...prev,
-                                      [branchId]: { 
-                                        ...prev[branchId], 
-                                        ["main"]: { ...prev[branchId]?.["main"], salePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
-                                      }
-                                    }))
-                                  }}
-                                  placeholder={form.getValues("price")?.toString() || "0.00"}
-                                  disabled={isLoading}
-                                  className="mt-1"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            // Variable product - Stock per variant
-                            <div className="space-y-4 border rounded-md p-3 bg-muted/20">
-                              {variants.map((v, idx) => {
-                                const variantKey = `index_${idx}`
-                                const stock = branchStocks[variantKey] || { 
-                                  quantity: 0, 
-                                  unitId: form.getValues("unitId") || "",
-                                  salePrice: v.price
-                                }
-                                
-                                return (
-                                  <div key={variantKey} className={cn("p-3 rounded-lg border bg-background", idx !== 0 && "mt-3")}>
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                                        {v.variantName || `Variant ${idx + 1}`}
-                                      </Badge>
-                                    </div>
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                      <div>
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
-                                          {t("quantity") || "Qty"} <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          value={stock.quantity || ""}
-                                          onChange={(e) => {
-                                            setStockEntries(prev => ({
-                                              ...prev,
-                                              [branchId]: { 
-                                                ...prev[branchId], 
-                                                [variantKey]: { ...prev[branchId]?.[variantKey], quantity: parseFloat(e.target.value) || 0 } 
-                                              }
-                                            }))
-                                          }}
-                                          placeholder="0"
-                                          disabled={isLoading}
-                                          className="h-8 mt-1"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">{t("sku") || "SKU"}</Label>
-                                        <Input
-                                          value={stock.sku || ""}
-                                          onChange={(e) => {
-                                            setStockEntries(prev => ({
-                                              ...prev,
-                                              [branchId]: { 
-                                                ...prev[branchId], 
-                                                [variantKey]: { ...prev[branchId]?.[variantKey], sku: e.target.value || undefined } 
-                                              }
-                                            }))
-                                          }}
-                                          placeholder="Variant SKU"
-                                          disabled={isLoading}
-                                          className="h-8 mt-1"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
-                                          {t("purchasePrice") || "Purchase"} <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          value={stock.purchasePrice || ""}
-                                          onChange={(e) => {
-                                            setStockEntries(prev => ({
-                                              ...prev,
-                                              [branchId]: { 
-                                                ...prev[branchId], 
-                                                [variantKey]: { ...prev[branchId]?.[variantKey], purchasePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
-                                              }
-                                            }))
-                                          }}
-                                          placeholder="0.00"
-                                          disabled={isLoading}
-                                          className="h-8 mt-1"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
-                                          {t("salePrice") || "Sale"} <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          value={stock.salePrice ?? ""}
-                                          onChange={(e) => {
-                                            setSalePriceTouched(prev => ({ 
-                                              ...prev, 
-                                              [branchId]: { ...prev[branchId], [variantKey]: true } 
-                                            }))
-                                            setStockEntries(prev => ({
-                                              ...prev,
-                                              [branchId]: { 
-                                                ...prev[branchId], 
-                                                [variantKey]: { ...prev[branchId]?.[variantKey], salePrice: e.target.value ? parseFloat(e.target.value) : undefined } 
-                                              }
-                                            }))
-                                          }}
-                                          placeholder={v.price?.toString() || "0.00"}
-                                          disabled={isLoading}
-                                          className="h-8 mt-1"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Product Images */}
             <div className="space-y-3">
@@ -1964,6 +1405,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                               <Checkbox
                                 checked={hasSelectedValues}
                                 onCheckedChange={(val) => {
+                                  userHasModifiedSelections.current = true
                                   if (val) {
                                     // Select all values
                                     setSelectedAttributeValues((prev) => ({
@@ -2002,6 +1444,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
                                     <Checkbox
                                       checked={isValueSelected}
                                       onCheckedChange={(val) => {
+                                        userHasModifiedSelections.current = true
                                         const currentValues = selectedAttributeValues[attr.id] || []
                                         let newValues: string[]
                                         

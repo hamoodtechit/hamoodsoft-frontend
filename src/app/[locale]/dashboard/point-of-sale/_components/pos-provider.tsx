@@ -630,7 +630,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
             id: variant.id || '',
             productId: product.id,
             sku: skuId,
-            price: variant.price ?? stock.salePrice ?? product.price ?? 0,
+            price: stock.salePrice ?? variant.price ?? product.price ?? 0,
             unitId: variant.unitId || product.unitId,
             variantName: variant.variantName || '',
             options: variant.options || {},
@@ -788,7 +788,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     const variantEntry = variants.find(v => v.sku === finalSku)
     const finalStock = variantEntry?.stock
 
-    const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
+    // Price priority: stock level > variant level > product level
+    const price = finalStock?.salePrice ?? variant?.price ?? product.price ?? 0
     const availableQty = finalStock?.quantity || (variant ? 0 : (product.manageStocks === false ? 999999 : 0))
 
     if (existingItemIndex >= 0) {
@@ -940,6 +941,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (foundVariant) {
+        // Price priority: stock level > variant level > product level
         const variantPrice = foundStock?.salePrice ?? foundVariant.price ?? foundProduct.price ?? 0
 
         const variantData: ProductVariant = {

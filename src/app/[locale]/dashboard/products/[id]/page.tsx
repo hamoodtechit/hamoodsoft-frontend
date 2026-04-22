@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useProduct } from "@/lib/hooks/use-products"
+import { Branch, ProductVariant } from "@/types"
 import { ArrowLeft, Edit, Package } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -32,9 +33,9 @@ export default function ProductDetailsPage() {
 
   // Create branch map for quick lookup
   const branchMap = useMemo(() => {
-    const map = new Map()
-    if (branches) {
-      branches.forEach((branch) => {
+    const map = new Map<string, Branch>()
+    if (Array.isArray(branches)) {
+      (branches as unknown as Branch[]).forEach((branch) => {
         map.set(branch.id, branch)
       })
     }
@@ -317,8 +318,7 @@ export default function ProductDetailsPage() {
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {(product.productVariants || product.variants || []).map((variant: any) => {
+                  {(product.productVariants || product.variants || []).map((variant: ProductVariant) => {
                     const variantImage = variant.thumbnailUrl || (variant.images && Array.isArray(variant.images) && variant.images.length > 0 ? variant.images[0] : null)
                     const variantImages = variant.images && Array.isArray(variant.images) ? variant.images : []
                     return (

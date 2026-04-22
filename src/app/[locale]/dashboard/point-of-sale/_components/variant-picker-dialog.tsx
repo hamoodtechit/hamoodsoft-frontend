@@ -46,8 +46,10 @@ export function VariantPickerDialog() {
                   (selectedProductForSku.images && selectedProductForSku.images[0]) ||
                   null
 
+                // Price priority: stock level > variant level > product level
+                const stockPrice = stock?.salePrice !== null && stock?.salePrice !== undefined ? stock.salePrice : null
                 const variantPriceValue = variant?.price !== null && variant?.price !== undefined ? variant.price : null
-                const variantPrice = variantPriceValue ?? stock?.salePrice ?? selectedProductForSku.price ?? 0
+                const variantPrice = stockPrice ?? variantPriceValue ?? selectedProductForSku.price ?? 0
 
                 const optionsText = variant?.options
                   ? Object.entries(variant.options)
