@@ -89,7 +89,7 @@ export default function ProductDetailsPage() {
           variant="default"
           size="sm"
           onClick={() => {
-            router.push(`/${locale}/dashboard/products?edit=${product.id}`)
+            router.push(`/${locale}/dashboard/products/${product.id}/edit`)
           }}
         >
           <Edit className="mr-2 h-4 w-4" />

@@ -1,3 +1,15 @@
+/**
+ * @deprecated This modal-based product dialog is deprecated.
+ * For product create/edit, use the dedicated page routes instead:
+ *   - Create: /dashboard/products/new
+ *   - Edit: /dashboard/products/[id]/edit
+ * 
+ * The form logic has been moved to reusable components under:
+ *   src/components/products/
+ * 
+ * This file is retained only for backward compatibility with the POS module
+ * which still uses the dialog approach. It will be removed once POS is migrated.
+ */
 "use client"
 
 import { AttributeDialog } from "@/components/common/attribute-dialog"

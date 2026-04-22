@@ -4,7 +4,6 @@ import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
-import { ProductDialog } from "@/components/common/product-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
@@ -37,7 +36,7 @@ import { type ExportColumn } from "@/lib/utils/export"
 import { Branch, Product, ProductVariant } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
 export default function ProductsPage() {
@@ -46,7 +45,6 @@ export default function ProductsPage() {
   const tModules = useTranslations("modulesPages.inventory")
   const params = useParams()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const locale = params.locale as string
 
 
@@ -342,28 +340,12 @@ export default function ProductsPage() {
     },
   ], [])
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [viewProductId, setViewProductId] = useState<string | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
 
   const { data: viewProduct, isLoading: isViewProductLoading } = useProduct(viewProductId || undefined)
-  // Fetch full product details when editing
-  const { data: editProduct } = useProduct(selectedProductId || undefined)
-
-  // Handle edit from URL query parameter
-  useEffect(() => {
-    const editId = searchParams.get("edit")
-    if (editId && products.length > 0) {
-      setSelectedProductId(editId)
-      setIsDialogOpen(true)
-      // Clean up URL
-      router.replace(`/${locale}/dashboard/products`, { scroll: false })
-    }
-  }, [searchParams, products, locale, router])
 
   const { data: branchesData } = useBranches()
   const branchMap = useMemo(() => {
@@ -402,15 +384,11 @@ export default function ProductsPage() {
   }
 
   const handleCreate = () => {
-    setSelectedProduct(null)
-    setSelectedProductId(null)
-    setIsDialogOpen(true)
+    router.push(`/${locale}/dashboard/products/new`)
   }
 
   const handleEdit = (product: Product) => {
-    setSelectedProductId(product.id)
-    setSelectedProduct(null) // Clear to ensure fresh fetch
-    setIsDialogOpen(true)
+    router.push(`/${locale}/dashboard/products/${product.id}/edit`)
   }
 
   const handleView = (product: Product) => {
@@ -683,17 +661,7 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      <ProductDialog 
-        product={editProduct || selectedProduct} 
-        open={isDialogOpen} 
-        onOpenChange={(open) => {
-          setIsDialogOpen(open)
-          if (!open) {
-            setSelectedProductId(null)
-            setSelectedProduct(null)
-          }
-        }} 
-      />
+
 
       <DeleteConfirmationDialog
         open={isDeleteDialogOpen}

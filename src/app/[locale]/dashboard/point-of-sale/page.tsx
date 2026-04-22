@@ -4,7 +4,6 @@ import { ContactDialog } from "@/components/common/contact-dialog"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { InvoiceDialog } from "@/components/common/invoice-dialog"
 import { PageLayout } from "@/components/common/page-layout"
-import { ProductDialog } from "@/components/common/product-dialog"
 import { SaleDialog } from "@/components/common/sale-dialog"
 import { CloseSessionDialog, OpenSessionDialog } from "@/components/pos/session-dialogs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -38,7 +37,6 @@ function POSContent() {
     activeSession, isLoadingSession, refetchSession,
     selectedBranchId, showCloseSession, setShowCloseSession,
     // Dialogs
-    showProductDialog, setShowProductDialog,
     showInvoice, setShowInvoice,
     completedSale,
     showRecentTransactions, setShowRecentTransactions,
@@ -145,12 +143,7 @@ function POSContent() {
         description={`Are you sure you want to delete transaction ${saleToDelete?.invoiceNumber || saleToDelete?.id}? This action cannot be undone.`}
       />
 
-      {/* Product Dialog */}
-      <ProductDialog
-        product={null}
-        open={showProductDialog}
-        onOpenChange={setShowProductDialog}
-      />
+
 
       {/* Invoice Dialog */}
       <InvoiceDialog
