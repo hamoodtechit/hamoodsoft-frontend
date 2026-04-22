@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { cn } from "@/lib/utils"
+import { Branch, Stock } from "@/types"
 import { Image as ImageIcon, X } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { UseFormReturn, UseFieldArrayReturn } from "react-hook-form"
 import { CreateProductInput, UpdateProductInput } from "@/lib/validations/products"
 
@@ -32,6 +34,7 @@ interface ProductVariantsSectionProps {
   isLoading: boolean
   isEdit: boolean
   availableAttributes: AvailableAttribute[]
+  existingStocks?: Stock[]
 }
 
 export function ProductVariantsSection({
@@ -40,12 +43,30 @@ export function ProductVariantsSection({
   isLoading,
   isEdit,
   availableAttributes,
+  existingStocks,
 }: ProductVariantsSectionProps) {
   const t = useTranslations("products")
 
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
+
+  // Get branches and the selected branch from the topbar
+  const { branches: branchesRaw, selectedBranchId: defaultBranchId } = useBranchSelection()
+  const branches = useMemo(() => {
+    return Array.isArray(branchesRaw) ? (branchesRaw as Branch[]) : []
+  }, [branchesRaw])
+
+  // Build a set of variant IDs that have existing stock entries
+  const variantIdsWithStocks = useMemo(() => {
+    const ids = new Set<string>()
+    if (existingStocks && existingStocks.length > 0) {
+      existingStocks.forEach((s) => {
+        if (s.variantId) ids.add(s.variantId)
+      })
+    }
+    return ids
+  }, [existingStocks])
 
   if (fields.length === 0) return null
 
@@ -60,10 +81,25 @@ export function ProductVariantsSection({
             </p>
           </div>
         </div>
-        <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3 bg-muted/30">
-          {fields.map((field, index) => (
-            <Card key={field.id} className="border">
+        <div className="space-y-2 max-h-[600px] overflow-y-auto border rounded-lg p-3 bg-muted/30">
+          {fields.map((field, index) => {
+            // Check if this variant has existing stocks (cannot be removed)
+            const variantId = form.getValues(`variants.${index}` as `variants.0`)?.id as string | undefined
+            const hasStocks = variantId ? variantIdsWithStocks.has(variantId) : false
+
+            return (
+            <Card key={field.id} className={cn("border", hasStocks && "border-amber-300/50 bg-amber-50/30 dark:bg-amber-950/10")}>
               <CardContent className="p-3">
+                {hasStocks && (
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
+                      {t("stock")} ✓
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      This variant has existing stock and cannot be removed
+                    </span>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <FormField
                     control={form.control}
@@ -87,9 +123,7 @@ export function ProductVariantsSection({
                     {(() => {
                       const variantData = form.getValues(`variants.${index}`)
                       const options = variantData?.options || {}
-                      // Convert "attr-{name}" keys to readable attribute names for display
                       return Object.entries(options).map(([key, value], idx) => {
-                        // Extract attribute name from "attr-color" -> "Color"
                         let displayName = key
                         if (key.startsWith("attr-")) {
                           const attrName = key.replace(/^attr-/, "").replace(/-/g, " ")
@@ -98,7 +132,6 @@ export function ProductVariantsSection({
                             .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                             .join(" ")
                         } else {
-                          // Try to find attribute by name or ID
                           const attr = availableAttributes.find((a) => a.name === key || a.id === key)
                           if (attr) {
                             displayName = attr.name
@@ -114,8 +147,130 @@ export function ProductVariantsSection({
                     })()}
                   </div>
                   
-                  {/* SKU and Price fields for stock management */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t">
+                  {/* Stock & Pricing fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t">
+                    {/* Branch Selection */}
+                    <FormField
+                      control={form.control}
+                      name={`variants.${index}.branchId`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">
+                            {t("branch") || "Branch"}
+                          </FormLabel>
+                          <FormControl>
+                            <select
+                              className={cn(
+                                "flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                "disabled:cursor-not-allowed disabled:opacity-50"
+                              )}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value || undefined)}
+                              disabled={isLoading}
+                            >
+                              <option value="">{t("selectBranch") || "Select branch..."}</option>
+                              {branches.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.name}
+                                </option>
+                              ))}
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Quantity */}
+                    <FormField
+                      control={form.control}
+                      name={`variants.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">
+                            {t("quantity") || "Quantity"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              inputMode="numeric"
+                              placeholder="0"
+                              disabled={isLoading}
+                              className="h-8"
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                field.onChange(value === "" ? undefined : parseInt(value) || 0)
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Sell Price */}
+                    <FormField
+                      control={form.control}
+                      name={`variants.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">
+                            {t("sellPrice") || "Sell Price"} <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="0.00"
+                              disabled={isLoading}
+                              className="h-8"
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                field.onChange(value === "" ? undefined : parseFloat(value) || 0)
+                              }}
+                              required
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Cost Price */}
+                    <FormField
+                      control={form.control}
+                      name={`variants.${index}.costPrice`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">
+                            {t("costPrice") || "Cost Price"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="0.00"
+                              disabled={isLoading}
+                              className="h-8"
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                field.onChange(value === "" ? undefined : parseFloat(value) || 0)
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* SKU (read-only row) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <FormField
                       control={form.control}
                       name={`variants.${index}.sku`}
@@ -131,34 +286,6 @@ export function ProductVariantsSection({
                               disabled={isLoading || isEdit}
                               readOnly={isEdit}
                               className={cn("h-8", isEdit && "bg-muted")}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            Price <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              placeholder="0.00"
-                              disabled={isLoading}
-                              className="h-8"
-                              value={field.value ?? ""}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                field.onChange(value === "" ? undefined : parseFloat(value) || 0)
-                              }}
-                              required
                             />
                           </FormControl>
                           <FormMessage />
@@ -281,7 +408,7 @@ export function ProductVariantsSection({
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       </div>
 
@@ -295,11 +422,9 @@ export function ProductVariantsSection({
           if (mediaDialogVariantIndex === null) return
 
           if (selectingThumbnail) {
-            // Single selection for variant thumbnail
             const selectedMedia = Array.isArray(media) ? media[0] : media
             form.setValue(`variants.${mediaDialogVariantIndex}.thumbnailUrl`, selectedMedia.secureUrl || selectedMedia.url)
           } else {
-            // Multiple selection for variant gallery
             const selectedMedia = Array.isArray(media) ? media : [media]
             const currentImages = form.getValues(`variants.${mediaDialogVariantIndex}.images`) || []
             const newUrls = selectedMedia.map((m) => m.secureUrl || m.url)

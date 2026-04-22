@@ -233,9 +233,17 @@
     "addImages": "Add Images",
     "stockDescription": "Add stock information for each selected branch",
     "quantity": "Quantity",
+    "quantityPlaceholder": "Enter quantity",
     "sku": "SKU",
     "skuPlaceholder": "Enter SKU (leave blank to auto-generate)",
-    "image": "Image"
+    "image": "Image",
+    "sellPrice": "Sell Price",
+    "sellPricePlaceholder": "e.g., 1200",
+    "costPrice": "Cost Price",
+    "costPricePlaceholder": "e.g., 800",
+    "branch": "Branch",
+    "selectBranch": "Select a branch",
+    "initialStock": "Initial Stock"
   },
   "productVariants": {
     "createVariant": "Create Variant",

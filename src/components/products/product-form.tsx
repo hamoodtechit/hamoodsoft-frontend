@@ -9,6 +9,7 @@ import { ProductVariantsSection } from "@/components/products/product-variants-s
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form } from "@/components/ui/form"
+import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -47,6 +48,9 @@ type PRODUCT_VARIANT_FIELDS = {
   variantName: string
   sku: string
   price: number
+  costPrice?: number
+  quantity?: number
+  branchId?: string
   unitId?: string
   options: Record<string, string>
   thumbnailUrl?: string | null
@@ -78,6 +82,9 @@ export function ProductForm({ product }: ProductFormProps) {
   const isEdit = !!product
   const isLoading = createMutation.isPending || updateMutation.isPending
 
+  // Get the currently selected branch from the topbar to use as default for variants
+  const { selectedBranchId: defaultBranchId } = useBranchSelection()
+
   const schema = isEdit ? updateProductSchema : createProductSchema
 
   const defaultValues = useMemo(() => {
@@ -86,6 +93,7 @@ export function ProductForm({ product }: ProductFormProps) {
         name: "",
         description: "",
         price: 0,
+        purchasePrice: undefined,
         unitId: "",
         categoryIds: [] as string[],
         branchIds: [] as string[],
@@ -108,6 +116,9 @@ export function ProductForm({ product }: ProductFormProps) {
       variantName: v.variantName || "",
       sku: v.sku || "",
       price: v.price ?? 0,
+      costPrice: (v as PRODUCT_VARIANT_FIELDS).costPrice ?? undefined,
+      quantity: (v as PRODUCT_VARIANT_FIELDS).quantity ?? undefined,
+      branchId: (v as PRODUCT_VARIANT_FIELDS).branchId || undefined,
       unitId: v.unitId || "",
       options: v.options || {},
       thumbnailUrl: v.thumbnailUrl || undefined,
@@ -117,6 +128,7 @@ export function ProductForm({ product }: ProductFormProps) {
       name: product.name || "",
       description: product.description || "",
       price: typeof product.price === "number" ? product.price : 0,
+      purchasePrice: (product as unknown as { purchasePrice?: number }).purchasePrice ?? undefined,
       unitId: product.unitId || "",
       categoryIds: product.categoryIds || product.categories?.map((c) => c.id) || [],
       branchIds: product.branchIds || [],
@@ -329,6 +341,26 @@ export function ProductForm({ product }: ProductFormProps) {
 
     const combinations = cartesianProduct(valueArrays)
 
+    // Get current variants to preserve user-filled data
+    const currentVariants = form.getValues("variants") || []
+    
+    // Get product-level prices to use as defaults for new variants
+    const productSellPrice = form.getValues("price") ?? 0
+    const productCostPrice = form.getValues("purchasePrice")
+
+    // Build a map of existing variants by their options key for quick lookup
+    const existingVariantsMap = new Map<string, typeof currentVariants[number]>()
+    currentVariants.forEach((v) => {
+      if (v.options) {
+        // Create a stable key from options
+        const optionsKey = Object.entries(v.options)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, val]) => `${k}=${val}`)
+          .join("|")
+        existingVariantsMap.set(optionsKey, v)
+      }
+    })
+
     const newVariants = combinations.map((combination) => {
       const options: Record<string, string> = {}
       const variantNameParts: string[] = []
@@ -339,13 +371,33 @@ export function ProductForm({ product }: ProductFormProps) {
         variantNameParts.push(value)
       })
 
+      // Create options key for matching
+      const optionsKey = Object.entries(options)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, val]) => `${k}=${val}`)
+        .join("|")
+
+      // Check if this combination already exists — preserve user-filled data
+      const existing = existingVariantsMap.get(optionsKey)
+      if (existing) {
+        return {
+          ...existing,
+          options, // Keep normalized options
+          variantName: existing.variantName || variantNameParts.join(" / "),
+        }
+      }
+
+      // New variant — auto-fill prices from product-level defaults and branch from topbar
       return {
         variantName: variantNameParts.join(" / "),
         options,
         sku: "",
-        price: 0,
+        price: productSellPrice,
+        costPrice: productCostPrice,
+        quantity: undefined as number | undefined,
+        branchId: defaultBranchId || undefined,
         thumbnailUrl: "",
-        images: [],
+        images: [] as string[],
       }
     })
 
@@ -379,9 +431,8 @@ export function ProductForm({ product }: ProductFormProps) {
       data.images = undefined
     }
 
-    // Remove pricing fields that are managed in stock, not product
-    const cleanedData = { ...data } as CreateProductInput & { purchasePrice?: number; salePrice?: number; profitMarginAmount?: number; profitMarginPercent?: number }
-    delete cleanedData.purchasePrice
+    // Remove unused pricing fields
+    const cleanedData = { ...data } as CreateProductInput & { salePrice?: number; profitMarginAmount?: number; profitMarginPercent?: number }
     delete cleanedData.salePrice
     delete cleanedData.profitMarginAmount
     delete cleanedData.profitMarginPercent
@@ -428,12 +479,27 @@ export function ProductForm({ product }: ProductFormProps) {
         const v = variant as unknown as PRODUCT_VARIANT_FIELDS
         const cleanedVariant: Record<string, unknown> = {
           variantName: v.variantName || "",
-          price: Math.round(v.price ?? 0),
+          price: v.price ?? 0,
           options: Object.keys(cleanedOptions).length > 0 ? cleanedOptions : {},
         }
 
         if (v.id && typeof v.id === "string") {
           cleanedVariant.id = v.id
+        }
+
+        // Include cost price if provided
+        if (v.costPrice !== undefined && v.costPrice !== null) {
+          cleanedVariant.costPrice = v.costPrice
+        }
+
+        // Include quantity if provided (for initial stock)
+        if (v.quantity !== undefined && v.quantity !== null) {
+          cleanedVariant.quantity = v.quantity
+        }
+
+        // Include branch ID if provided
+        if (v.branchId && typeof v.branchId === "string" && v.branchId.trim().length > 0) {
+          cleanedVariant.branchId = v.branchId.trim()
         }
 
         const thumbnailUrl =
@@ -465,13 +531,50 @@ export function ProductForm({ product }: ProductFormProps) {
     // Always set barcodeType to EAN_13
     data.barcodeType = "EAN_13"
 
+    // Build stocks[] array from variant-level stock data (Option A: frontend transform)
+    // The backend accepts a top-level `stocks[]` array for initial stock creation.
+    // We extract branchId/quantity/costPrice from variants and create stock entries.
+    interface StockEntry {
+      branchId: string
+      quantity: number
+      purchasePrice?: number
+      salePrice?: number
+      sku?: string
+      variantId?: string
+    }
+    const stocks: StockEntry[] = []
+
+    if (data.variants && data.variants.length > 0) {
+      data.variants = data.variants.map((variant) => {
+        const v = variant as unknown as PRODUCT_VARIANT_FIELDS
+
+        // Extract stock data from variant before sending
+        if (v.branchId && typeof v.quantity === "number" && v.quantity > 0) {
+          stocks.push({
+            branchId: v.branchId,
+            quantity: v.quantity,
+            purchasePrice: v.costPrice ?? data.purchasePrice ?? undefined,
+            salePrice: v.price ?? data.price ?? undefined,
+            sku: v.sku || undefined,
+          })
+        }
+
+        // Remove stock-specific fields from variant payload — backend doesn't expect them
+        const { costPrice: _cp, quantity: _q, branchId: _bid, ...cleanVariant } = variant as Record<string, unknown>
+        return cleanVariant as typeof variant
+      })
+    }
+
+    // Attach stocks to payload
+    const payload = { ...data, stocks: stocks.length > 0 ? stocks : undefined } as Record<string, unknown>
+
     if (process.env.NODE_ENV === "development") {
-      console.log("Submitting product data:", data)
+      console.log("Submitting product data:", payload)
     }
 
     if (isEdit && product) {
       updateMutation.mutate(
-        { id: product.id, data: data as UpdateProductInput },
+        { id: product.id, data: payload as unknown as UpdateProductInput },
         {
           onSuccess: async () => {
             // Wait for cache invalidation to complete before navigating
@@ -491,7 +594,7 @@ export function ProductForm({ product }: ProductFormProps) {
       return
     }
 
-    createMutation.mutate(data as CreateProductInput, {
+    createMutation.mutate(payload as unknown as CreateProductInput, {
       onSuccess: async () => {
         // Wait for cache invalidation to complete before navigating
         await queryClient.invalidateQueries({ queryKey: ["products"] })
@@ -596,6 +699,7 @@ export function ProductForm({ product }: ProductFormProps) {
                 isLoading={isLoading}
                 isEdit={isEdit}
                 availableAttributes={availableAttributes}
+                existingStocks={product?.stocks}
               />
             </CardContent>
           </Card>

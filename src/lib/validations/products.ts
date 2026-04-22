@@ -6,7 +6,10 @@ const productVariantSchema = z.object({
   id: z.string().uuid().optional(), // Required for updates to identify existing variants
   variantName: z.string().min(1, "Variant name is required"),
   sku: z.string().optional(), // SKU is managed by backend, optional in payload
-  price: z.number({ invalid_type_error: "Price must be a number" }).min(0, "Price must be 0 or greater"),
+  price: z.number({ invalid_type_error: "Sell price must be a number" }).min(0, "Sell price must be 0 or greater"),
+  costPrice: z.number({ invalid_type_error: "Cost price must be a number" }).min(0, "Cost price must be 0 or greater").optional(),
+  quantity: z.number({ invalid_type_error: "Quantity must be a number" }).min(0, "Quantity must be 0 or greater").optional(),
+  branchId: z.string().uuid().optional(),
   unitId: z.string().uuid().optional(),
   options: z.record(z.string().min(1), z.string().min(1)), // Backend expects attribute names as keys (e.g., "Color", "Size")
   thumbnailUrl: z.string().min(1).optional(),

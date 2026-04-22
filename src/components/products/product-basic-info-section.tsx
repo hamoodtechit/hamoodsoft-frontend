@@ -78,13 +78,13 @@ export function ProductBasicInfoSection({
         )}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <FormField
           control={form.control}
           name="price"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("price")} <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t("sellPrice") || "Sell Price"} <span className="text-destructive">*</span></FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -92,7 +92,29 @@ export function ProductBasicInfoSection({
                   step="0.01"
                   value={field.value !== undefined && field.value !== null ? field.value : ""}
                   onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-                  placeholder={t("pricePlaceholder")}
+                  placeholder={t("pricePlaceholder") || "0.00"}
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="purchasePrice"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("costPrice") || "Cost Price"}</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={field.value !== undefined && field.value !== null ? field.value : ""}
+                  onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                  placeholder="0.00"
                   disabled={isLoading}
                 />
               </FormControl>
