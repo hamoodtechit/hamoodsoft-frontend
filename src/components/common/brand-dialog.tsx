@@ -36,7 +36,7 @@ interface BrandDialogProps {
   brand: Brand | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmitCreate: (data: CreateBrandInput) => void
+  onSubmitCreate: (data: CreateBrandInput, createdBrand?: Brand) => void
   onSubmitUpdate: (id: string, data: UpdateBrandInput) => void
   isLoading: boolean
 }
@@ -93,8 +93,8 @@ export function BrandDialog({
       )
     } else {
       createMutation.mutate(data as CreateBrandInput, {
-        onSuccess: () => {
-          onSubmitCreate(data as CreateBrandInput)
+        onSuccess: (createdBrand: Brand) => {
+          onSubmitCreate(data as CreateBrandInput, createdBrand)
           onOpenChange(false)
           form.reset()
         },

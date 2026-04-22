@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form } from "@/components/ui/form"
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   createProductSchema,
   updateProductSchema,
@@ -63,6 +64,7 @@ export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter()
   const locale = params.locale as string
 
+  const queryClient = useQueryClient()
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
 
@@ -464,7 +466,11 @@ export function ProductForm({ product }: ProductFormProps) {
       updateMutation.mutate(
         { id: product.id, data: data as UpdateProductInput },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            // Wait for cache invalidation to complete before navigating
+            // so the products list shows the updated data
+            await queryClient.invalidateQueries({ queryKey: ["products"] })
+            await queryClient.invalidateQueries({ queryKey: ["product", product.id] })
             router.push(`/${locale}/dashboard/products`)
           },
           onError: (error) => {
@@ -478,7 +484,9 @@ export function ProductForm({ product }: ProductFormProps) {
     }
 
     createMutation.mutate(data as CreateProductInput, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        // Wait for cache invalidation to complete before navigating
+        await queryClient.invalidateQueries({ queryKey: ["products"] })
         router.push(`/${locale}/dashboard/products`)
       },
       onError: (error) => {

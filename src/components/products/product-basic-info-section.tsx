@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/products/rich-text-editor"
 import { useUnits } from "@/lib/hooks/use-units"
-import { useBrands, useCreateBrand } from "@/lib/hooks/use-brands"
+import { useBrands } from "@/lib/hooks/use-brands"
 import { cn } from "@/lib/utils"
 import { Brand, Unit } from "@/types"
 import { Plus } from "lucide-react"
@@ -37,7 +37,6 @@ export function ProductBasicInfoSection({
   const { data: units = [] } = useUnits()
   const { data: brandsData } = useBrands()
   const brands = brandsData?.items || []
-  const createBrandMutation = useCreateBrand()
 
   const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false)
   const [isBrandDialogOpen, setIsBrandDialogOpen] = useState(false)
@@ -207,15 +206,17 @@ export function ProductBasicInfoSection({
         brand={null}
         open={isBrandDialogOpen}
         onOpenChange={setIsBrandDialogOpen}
-        onSubmitCreate={(data) => {
-          createBrandMutation.mutate(data, {
-            onSuccess: () => {
-              setIsBrandDialogOpen(false)
-            },
-          })
+        onSubmitCreate={(_data, createdBrand) => {
+          // BrandDialog handles the mutation internally.
+          // Auto-select the newly created brand in the form.
+          if (createdBrand?.id) {
+            form.setValue("brandId", createdBrand.id)
+            onBrandChange?.(createdBrand.id)
+          }
+          setIsBrandDialogOpen(false)
         }}
         onSubmitUpdate={() => {}}
-        isLoading={createBrandMutation.isPending}
+        isLoading={false}
       />
     </>
   )
