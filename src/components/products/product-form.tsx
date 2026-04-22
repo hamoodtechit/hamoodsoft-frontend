@@ -162,6 +162,42 @@ export function ProductForm({ product }: ProductFormProps) {
   const [selectedAttributeIds, setSelectedAttributeIds] = useState<string[]>([])
   const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string[]>>({})
 
+  // Build a map of attribute values that are locked (used by existing variants with IDs)
+  // These values cannot be unchecked because they correspond to saved variants
+  const lockedAttributeValues = useMemo<Record<string, string[]>>(() => {
+    if (!isEdit || !product) return {}
+
+    const existingVariants = product.productVariants || product.variants || []
+    const locked: Record<string, Set<string>> = {}
+
+    existingVariants.forEach((variant) => {
+      // Only lock values for variants that have been saved (have an id)
+      if (!variant.id || !variant.options) return
+
+      Object.entries(variant.options).forEach(([key, value]) => {
+        // key is like "attr-color", we need to find the matching attribute id
+        const attrName = key.startsWith("attr-")
+          ? key.replace(/^attr-/, "").replace(/-/g, " ").toLowerCase()
+          : key.toLowerCase()
+
+        const matchingAttr = availableAttributes.find(
+          (a) => a.name.toLowerCase() === attrName || a.id === key
+        )
+        if (matchingAttr) {
+          if (!locked[matchingAttr.id]) locked[matchingAttr.id] = new Set()
+          locked[matchingAttr.id].add(String(value))
+        }
+      })
+    })
+
+    // Convert Sets to arrays
+    const result: Record<string, string[]> = {}
+    Object.entries(locked).forEach(([attrId, values]) => {
+      result[attrId] = Array.from(values)
+    })
+    return result
+  }, [isEdit, product, availableAttributes])
+
   const lastProcessedAttributesRef = useRef<string>("")
   const hasInitializedFromProduct = useRef(false)
   const userHasModifiedSelections = useRef(false)
@@ -678,6 +714,8 @@ export function ProductForm({ product }: ProductFormProps) {
             <ProductAttributesSection
               brandId={brandIdForAttributes}
               isLoading={isLoading}
+              isEdit={isEdit}
+              lockedAttributeValues={lockedAttributeValues}
               selectedAttributeIds={selectedAttributeIds}
               setSelectedAttributeIds={setSelectedAttributeIds}
               selectedAttributeValues={selectedAttributeValues}

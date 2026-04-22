@@ -22,6 +22,8 @@ interface AttributeItem {
 interface ProductAttributesSectionProps {
   brandId: string | undefined
   isLoading: boolean
+  isEdit: boolean
+  lockedAttributeValues?: Record<string, string[]>
   selectedAttributeIds: string[]
   setSelectedAttributeIds: (ids: string[]) => void
   selectedAttributeValues: Record<string, string[]>
@@ -32,6 +34,8 @@ interface ProductAttributesSectionProps {
 export function ProductAttributesSection({
   brandId,
   isLoading,
+  isEdit: _isEdit,
+  lockedAttributeValues = {},
   selectedAttributeIds,
   setSelectedAttributeIds,
   selectedAttributeValues,
@@ -113,6 +117,11 @@ export function ProductAttributesSection({
             {availableAttributes.map((attr) => {
               const selectedValues = selectedAttributeValues[attr.id] || []
               const hasSelectedValues = selectedValues.length > 0
+              const lockedValues = lockedAttributeValues[attr.id] || []
+              // The select-all checkbox is disabled if ALL values of this attribute are locked
+              const allValuesLocked = lockedValues.length > 0 && attr.values.every((v) => lockedValues.includes(v))
+              // If any values are locked, the select-all unchecking should be prevented
+              const hasAnyLockedValues = lockedValues.length > 0
               
               return (
                 <Card key={attr.id} className={cn("border", hasSelectedValues && "border-primary bg-primary/5")}>
@@ -134,6 +143,8 @@ export function ProductAttributesSection({
                                 setSelectedAttributeIds([...selectedAttributeIds, attr.id])
                               }
                             } else {
+                              // Only allow unchecking if no values are locked
+                              if (hasAnyLockedValues) return
                               // Deselect all values
                               setSelectedAttributeValues((prev: Record<string, string[]>) => {
                                 const next = { ...prev }
@@ -143,25 +154,32 @@ export function ProductAttributesSection({
                               setSelectedAttributeIds(selectedAttributeIds.filter((id) => id !== attr.id))
                             }
                           }}
-                          disabled={isLoading}
+                          disabled={isLoading || allValuesLocked}
                         />
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {attr.values.map((value) => {
                           const isValueSelected = selectedValues.includes(value)
+                          const isValueLocked = lockedValues.includes(value)
                           return (
                             <label
                               key={value}
                               className={cn(
-                                "flex items-center gap-2 rounded-md border px-2 py-1 cursor-pointer transition-colors",
+                                "flex items-center gap-2 rounded-md border px-2 py-1 transition-colors",
+                                isValueLocked
+                                  ? "cursor-not-allowed opacity-60"
+                                  : "cursor-pointer",
                                 isValueSelected
                                   ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border hover:bg-muted"
+                                  : isValueLocked
+                                    ? "border-border"
+                                    : "border-border hover:bg-muted"
                               )}
                             >
                               <Checkbox
                                 checked={isValueSelected}
                                 onCheckedChange={(val) => {
+                                  if (isValueLocked) return
                                   onUserModified()
                                   const currentValues = selectedAttributeValues[attr.id] || []
                                   let newValues: string[]
@@ -186,7 +204,7 @@ export function ProductAttributesSection({
                                     setSelectedAttributeIds(selectedAttributeIds.filter((id) => id !== attr.id))
                                   }
                                 }}
-                                disabled={isLoading}
+                                disabled={isLoading || isValueLocked}
                               />
                               <span className="text-xs">{value}</span>
                             </label>
