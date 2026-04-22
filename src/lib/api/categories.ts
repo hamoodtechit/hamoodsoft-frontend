@@ -14,7 +14,7 @@ export const categoriesApi = {
 
   getCategories: async (branchId?: string): Promise<Category[]> => {
     try {
-      const response = await apiClient.get<ApiResponse<any>>(
+      const response = await apiClient.get<ApiResponse<Record<string, unknown>>>(
         endpoints.categories.list,
         { params: branchId ? { branchId } : undefined }
       )
@@ -35,12 +35,13 @@ export const categoriesApi = {
       
       
       return categories
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { data?: unknown; status?: number } }
       console.error("❌ Error fetching categories:", error)
       console.error("Error details:", {
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
+        message: err?.message,
+        response: err?.response?.data,
+        status: err?.response?.status,
       })
       return []
     }

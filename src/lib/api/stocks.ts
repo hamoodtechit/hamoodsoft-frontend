@@ -73,11 +73,12 @@ function normalizeHistoryList(data: PaginatedResult<StockHistory> | StockHistory
   }
 }
 
-function normalizeStockHistory(history: any): StockHistory {
+function normalizeStockHistory(history: StockHistory): StockHistory {
+  const raw = history as StockHistory & { quantityChange?: number }
   return {
     ...history,
-    quantity: history.quantityChange ?? history.quantity ?? 0,
-    quantityChange: history.quantityChange ?? history.quantity ?? 0,
+    quantity: raw.quantityChange ?? history.quantity ?? 0,
+    quantityChange: raw.quantityChange ?? history.quantity ?? 0,
   }
 }
 
@@ -96,8 +97,8 @@ function normalizeAdjustmentsList(data: PaginatedResult<StockAdjustment> | Stock
 }
 
 export const stocksApi = {
-  create: async (data: CreateStockInput): Promise<Stock> => {
-    const response = await apiClient.post<ApiResponse<Stock>>(endpoints.stocks.create, data)
+  create: async (data: CreateStockInput): Promise<Stock & { consolidated?: boolean }> => {
+    const response = await apiClient.post<ApiResponse<Stock & { consolidated?: boolean }>>(endpoints.stocks.create, data)
     return response.data.data
   },
 
@@ -108,7 +109,7 @@ export const stocksApi = {
 
   list: async (params?: StocksListParams): Promise<PaginatedResult<Stock>> => {
     // Clean params - remove undefined/null/empty values
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof StocksListParams]
@@ -149,7 +150,7 @@ export const stocksApi = {
 
   listAdjustments: async (params?: StockAdjustmentsListParams): Promise<PaginatedResult<StockAdjustment>> => {
     // Clean params - remove undefined/null/empty values
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof StockAdjustmentsListParams]
@@ -169,7 +170,7 @@ export const stocksApi = {
   // Stock History
   listHistory: async (params?: StockHistoryListParams): Promise<PaginatedResult<StockHistory>> => {
     // Clean params - remove undefined/null/empty values
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof StockHistoryListParams]

@@ -5,6 +5,7 @@ import { CreateAttributeInput, UpdateAttributeInput } from "@/lib/validations/at
 import { Attribute } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useAttributes(params?: AttributesListParams) {
   return useQuery({
@@ -30,12 +31,8 @@ export function useCreateAttribute() {
       queryClient.invalidateQueries({ queryKey: ["attributes"] })
       toast.success("Attribute created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create attribute. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create attribute. Please try again."))
     },
   })
 }
@@ -51,12 +48,8 @@ export function useUpdateAttribute() {
       queryClient.invalidateQueries({ queryKey: ["attribute", updated.id] })
       toast.success("Attribute updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update attribute. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update attribute. Please try again."))
     },
   })
 }
@@ -70,12 +63,8 @@ export function useDeleteAttribute() {
       queryClient.invalidateQueries({ queryKey: ["attributes"] })
       toast.success("Attribute deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete attribute. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete attribute. Please try again."))
     },
   })
 }

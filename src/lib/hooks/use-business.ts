@@ -4,11 +4,12 @@ import { businessApi } from "@/lib/api/business"
 import { usersApi } from "@/lib/api/users"
 import { CreateBusinessInput, UpdateBusinessInput } from "@/lib/validations/business"
 import { useAuthStore } from "@/store"
-import { Business } from "@/types"
+import { Business, User } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useCreateBusiness() {
   const router = useRouter()
@@ -23,7 +24,7 @@ export function useCreateBusiness() {
       // Check if user already has businesses
       const currentBusinesses = queryClient.getQueryData<Business[]>(["businesses"]) || storeBusinesses || []
       const hasExistingBusinesses = currentBusinesses.length > 0
-      
+
       // If user doesn't have a currentBusinessId (first business), set it
       // If user already has businesses, don't automatically switch (let them choose)
       if (storeUser && createdBusiness.id) {
@@ -36,7 +37,7 @@ export function useCreateBusiness() {
           // Update user in store and cache IMMEDIATELY
           setUser(updatedUser)
           queryClient.setQueryData(["auth", "profile"], updatedUser)
-          
+
           // Try to update via API (in background, don't block on failure)
           if (storeUser.id) {
             usersApi.updateUser(storeUser.id, {
@@ -44,35 +45,32 @@ export function useCreateBusiness() {
             }).then((apiUpdatedUser) => {
               setUser(apiUpdatedUser)
               queryClient.setQueryData(["auth", "profile"], apiUpdatedUser)
-            }).catch((error: any) => {
+            }).catch((error) => {
               console.warn("Failed to update user's currentBusinessId via API:", error)
             })
           }
         }
         // If user already has currentBusinessId, don't change it - they can switch manually
       }
-      
+
       // Add the new business to the businesses array
       const updatedBusinesses = [...currentBusinesses, createdBusiness]
       setBusinesses(updatedBusinesses)
       queryClient.setQueryData(["businesses"], updatedBusinesses)
-      
+
       // Onboarding status is now based on user.currentBusinessId, no need to invalidate
-      
+
       if (hasExistingBusinesses) {
         toast.success("New business created successfully! You can switch to it from the business switcher.")
       } else {
         toast.success("Business registered successfully!")
       }
-      
+
       // Redirect to dashboard
       router.push(`/${locale}/dashboard`)
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to register business. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to register business. Please try again."))
     },
   })
 }
@@ -93,7 +91,7 @@ export function useBusinesses() {
         hasInitializedRef.current = true
       }
     }
-  }, []) // Only run once on mount
+  }, [queryClient, storeBusinesses]) // Only run once on mount
 
   const query = useQuery({
     queryKey: ["businesses"],
@@ -118,15 +116,15 @@ export function useBusinesses() {
       // Check if data is actually different from store to prevent infinite loops
       const dataString = JSON.stringify(query.data.map(b => ({ id: b.id, modules: b.modules })))
       const storeString = JSON.stringify(storeBusinesses.map(b => ({ id: b.id, modules: b.modules })))
-      
+
       if (dataString !== storeString) {
         // Merge API data with store businesses to preserve modules
         const mergedBusinesses = query.data.map((apiBusiness: Business) => {
           // Find existing business in store to preserve modules
           const existingBusiness = storeBusinesses.find(b => b.id === apiBusiness.id)
           // If existing business has modules, preserve them (unless API has modules)
-          if (existingBusiness?.modules && existingBusiness.modules.length > 0 && 
-              (!apiBusiness.modules || apiBusiness.modules.length === 0)) {
+          if (existingBusiness?.modules && existingBusiness.modules.length > 0 &&
+            (!apiBusiness.modules || apiBusiness.modules.length === 0)) {
             return {
               ...apiBusiness,
               modules: existingBusiness.modules, // Preserve modules from store
@@ -135,7 +133,7 @@ export function useBusinesses() {
           // Otherwise use API data (which might have modules)
           return apiBusiness
         })
-        
+
         // Only update if merged data is different
         const mergedString = JSON.stringify(mergedBusinesses.map(b => ({ id: b.id, modules: b.modules })))
         if (mergedString !== storeString) {
@@ -143,7 +141,7 @@ export function useBusinesses() {
         }
       }
     }
-  }, [query.data, query.isFetched, setBusinesses]) // Removed storeBusinesses from deps to prevent loop
+  }, [query.data, query.isFetched, setBusinesses, storeBusinesses]) // Added storeBusinesses back but with care
 
   return query
 }
@@ -171,14 +169,14 @@ export function useCurrentBusiness() {
   // Get businesses from multiple sources in priority order
   const businesses = useMemo(() => {
     if (storeBusinesses.length > 0) return storeBusinesses
-    
+
     const cachedBusinesses = queryClient.getQueryData<Business[]>(["businesses"])
     if (cachedBusinesses && Array.isArray(cachedBusinesses) && cachedBusinesses.length > 0) {
       return cachedBusinesses
     }
-    
+
     if (apiBusinesses && apiBusinesses.length > 0) return apiBusinesses
-    
+
     return []
   }, [storeBusinesses, apiBusinesses, queryClient])
 
@@ -206,14 +204,11 @@ export function useUpdateBusiness() {
       setBusinesses(updatedBusinesses)
       queryClient.setQueryData(["businesses"], updatedBusinesses)
       queryClient.setQueryData(["business", updatedBusiness.id], updatedBusiness)
-      
+
       toast.success("Business updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to update business. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update business. Please try again."))
     },
   })
 }
@@ -226,7 +221,7 @@ export function useSwitchBusiness() {
     mutationFn: async (businessId: string) => {
       console.log("useSwitchBusiness mutationFn called with businessId:", businessId)
       // Get user from query cache first, fallback to store
-      const cachedUser = queryClient.getQueryData<any>(["auth", "profile"])
+      const cachedUser = queryClient.getQueryData<User>(["auth", "profile"])
       const user = cachedUser || storeUser
 
       console.log("User from cache/store:", { userId: user?.id, currentBusinessId: user?.currentBusinessId })
@@ -241,51 +236,51 @@ export function useSwitchBusiness() {
       const updatedUser = await usersApi.updateUser(user.id, {
         currentBusinessId: businessId,
       })
-      
+
       console.log("usersApi.updateUser response:", updatedUser)
-      
+
       // Return both the API response and the businessId we sent
       // This ensures we have the businessId even if API returns empty object
       return { updatedUser, businessId }
     },
     onSuccess: async ({ updatedUser, businessId }) => {
       console.log("useSwitchBusiness onSuccess called with:", { updatedUser, businessId })
-      
+
       // Merge updated user with existing user to preserve all fields
-      const currentUser = storeUser || queryClient.getQueryData<any>(["auth", "profile"])
-      
+      const currentUser = storeUser || queryClient.getQueryData<User>(["auth", "profile"])
+
       // IMPORTANT: Always use the businessId we sent, not the API response
       // The API might return the old currentBusinessId, so we trust what we sent
       const newCurrentBusinessId = businessId
-      
+
       console.log("newCurrentBusinessId (using businessId we sent):", newCurrentBusinessId)
       console.log("API returned currentBusinessId:", updatedUser?.currentBusinessId)
-      
+
       const mergedUser = {
         ...currentUser,
         ...updatedUser,
         currentBusinessId: newCurrentBusinessId, // Always use the businessId we sent
       }
-      
+
       console.log("mergedUser:", mergedUser)
-      
+
       // Update user in store and cache IMMEDIATELY
       setUser(mergedUser)
       queryClient.setQueryData(["auth", "profile"], mergedUser)
-      
+
       console.log("User updated in store and cache")
-      
-     
-      
+
+
+
       // Fetch the specific business to get its modules
       // Use the businessId we sent, not the one from API response (which might be undefined)
       try {
         const newCurrentBusiness = await businessApi.getBusinessById(newCurrentBusinessId)
-        
+
         // Update businesses array: merge API response with existing business to preserve modules
-        let updatedBusinesses = [...storeBusinesses]
+        const updatedBusinesses = [...storeBusinesses]
         const existingIndex = updatedBusinesses.findIndex(b => b.id === newCurrentBusiness.id)
-        
+
         if (existingIndex >= 0) {
           // Merge API response with existing business to preserve modules
           // If API response doesn't have modules, keep the existing ones
@@ -301,12 +296,12 @@ export function useSwitchBusiness() {
             modules: newCurrentBusiness.modules || [],
           })
         }
-        
+
         // Update businesses in store and cache with modules preserved
         setBusinesses(updatedBusinesses)
         queryClient.setQueryData(["businesses"], updatedBusinesses)
-      
-     
+
+
       } catch (error) {
         // If fetch fails, still update user but log error
         console.warn("Failed to fetch business details after switch:", error)
@@ -324,15 +319,11 @@ export function useSwitchBusiness() {
           console.warn("Failed to refetch businesses after switch:", fallbackError)
         }
       }
-      
+
       toast.success("Business switched successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to switch business. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to switch business. Please try again."))
     },
   })
 }

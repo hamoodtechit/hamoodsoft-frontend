@@ -4,6 +4,7 @@ import { transactionsApi, type TransactionsListParams } from "@/lib/api/transact
 import { CreateIncomeTransactionInput, CreateExpenseTransactionInput } from "@/lib/validations/transactions"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useTransactions(params?: TransactionsListParams) {
   const queryKey = [
@@ -47,12 +48,8 @@ export function useCreateIncomeTransaction() {
       queryClient.invalidateQueries({ queryKey: ["accounts"] })
       toast.success("Income transaction created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create income transaction. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create income transaction. Please try again."))
     },
   })
 }
@@ -67,12 +64,8 @@ export function useCreateExpenseTransaction() {
       queryClient.invalidateQueries({ queryKey: ["accounts"] })
       toast.success("Expense transaction created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create expense transaction. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create expense transaction. Please try again."))
     },
   })
 }

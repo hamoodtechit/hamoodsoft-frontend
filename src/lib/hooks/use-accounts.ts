@@ -5,6 +5,7 @@ import { CreateAccountInput, UpdateAccountInput } from "@/lib/validations/accoun
 import { Account } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useAccounts(params?: AccountsListParams) {
   const queryKey = [
@@ -49,12 +50,8 @@ export function useCreateAccount() {
       queryClient.invalidateQueries({ queryKey: ["accounts"] })
       toast.success("Account created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create account. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create account. Please try again."))
     },
   })
 }
@@ -70,12 +67,8 @@ export function useUpdateAccount() {
       queryClient.invalidateQueries({ queryKey: ["account", updatedAccount.id] })
       toast.success("Account updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update account. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update account. Please try again."))
     },
   })
 }

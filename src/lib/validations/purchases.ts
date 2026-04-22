@@ -11,6 +11,7 @@ export const purchaseItemSchema = z.object({
   discountAmount: z.number().min(0, "Discount amount must be greater than or equal to 0").optional().default(0),
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
   productId: z.string().optional(),
+  variantId: z.string().optional(),
   itemType: z.enum(["PRODUCT", "SERVICE", "FUEL"]).optional(),
   fuelTypeId: z.string().optional(),
   tankerId: z.string().optional(),

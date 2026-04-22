@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 import { getNextOnboardingStep } from "./use-onboarding"
 
 export function useLogin() {
@@ -54,10 +55,8 @@ export function useLogin() {
       
       toast.success("Login successful!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Login failed. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Login failed. Please try again."))
     },
   })
 }
@@ -89,10 +88,8 @@ export function useRegister() {
       // Redirect to business registration step
       router.push(`/${locale}/register-business`)
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || "Registration failed. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Registration failed. Please try again."))
     },
   })
 }
@@ -197,11 +194,8 @@ export function useForgotPassword() {
         toast.success("Password reset requested successfully!")
       }
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to request password reset. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to request password reset. Please try again."))
     },
   })
 }
@@ -217,11 +211,8 @@ export function useResetPassword() {
       toast.success("Password reset successful! You can now login.")
       router.push(`/${locale}/login`)
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to reset password. The link may be invalid or expired."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to reset password. The link may be invalid or expired."))
     },
   })
 }

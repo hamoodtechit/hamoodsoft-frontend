@@ -1,4 +1,3 @@
-import { config } from "@/constants/config"
 import { ApiResponse, User } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
@@ -20,8 +19,8 @@ export const usersApi = {
     return response.data.data
   },
 
-  updatePreferences: async (preferences: Record<string, any>): Promise<any> => {
-    const response = await apiClient.patch<ApiResponse<any>>(endpoints.auth.preferences, preferences)
+  updatePreferences: async (preferences: Record<string, unknown>): Promise<unknown> => {
+    const response = await apiClient.patch<ApiResponse<unknown>>(endpoints.auth.preferences, preferences)
     // we return the full response or just data
     return response.data
   },

@@ -109,7 +109,7 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
       }
 
       updateMutation.mutate(
-        { id: tanker.id, data: { ...values, branchId: selectedBranchId } as any },
+        { id: tanker.id, data: { ...values, branchId: selectedBranchId } },
         {
           onSuccess: () => {
             onOpenChange(false)
@@ -125,7 +125,7 @@ export function TankerDialog({ tanker, open, onOpenChange }: TankerDialogProps) 
       createMutation.mutate({
         ...values,
         branchId: selectedBranchId
-      } as any, {
+      }, {
         onSuccess: () => {
           onOpenChange(false)
         },

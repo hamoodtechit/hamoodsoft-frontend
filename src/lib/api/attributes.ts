@@ -59,7 +59,7 @@ export const attributesApi = {
   },
 
   list: async (params?: AttributesListParams): Promise<PaginatedResult<Attribute>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {

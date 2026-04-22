@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
 import { useAuthStore, useUIStore } from "@/store"
-import { ChevronDown, Languages, Moon, Search, Settings, Sun, User } from "lucide-react"
+import { ChevronDown, Languages, Moon, Search, Sun, User } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -128,12 +128,7 @@ export function DashboardHeader() {
                     <span>{tHeader("profileSettings")}</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/${locale}/dashboard/business-settings`} className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Business Settings</span>
-                  </Link>
-                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
                 {/* Language Switcher - Show on small screens */}
                 <div className="sm:hidden">

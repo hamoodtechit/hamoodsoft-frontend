@@ -4,6 +4,7 @@ import { paymentsApi, type PaymentsListParams } from "@/lib/api/payments"
 import { CreatePaymentInput } from "@/lib/validations/payments"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function usePayments(params?: PaymentsListParams) {
   const queryKey = [
@@ -49,12 +50,8 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({ queryKey: ["purchases"] })
       toast.success("Payment created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create payment. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create payment. Please try again."))
     },
   })
 }
@@ -71,12 +68,8 @@ export function useDeletePayment() {
       queryClient.invalidateQueries({ queryKey: ["purchases"] })
       toast.success("Payment deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete payment. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete payment. Please try again."))
     },
   })
 }

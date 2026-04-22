@@ -7,17 +7,17 @@ import { endpoints } from "./endpoints"
 const permissionPattern = /^[a-z_]+:[a-z_]+$/
 
 // Normalize role data from API response (with rolePermissions) to frontend format
-const normalizeRole = (role: any): Role => {
+const normalizeRole = (role: Record<string, any>): Role => {
   // Extract permission keys from rolePermissions array and normalize them
-  const rawPermissions = role.rolePermissions?.map((rp: any) => rp.permission?.key).filter(Boolean) || []
-  
+  const rawPermissions = (role.rolePermissions as any[])?.map((rp: any) => rp.permission?.key).filter(Boolean) || []
+
   // Normalize all permissions to snake_case format
   const permissions = rawPermissions
     .map(normalizePermission)
     .filter((p: string) => permissionPattern.test(p))
     // Remove duplicates
     .filter((p: string, index: number, arr: string[]) => arr.indexOf(p) === index)
-  
+
   return {
     id: role.id,
     businessId: role.businessId,
@@ -32,7 +32,7 @@ const normalizeRole = (role: any): Role => {
 }
 
 // Normalize array of roles
-const normalizeRoles = (roles: any[]): Role[] => {
+const normalizeRoles = (roles: Array<Record<string, any>>): Role[] => {
   return roles.map(normalizeRole)
 }
 
@@ -46,7 +46,7 @@ export const rolesApi = {
         .filter((p) => permissionPattern.test(p))
         .filter((p, index, arr) => arr.indexOf(p) === index), // Remove duplicates
     }
-    
+
     const response = await apiClient.post<ApiResponse<Role>>(
       endpoints.roles.create,
       normalizedData
@@ -79,7 +79,7 @@ export const rolesApi = {
           .filter((p, index, arr) => arr.indexOf(p) === index), // Remove duplicates
       }),
     }
-    
+
     const response = await apiClient.patch<ApiResponse<Role>>(
       endpoints.roles.update(id),
       normalizedData

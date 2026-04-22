@@ -18,7 +18,7 @@ type IncomeExpenseCategoriesResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -62,7 +62,7 @@ function normalizeIncomeExpenseCategoriesList(data: PaginatedResult<IncomeExpens
 
 export const incomeExpenseCategoriesApi = {
   getIncomeExpenseCategories: async (params?: IncomeExpenseCategoriesListParams): Promise<PaginatedResult<IncomeExpenseCategory>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof IncomeExpenseCategoriesListParams]

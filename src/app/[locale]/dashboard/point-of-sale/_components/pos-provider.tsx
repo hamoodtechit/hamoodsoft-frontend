@@ -279,8 +279,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const businessConfig = useMemo(() => {
     const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
     return {
-      showPointReducing: setting?.configs?.showPointReducing ?? false,
-      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+      showPointReducing: Boolean(setting?.configs?.showPointReducing ?? false),
+      pointReducingAmountPerLiter: Number(setting?.configs?.pointReducingAmountPerLiter ?? 0),
     };
   }, [settingsData]);
 
@@ -327,7 +327,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   }, [stocksData])
 
   const { data: contactsData } = useContacts({ type: "CUSTOMER" })
-  const contacts = contactsData?.items || []
+  const contacts = useMemo(() => contactsData?.items || [], [contactsData])
 
   const { data: categories = [] } = useCategories(selectedBranchId || undefined)
   const { data: brandsData } = useBrands()
@@ -630,7 +630,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
             id: variant.id || '',
             productId: product.id,
             sku: skuId,
-            price: variant.price ?? stock.salePrice ?? product.price ?? 0,
+            price: stock.salePrice ?? variant.price ?? product.price ?? 0,
             unitId: variant.unitId || product.unitId,
             variantName: variant.variantName || '',
             options: variant.options || {},
@@ -788,7 +788,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     const variantEntry = variants.find(v => v.sku === finalSku)
     const finalStock = variantEntry?.stock
 
-    const price = variant?.price ?? finalStock?.salePrice ?? product.price ?? 0
+    // Price priority: stock level > variant level > product level
+    const price = finalStock?.salePrice ?? variant?.price ?? product.price ?? 0
     const availableQty = finalStock?.quantity || (variant ? 0 : (product.manageStocks === false ? 999999 : 0))
 
     if (existingItemIndex >= 0) {
@@ -940,6 +941,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (foundVariant) {
+        // Price priority: stock level > variant level > product level
         const variantPrice = foundStock?.salePrice ?? foundVariant.price ?? foundProduct.price ?? 0
 
         const variantData: ProductVariant = {
@@ -1217,6 +1219,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     paidAmountInput, cartTotals, discountType, cashAccountId, bankAccountId,
     paymentSplits, accounts, products, getProductVariants,
     playSound, createSaleMutation, clearCart, dispensers,
+    businessConfig.pointReducingAmountPerLiter, businessConfig.showPointReducing,
   ])
 
   // Save as draft
@@ -1239,6 +1242,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
         return {
           sku: sku,
+          variantId: item.variantId,
           itemName: item.itemName,
           itemDescription: item.itemDescription || "",
           unit: item.unit,

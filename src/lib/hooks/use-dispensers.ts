@@ -39,7 +39,7 @@ export function useCreateDispenser() {
       queryClient.invalidateQueries({ queryKey: ["dispensers"] })
       toast.success("Dispenser created successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to create dispenser"))
     },
   })
@@ -54,7 +54,7 @@ export function useUpdateDispenser() {
       queryClient.invalidateQueries({ queryKey: ["dispenser", id] })
       toast.success("Dispenser updated successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to update dispenser"))
     },
   })
@@ -68,7 +68,7 @@ export function useDeleteDispenser() {
       queryClient.invalidateQueries({ queryKey: ["dispensers"] })
       toast.success("Dispenser deleted successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to delete dispenser"))
     },
   })

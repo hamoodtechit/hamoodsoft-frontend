@@ -45,6 +45,7 @@ interface AdjustStockDialogProps {
   defaultProductId?: string
   defaultUnitId?: string
   defaultStockId?: string
+  defaultVariantId?: string
 }
 
 export function AdjustStockDialog({
@@ -54,12 +55,13 @@ export function AdjustStockDialog({
   defaultProductId,
   defaultUnitId,
   defaultStockId,
+  defaultVariantId,
 }: AdjustStockDialogProps) {
   const t = useTranslations("stocks")
   const tCommon = useTranslations("common")
   const { data: branches = [] } = useBranches()
   const { data: productsData } = useProducts()
-  const products = productsData?.items || []
+  const products = useMemo(() => productsData?.items || [], [productsData])
   const { data: units = [] } = useUnits()
   const adjustMutation = useAdjustStock()
 
@@ -69,26 +71,39 @@ export function AdjustStockDialog({
     return {
       branchId: defaultBranchId || "",
       productId: defaultProductId || "",
+      variantId: defaultVariantId || "",
       unitId: defaultUnitId || "",
       stockId: defaultStockId || undefined,
       transactionType: "IN" as "IN" | "OUT",
       quantity: 0,
       reason: "",
     }
-  }, [defaultBranchId, defaultProductId, defaultUnitId, defaultStockId])
+  }, [defaultBranchId, defaultProductId, defaultUnitId, defaultStockId, defaultVariantId])
 
   const form = useForm<AdjustStockInput>({
     resolver: zodResolver(adjustStockSchema),
     defaultValues,
   })
 
-  const transactionType = form.watch("transactionType")
+  // transactionType is controlled by the form field directly
+  const productId = form.watch("productId")
+  const variantId = form.watch("variantId")
 
   useEffect(() => {
     if (open) {
       form.reset(defaultValues)
     }
   }, [open, defaultValues, form])
+
+  // Reset variantId when productId changes (if not in initial load)
+  useEffect(() => {
+    if (productId && !defaultStockId) {
+      const product = products.find(p => p.id === productId)
+      if (variantId && product && !product.variants?.some(v => v.id === variantId)) {
+        form.setValue("variantId", "")
+      }
+    }
+  }, [productId, products, variantId, defaultStockId, form])
 
   const onSubmit = (data: AdjustStockInput) => {
     adjustMutation.mutate(data, {
@@ -145,7 +160,14 @@ export function AdjustStockDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!!defaultStockId}>
+                      <Select 
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          if (!defaultStockId) form.setValue("variantId", "")
+                        }} 
+                        value={field.value} 
+                        disabled={!!defaultStockId}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectProduct")} />
@@ -163,6 +185,37 @@ export function AdjustStockDialog({
                     </FormItem>
                   )}
                 />
+
+                {productId && products.find(p => p.id === productId)?.isVariable && (
+                  <FormField
+                    control={form.control}
+                    name="variantId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("variant") || "Variant"}</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value || ""} 
+                          disabled={!!defaultStockId}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("selectVariant") || "Select a variant"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.find(p => p.id === productId)?.variants?.map((variant) => (
+                              <SelectItem key={variant.id} value={variant.id || ""}>
+                                {variant.variantName} {variant.sku ? `(${variant.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

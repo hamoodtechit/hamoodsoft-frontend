@@ -48,7 +48,7 @@ export function useCreateTanker() {
       queryClient.invalidateQueries({ queryKey: ["tankers"] })
       toast.success("Tanker created successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to create tanker"))
     },
   })
@@ -63,7 +63,7 @@ export function useUpdateTanker() {
       queryClient.invalidateQueries({ queryKey: ["tanker", id] })
       toast.success("Tanker updated successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to update tanker"))
     },
   })
@@ -77,7 +77,7 @@ export function useDeleteTanker() {
       queryClient.invalidateQueries({ queryKey: ["tankers"] })
       toast.success("Tanker deleted successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to delete tanker"))
     },
   })

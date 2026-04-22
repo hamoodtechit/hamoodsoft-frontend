@@ -38,16 +38,16 @@ const SettingsContext = createContext<SettingsContextValue | undefined>(undefine
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { isAuthenticated, token, user } = useAuthStore()
-  
+
   // Only fetch settings if user is authenticated and not on login/register pages
-  const isAuthPage = pathname?.includes("/login") || 
-                     pathname?.includes("/register") || 
-                     pathname?.includes("/forgot-password") || 
-                     pathname?.includes("/reset-password")
-  
+  const isAuthPage = pathname?.includes("/login") ||
+    pathname?.includes("/register") ||
+    pathname?.includes("/forgot-password") ||
+    pathname?.includes("/reset-password")
+
   // Ensure boolean conversion - use !! to convert to strict boolean
   const shouldFetchSettings = !isAuthPage && !!(isAuthenticated || (token && user?.id))
-  
+
   const { data, isLoading } = useSettings(shouldFetchSettings)
   const settings = data?.items ?? []
 
@@ -65,31 +65,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const generalConfig = getSettingConfig("general")
     const generalSettings = generalConfig
       ? {
-          logoUrl: generalConfig.logoUrl || undefined,
-          currency: generalConfig.currency || undefined,
-          timeZone: generalConfig.timeZone || undefined,
-          currencySymbolPlacement: generalConfig.currencySymbolPlacement || "before-amount",
-        }
+        logoUrl: generalConfig.logoUrl || undefined,
+        currency: generalConfig.currency || undefined,
+        timeZone: generalConfig.timeZone || undefined,
+        currencySymbolPlacement: generalConfig.currencySymbolPlacement || "before-amount",
+      }
       : null
 
     // Get tax settings
     const taxConfig = getSettingConfig("taxRate")
     const taxSettings = taxConfig
       ? {
-          name: taxConfig.name || undefined,
-          rate: taxConfig.rate ?? undefined,
-        }
+        name: taxConfig.name || undefined,
+        rate: taxConfig.rate ?? undefined,
+      }
       : null
 
     // Get invoice settings
     const invoiceConfig = getSettingConfig("invoice")
     const invoiceSettings = invoiceConfig
       ? {
-          prefix: invoiceConfig.prefix || "INV",
-          startNumber: invoiceConfig.startNumber ?? 1000,
-          layout: invoiceConfig.layout || "pos-80mm",
-          footer: invoiceConfig.footer || "",
-        }
+        prefix: invoiceConfig.prefix || "INV",
+        startNumber: invoiceConfig.startNumber ?? 1000,
+        layout: invoiceConfig.layout || "pos-80mm",
+        footer: invoiceConfig.footer || "",
+      }
       : null
 
     // Get email settings

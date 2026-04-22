@@ -49,7 +49,7 @@ export default function BrandsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null)
   const [search, setSearch] = useState("")
-  
+
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {

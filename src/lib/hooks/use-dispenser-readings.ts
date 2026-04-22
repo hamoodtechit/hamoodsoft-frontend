@@ -28,7 +28,7 @@ export function useCreateDispenserReading() {
       queryClient.invalidateQueries({ queryKey: ["tankers"] })
       toast.success("Reading recorded successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to record reading"))
     },
   })
@@ -43,7 +43,7 @@ export function useDeleteDispenserReading() {
       queryClient.invalidateQueries({ queryKey: ["tankers"] })
       toast.success("Reading deleted successfully")
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(extractError(error, "Failed to delete reading"))
     },
   })

@@ -4,6 +4,7 @@ import { posSessionsApi } from "@/lib/api/pos-sessions"
 import { ClosePOSSessionInput, OpenPOSSessionInput, POSSession } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function usePOSSession(branchId: string | undefined) {
   return useQuery({
@@ -23,12 +24,8 @@ export function useOpenPOSSession() {
       queryClient.invalidateQueries({ queryKey: ["pos-session", session.branchId] })
       toast.success("POS session opened successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to open POS session. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to open POS session. Please try again."))
     },
   })
 }
@@ -42,12 +39,8 @@ export function useClosePOSSession() {
       queryClient.invalidateQueries({ queryKey: ["pos-session", session.branchId] })
       toast.success("POS session closed successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to close POS session. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to close POS session. Please try again."))
     },
   })
 }

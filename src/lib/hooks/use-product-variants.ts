@@ -8,6 +8,7 @@ import {
 import { ProductVariant } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useProductVariants(productId: string | undefined) {
   return useQuery({
@@ -26,12 +27,8 @@ export function useCreateProductVariant(productId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["productVariants", productId] })
       toast.success("Variant created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create variant. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create variant. Please try again."))
     },
   })
 }
@@ -47,12 +44,8 @@ export function useUpdateProductVariant(productId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["productVariant", updated.id] })
       toast.success("Variant updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update variant. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update variant. Please try again."))
     },
   })
 }
@@ -66,12 +59,8 @@ export function useDeleteProductVariant(productId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["productVariants", productId] })
       toast.success("Variant deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete variant. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete variant. Please try again."))
     },
   })
 }

@@ -23,16 +23,18 @@ type TransactionsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
-function normalizeTransaction(transaction: any): Transaction {
+function normalizeTransaction(transaction: Transaction): Transaction {
+  // Access raw API fields using intersection type
+  const raw = transaction as Transaction & { incomeExpenseCategoryId?: string; incomeExpenseCategory?: unknown }
   // Normalize type: "IN" -> "INCOME", "EX" -> "EXPENSE"
   let normalizedType: "INCOME" | "EXPENSE" = "INCOME"
-  if (transaction.type === "IN") {
+  if (transaction.type === "IN" as string) {
     normalizedType = "INCOME"
-  } else if (transaction.type === "EX") {
+  } else if (transaction.type === "EX" as string) {
     normalizedType = "EXPENSE"
   } else if (transaction.type === "INCOME") {
     normalizedType = "INCOME"
@@ -43,9 +45,9 @@ function normalizeTransaction(transaction: any): Transaction {
   return {
     ...transaction,
     type: normalizedType,
-    categoryId: transaction.incomeExpenseCategoryId || transaction.categoryId || null,
+    categoryId: raw.incomeExpenseCategoryId || transaction.categoryId || null,
     // Preserve all API response fields - incomeExpenseCategory is the object, category is a string
-    incomeExpenseCategory: transaction.incomeExpenseCategory || null,
+    incomeExpenseCategory: raw.incomeExpenseCategory || null,
     account: transaction.account || null,
     branch: transaction.branch || null,
     contact: transaction.contact || null,
@@ -92,7 +94,7 @@ function normalizeTransactionsList(data: PaginatedResult<Transaction> | Transact
 
 export const transactionsApi = {
   getTransactions: async (params?: TransactionsListParams): Promise<PaginatedResult<Transaction>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof TransactionsListParams]

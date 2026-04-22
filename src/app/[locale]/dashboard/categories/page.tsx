@@ -44,20 +44,20 @@ export default function CategoriesPage() {
   const currentBusiness = useCurrentBusiness()
   const { data: categories = [], isLoading } = useCategories(selectedBranchId || undefined)
   const deleteCategoryMutation = useDeleteCategory()
-  
+
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
   const canCreate = useHasPermission(PERMISSIONS.CATEGORIES_CREATE)
   const canUpdate = useHasPermission(PERMISSIONS.CATEGORIES_UPDATE)
   const canDelete = useHasPermission(PERMISSIONS.CATEGORIES_DELETE)
-  
+
   // Secure by module access (inventory)
   useEffect(() => {
     if (!isCheckingAccess && !hasAccess) {
       router.push(`/${locale}/dashboard`)
     }
   }, [hasAccess, isCheckingAccess, locale, router])
-  
+
   // Show loading while checking permissions
   if (isCheckingAccess) {
     return (
@@ -66,7 +66,7 @@ export default function CategoriesPage() {
       </PageLayout>
     )
   }
-  
+
   if (!hasAccess) {
     return (
       <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
@@ -95,7 +95,7 @@ export default function CategoriesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
   const [search, setSearch] = useState("")
-  
+
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -114,7 +114,7 @@ export default function CategoriesPage() {
   // Flatten nested categories to get all categories (including nested children)
   const allCategoriesFlat = useMemo(() => {
     const flattened: Category[] = []
-    
+
     const traverse = (cats: Category[]) => {
       cats.forEach((cat) => {
         // Add the category itself (without children for flat display)
@@ -122,14 +122,14 @@ export default function CategoriesPage() {
           ...cat,
           children: undefined,
         })
-        
+
         // Recursively traverse children if they exist
         if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
           traverse((cat as any).children)
         }
       })
     }
-    
+
     traverse(categories)
     console.log("📊 All Categories Flat (for table view):", {
       allCategoriesFlat: flattened,
@@ -154,7 +154,7 @@ export default function CategoriesPage() {
   const filteredCategoriesForTree = useMemo(() => {
     if (!search.trim()) return categories
     const searchLower = search.toLowerCase()
-    
+
     // Filter nested structure recursively
     const filterNested = (cats: Category[]): Category[] => {
       return cats.flatMap((cat) => {
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
         return []
       })
     }
-    
+
     return filterNested(categories)
   }, [categories, search])
 
@@ -240,7 +240,7 @@ export default function CategoriesPage() {
   // Flatten nested category structure to get all categories
   const flattenCategories = (categories: Category[]): Category[] => {
     const flattened: Category[] = []
-    
+
     const traverse = (cats: Category[]) => {
       cats.forEach((cat) => {
         // Add the category itself
@@ -248,14 +248,14 @@ export default function CategoriesPage() {
           ...cat,
           children: undefined, // Remove children for flat structure
         })
-        
+
         // Recursively traverse children if they exist
         if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
           traverse((cat as any).children)
         }
       })
     }
-    
+
     traverse(categories)
     return flattened
   }
@@ -267,12 +267,12 @@ export default function CategoriesPage() {
         ...cat,
         children: [],
       }
-      
+
       // If this category has nested children, process them recursively
       if ((cat as any).children && Array.isArray((cat as any).children) && (cat as any).children.length > 0) {
         processed.children = processNestedCategories((cat as any).children)
       }
-      
+
       return processed
     })
   }
@@ -289,7 +289,7 @@ export default function CategoriesPage() {
 
     // Check if categories are already nested (API returned nested structure)
     const hasNestedStructure = categories.some(c => (c as any).children?.length > 0)
-    
+
     // If API already returned nested structure, process it recursively
     if (hasNestedStructure) {
       console.log("🌲 API returned nested structure, processing recursively")
@@ -374,9 +374,8 @@ export default function CategoriesPage() {
       return (
         <div key={category.id} className="space-y-2">
           <div
-            className={`flex items-center justify-between rounded-lg border p-4 hover:bg-accent ${
-              level > 0 ? "ml-6 border-l-2" : ""
-            }`}
+            className={`flex items-center justify-between rounded-lg border p-4 hover:bg-accent ${level > 0 ? "ml-6 border-l-2" : ""
+              }`}
           >
             <div className="flex items-center gap-3">
               <FolderTree className="h-5 w-5 text-muted-foreground" />

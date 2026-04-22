@@ -23,9 +23,6 @@ export function extractError(error: any, defaultMessage: string = "An unexpected
 
   // Standard JS Error object
   if (error.message && typeof error.message === "string") {
-    // Axios sets generic error messages like "Request failed with status code 400"
-    // that aren't very useful to the end user. If we have a generic message,
-    // we still return it but the response data checked above is preferred.
     return error.message;
   }
 

@@ -54,7 +54,7 @@ export const brandsApi = {
   },
 
   list: async (params?: BrandsListParams): Promise<PaginatedResult<Brand>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {

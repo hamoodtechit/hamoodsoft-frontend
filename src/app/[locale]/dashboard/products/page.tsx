@@ -27,15 +27,14 @@ import {
 import { type ProductsListParams } from "@/lib/api/products"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useBranches } from "@/lib/hooks/use-branches"
-import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteProduct, useProduct, useProducts } from "@/lib/hooks/use-products"
 import { useStocks } from "@/lib/hooks/use-stocks"
-import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { useHasPermission } from "@/lib/hooks/use-permissions"
 import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Product } from "@/types"
+import { Branch, Product, ProductVariant } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -43,7 +42,6 @@ import { useEffect, useMemo, useState } from "react"
 
 export default function ProductsPage() {
   const t = useTranslations("products")
-  const tAttributes = useTranslations("attributes")
   const tCommon = useTranslations("common")
   const tModules = useTranslations("modulesPages.inventory")
   const params = useParams()
@@ -51,13 +49,12 @@ export default function ProductsPage() {
   const searchParams = useSearchParams()
   const locale = params.locale as string
 
-  const currentBusiness = useCurrentBusiness()
+
   const { selectedBranchId } = useBranchSelection()
   const deleteMutation = useDeleteProduct()
   
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
-  const canCreate = useHasPermission(PERMISSIONS.PRODUCTS_CREATE)
   const canUpdate = useHasPermission(PERMISSIONS.PRODUCTS_UPDATE)
   const canDelete = useHasPermission(PERMISSIONS.PRODUCTS_DELETE)
 
@@ -104,21 +101,18 @@ export default function ProductsPage() {
   }, [selectedBranchId])
 
   const { data, isLoading } = useProducts(queryParams)
-  console.log("data", data)
-  const products = data?.items ?? []
+  const products = useMemo(() => data?.items ?? [], [data?.items])
   const meta = data?.meta
   const total = meta?.total ?? products.length
   const totalPages =
-    meta?.totalPages ??
     Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
-  const currentPage = meta?.page ?? page
 
   // Fetch stocks for quantity calculation
   const { data: stocksData } = useStocks({ branchId: selectedBranchId || undefined })
-  const stocks = stocksData?.items ?? []
+  const stocks = useMemo(() => stocksData?.items ?? [], [stocksData?.items])
 
   // Helper function to get product image (prioritizes product thumbnail, then variant images, then product images)
-  const getProductImage = (product: Product): string | null => {
+  const getProductImage = useMemo(() => (product: Product): string | null => {
     // 1. Product thumbnail
     if (product.thumbnailUrl) return product.thumbnailUrl
     
@@ -138,10 +132,10 @@ export default function ProductsPage() {
     }
     
     return null
-  }
+  }, [])
 
   // Helper function to get total quantity for a product
-  const getProductQuantity = (product: Product): number => {
+  const getProductQuantity = useMemo(() => (product: Product): number => {
     if (!product.manageStocks) return 0
     
     // Sum quantities from product.stocks
@@ -167,7 +161,7 @@ export default function ProductsPage() {
         .filter(s => s.productId === product.id)
         .reduce((sum, stock) => sum + (stock.quantity || 0), 0)
     }
-  }
+  }, [selectedBranchId, stocks])
 
   // Table columns configuration
   const tableColumns: Column<Product>[] = useMemo(() => [
@@ -295,7 +289,7 @@ export default function ProductsPage() {
       },
       sortable: false,
     },
-  ], [t, tCommon, selectedBranchId, stocks])
+  ], [t, tCommon, getProductQuantity, getProductImage])
 
   // Export columns configuration
   const exportColumns: ExportColumn<Product>[] = useMemo(() => [
@@ -358,7 +352,7 @@ export default function ProductsPage() {
 
   const { data: viewProduct, isLoading: isViewProductLoading } = useProduct(viewProductId || undefined)
   // Fetch full product details when editing
-  const { data: editProduct, isLoading: isEditProductLoading } = useProduct(selectedProductId || undefined)
+  const { data: editProduct } = useProduct(selectedProductId || undefined)
 
   // Handle edit from URL query parameter
   useEffect(() => {
@@ -372,12 +366,12 @@ export default function ProductsPage() {
   }, [searchParams, products, locale, router])
 
   const { data: branchesData } = useBranches()
-  const branches = Array.isArray(branchesData) ? branchesData : []
   const branchMap = useMemo(() => {
-    const map = new Map<string, any>()
-    branches.forEach((b: any) => map.set(b.id, b))
+    const map = new Map<string, Branch>()
+    const branchesList = Array.isArray(branchesData) ? (branchesData as Branch[]) : []
+    branchesList.forEach((b) => map.set(b.id, b))
     return map
-  }, [branches])
+  }, [branchesData])
 
   // Secure by module access (inventory)
   useEffect(() => {
@@ -760,8 +754,8 @@ export default function ProductsPage() {
                 }
                 
                 // Add variant images
-                const variants = viewProduct.productVariants || viewProduct.variants || []
-                variants.forEach((variant: any) => {
+                const variants = (viewProduct.productVariants || viewProduct.variants || []) as (ProductVariant | { variantName?: string; sku?: string; price?: number; unitId?: string; thumbnailUrl?: string | null; images?: string[]; options?: Record<string, string> })[]
+                variants.forEach((variant) => {
                   if (variant.thumbnailUrl && !allImages.includes(variant.thumbnailUrl)) {
                     allImages.push(variant.thumbnailUrl)
                   }
@@ -891,14 +885,14 @@ export default function ProductsPage() {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    {(viewProduct.variants || viewProduct.productVariants || []).map((v: any, index: number) => {
-                      const variant = v.variantName ? v : {
+                    {(viewProduct.variants || viewProduct.productVariants || []).map((v, index: number) => {
+                      const variant = ((v as unknown as ProductVariant).productId ? (v as unknown as ProductVariant) : {
                         variantName: v.variantName || "N/A",
                         sku: v.sku,
                         price: v.price,
                         unitId: v.unitId,
                         options: v.options || {},
-                      }
+                      }) as ProductVariant
                       return (
                       <Card key={index} className="border">
                         <CardContent className="p-4">

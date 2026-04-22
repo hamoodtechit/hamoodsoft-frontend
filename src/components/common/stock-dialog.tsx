@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/select"
 import { useBranches } from "@/lib/hooks/use-branches"
 import { useProducts } from "@/lib/hooks/use-products"
-import { useCreateStock } from "@/lib/hooks/use-stocks"
+import { useCreateStock, useStocks } from "@/lib/hooks/use-stocks"
 import { useUnits } from "@/lib/hooks/use-units"
 import { createStockSchema, type CreateStockInput } from "@/lib/validations/stocks"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Package } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 
 interface StockDialogProps {
@@ -44,12 +44,40 @@ interface StockDialogProps {
   defaultProductId?: string
 }
 
+/**
+ * Generates the next available unique SKU by examining existing stock SKUs.
+ * Given a base SKU like "PROD-001", it finds all stocks matching the pattern
+ * "PROD-001", "PROD-001-001", "PROD-001-002", etc. and returns the next suffix.
+ */
+function generateNextSku(baseSku: string, existingSkus: string[]): string {
+  if (!baseSku) return ""
+
+  // Check if the base SKU itself is already taken
+  const isBaseTaken = existingSkus.some(s => s === baseSku)
+  if (!isBaseTaken) return baseSku
+
+  // Find all existing suffixed variants matching the pattern: baseSku-NNN
+  const suffixPattern = new RegExp(`^${baseSku.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d{3})$`)
+  let maxSuffix = 0
+
+  existingSkus.forEach(sku => {
+    const match = sku.match(suffixPattern)
+    if (match) {
+      const num = parseInt(match[1], 10)
+      if (num > maxSuffix) maxSuffix = num
+    }
+  })
+
+  const nextSuffix = (maxSuffix + 1).toString().padStart(3, '0')
+  return `${baseSku}-${nextSuffix}`
+}
+
 export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProductId }: StockDialogProps) {
   const t = useTranslations("stocks")
   const tCommon = useTranslations("common")
   const { data: branches = [] } = useBranches()
   const { data: productsData } = useProducts()
-  const products = productsData?.items || []
+  const products = useMemo(() => productsData?.items || [], [productsData])
   const { data: units = [] } = useUnits()
   const createMutation = useCreateStock()
 
@@ -59,11 +87,12 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
     return {
       branchId: defaultBranchId || "",
       productId: defaultProductId || "",
+      variantId: "",
       unitId: "",
       sku: "",
       quantity: 0,
-      purchasePrice: undefined as any,
-      salePrice: undefined as any,
+      purchasePrice: 0,
+      salePrice: 0,
     }
   }, [defaultBranchId, defaultProductId])
 
@@ -72,30 +101,71 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
     defaultValues,
   })
 
-  // Watch productId to auto-fill sale price
-  const productId = useWatch({
+  // Watch productId and variantId to auto-fill prices
+  const watchedFields = useWatch({
     control: form.control,
-    name: "productId",
+    name: ["productId", "variantId"],
+  })
+  const productId = watchedFields[0]
+  const variantId = watchedFields[1]
+
+  // Fetch existing stocks for the selected product (business-wide) to determine unique SKU suffix
+  const { data: existingStocksData } = useStocks({
+    productId: productId || undefined,
+    limit: 200,
   })
 
-  // Auto-fill sale price when product is selected
+  // Collect all existing stock SKUs for the current product
+  const existingStockSkus = useMemo(() => {
+    const skus: string[] = []
+    if (existingStocksData?.items) {
+      existingStocksData.items.forEach(stock => {
+        if (stock.sku) skus.push(stock.sku)
+      })
+    }
+    return skus
+  }, [existingStocksData])
+
+  const getUniqueSku = useCallback((baseSku: string) => {
+    return generateNextSku(baseSku, existingStockSkus)
+  }, [existingStockSkus])
+
+  // Auto-fill price and unit when product/variant is selected
   useEffect(() => {
     if (productId) {
       const selectedProduct = products.find((p) => p.id === productId)
-      if (selectedProduct?.price !== undefined) {
-        // Always populate sale price with product price when product is selected
-        // User can still edit it afterward
-        form.setValue("salePrice", selectedProduct.price, { shouldValidate: false })
+      
+      // If product changed, reset variantId if it doesn't belong to new product
+      if (variantId && selectedProduct && !selectedProduct.variants?.some(v => v.id === variantId)) {
+        form.setValue("variantId", "")
       }
-      if (selectedProduct?.unitId) {
-        form.setValue("unitId", selectedProduct.unitId, { shouldValidate: false })
+
+      if (selectedProduct) {
+        // If variant is selected, use variant price, otherwise use product price
+        const selectedVariant = selectedProduct.variants?.find(v => v.id === variantId)
+        const price = selectedVariant?.price ?? selectedProduct.price
+        const baseSku = selectedVariant?.sku ?? selectedProduct.sku ?? ""
+        const unitId = selectedVariant?.unitId ?? selectedProduct.unitId
+
+        if (price !== undefined) {
+          form.setValue("salePrice", price, { shouldValidate: false })
+        }
+        if (unitId) {
+          form.setValue("unitId", unitId, { shouldValidate: false })
+        }
+        if (baseSku) {
+          // Generate a unique SKU by appending a suffix if the base SKU is already taken
+          const uniqueSku = getUniqueSku(baseSku)
+          form.setValue("sku", uniqueSku, { shouldValidate: false })
+        }
       }
     } else {
-      // Clear sale price when no product is selected
-      form.setValue("salePrice", undefined as any, { shouldValidate: false })
+      form.setValue("salePrice", 0, { shouldValidate: false })
       form.setValue("unitId", "", { shouldValidate: false })
+      form.setValue("sku", "", { shouldValidate: false })
+      form.setValue("variantId", "")
     }
-  }, [productId, products, form])
+  }, [productId, variantId, products, form, getUniqueSku])
 
   useEffect(() => {
     if (open) {
@@ -158,7 +228,13 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("product")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          form.setValue("variantId", "") // Reset variant when product changes
+                        }} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectProduct")} />
@@ -176,6 +252,33 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                     </FormItem>
                   )}
                 />
+
+                {productId && products.find(p => p.id === productId)?.isVariable && (
+                  <FormField
+                    control={form.control}
+                    name="variantId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("variant") || "Variant"}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("selectVariant") || "Select a variant"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.find(p => p.id === productId)?.variants?.map((variant) => (
+                              <SelectItem key={variant.id || ""} value={variant.id || ""}>
+                                {variant.variantName} {variant.sku ? `(${variant.sku})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

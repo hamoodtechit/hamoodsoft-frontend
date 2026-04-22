@@ -5,6 +5,7 @@ import { CreatePurchaseInput, UpdatePurchaseInput } from "@/lib/validations/purc
 import { Purchase } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function usePurchases(params?: PurchasesListParams) {
   const branchId = params?.branchId
@@ -49,12 +50,8 @@ export function useCreatePurchase() {
       queryClient.invalidateQueries({ queryKey: ["fuel-types"] })
       toast.success("Purchase created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create purchase. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create purchase. Please try again."))
     },
   })
 }
@@ -70,12 +67,8 @@ export function useUpdatePurchase() {
       queryClient.invalidateQueries({ queryKey: ["purchase", updatedPurchase.id] })
       toast.success("Purchase updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update purchase. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update purchase. Please try again."))
     },
   })
 }
@@ -89,12 +82,8 @@ export function useDeletePurchase() {
       queryClient.invalidateQueries({ queryKey: ["purchases"] })
       toast.success("Purchase deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete purchase. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete purchase. Please try again."))
     },
   })
 }

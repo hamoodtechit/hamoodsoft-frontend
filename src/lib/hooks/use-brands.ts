@@ -5,6 +5,7 @@ import { CreateBrandInput, UpdateBrandInput } from "@/lib/validations/brands"
 import { Brand } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useBrands(params?: BrandsListParams) {
   return useQuery({
@@ -30,12 +31,8 @@ export function useCreateBrand() {
       queryClient.invalidateQueries({ queryKey: ["brands"] })
       toast.success("Brand created successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create brand. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create brand. Please try again."))
     },
   })
 }
@@ -51,12 +48,8 @@ export function useUpdateBrand() {
       queryClient.invalidateQueries({ queryKey: ["brand", updated.id] })
       toast.success("Brand updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update brand. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update brand. Please try again."))
     },
   })
 }
@@ -70,12 +63,8 @@ export function useDeleteBrand() {
       queryClient.invalidateQueries({ queryKey: ["brands"] })
       toast.success("Brand deleted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete brand. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete brand. Please try again."))
     },
   })
 }

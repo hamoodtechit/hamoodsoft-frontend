@@ -2,16 +2,16 @@
 
 import { businessApi } from "@/lib/api/business"
 import { SelectAppsInput } from "@/lib/validations/apps"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useSelectApps() {
   const router = useRouter()
   const params = useParams()
   const locale = params?.locale || "en"
-  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (data: SelectAppsInput) => businessApi.selectApps(data),
@@ -20,11 +20,8 @@ export function useSelectApps() {
       toast.success("Apps selected successfully!")
       router.push(`/${locale}/dashboard`)
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to select apps. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to select apps. Please try again."))
     },
   })
 }

@@ -46,7 +46,7 @@ export function useCreateSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
       toast.success("Sale created successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
@@ -67,7 +67,7 @@ export function useUpdateSale() {
       queryClient.invalidateQueries({ queryKey: ["sale", updatedSale.id] })
       toast.success("Sale updated successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
@@ -86,7 +86,7 @@ export function useDeleteSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
       toast.success("Sale deleted successfully!")
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.message ||

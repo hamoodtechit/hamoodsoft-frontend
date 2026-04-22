@@ -45,8 +45,8 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
     }
     
     // Fallback: Get role from user's role relationship (if backend provides it)
-    if ((user as any).role) {
-      return (user as any).role as Role
+    if (user.role) {
+      return user.role
     }
     
     // Fallback: Default to "Owner" role if user is business owner

@@ -74,21 +74,21 @@ export default function DashboardPage() {
 
   // Load saved order from user preferences
   const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(
-    user?.preferences?.dashboardOrder || {}
+    (user?.preferences?.dashboardOrder as Record<string, string[]>) || {}
   )
 
   // Load pinned items
   const [pinnedItems, setPinnedItems] = useState<string[]>(
-    user?.preferences?.dashboardPinned || []
+    (user?.preferences?.dashboardPinned as string[]) || []
   )
 
   // Sync state if user preferences load or change from elsewhere
   useEffect(() => {
     if (user?.preferences?.dashboardOrder) {
-      setSavedOrder(user.preferences.dashboardOrder)
+      setSavedOrder(user.preferences.dashboardOrder as Record<string, string[]>)
     }
     if (user?.preferences?.dashboardPinned) {
-      setPinnedItems(user.preferences.dashboardPinned)
+      setPinnedItems(user.preferences.dashboardPinned as string[])
     }
   }, [user?.preferences])
 

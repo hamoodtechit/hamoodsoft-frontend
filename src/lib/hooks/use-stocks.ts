@@ -4,6 +4,7 @@ import { stocksApi, StocksListParams, StockHistoryListParams, StockAdjustmentsLi
 import { AdjustStockInput, CreateStockInput, UpdateStockInput, UpdateAdjustmentInput } from "@/lib/validations/stocks"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 // List stocks with pagination and filters
 export function useStocks(params?: StocksListParams) {
@@ -11,7 +12,7 @@ export function useStocks(params?: StocksListParams) {
     queryKey: ["stocks", params?.page, params?.limit, params?.search, params?.branchId, params?.productId, params?.sku, params?.unitId, params?.fuelTypeId, params?.tankerId, params?.itemType],
     queryFn: () => stocksApi.list(params),
     refetchOnWindowFocus: true,
-    enabled: !!params?.branchId,
+    enabled: !!(params?.branchId || params?.productId),
   })
 }
 
@@ -49,16 +50,16 @@ export function useCreateStock() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateStockInput) => stocksApi.create(data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["stocks"] })
-      toast.success("Stock created successfully!")
+      if (data?.consolidated) {
+        toast.info("Similar stock batch found. New stock has been included in the existing entry.")
+      } else {
+        toast.success("Stock created successfully!")
+      }
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create stock. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create stock. Please try again."))
     },
   })
 }
@@ -73,12 +74,8 @@ export function useUpdateStock() {
       queryClient.invalidateQueries({ queryKey: ["stock"] })
       toast.success("Stock updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update stock. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update stock. Please try again."))
     },
   })
 }
@@ -94,12 +91,8 @@ export function useAdjustStock() {
       queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] })
       toast.success("Stock adjusted successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to adjust stock. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to adjust stock. Please try again."))
     },
   })
 }
@@ -115,12 +108,8 @@ export function useUpdateStockAdjustment() {
       queryClient.invalidateQueries({ queryKey: ["stockHistory"] })
       toast.success("Stock adjustment updated successfully!")
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update stock adjustment. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update stock adjustment. Please try again."))
     },
   })
 }

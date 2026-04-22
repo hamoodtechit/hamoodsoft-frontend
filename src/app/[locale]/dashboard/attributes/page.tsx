@@ -52,7 +52,7 @@ export default function AttributesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(null)
   const [search, setSearch] = useState("")
-  
+
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {

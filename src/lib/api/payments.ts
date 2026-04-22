@@ -24,7 +24,7 @@ type PaymentsResponseShape = {
     limit?: number
     total?: number
     totalPages?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -73,7 +73,7 @@ export const paymentsApi = {
   },
 
   getPayments: async (params?: PaymentsListParams): Promise<PaginatedResult<Payment>> => {
-    const cleanParams: Record<string, any> = {}
+    const cleanParams: Record<string, string | number | boolean> = {}
     if (params) {
       Object.keys(params).forEach((key) => {
         const value = params[key as keyof PaymentsListParams]

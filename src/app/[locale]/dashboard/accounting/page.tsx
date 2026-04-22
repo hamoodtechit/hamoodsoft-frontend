@@ -9,26 +9,26 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet"
 import { useAccount, useAccountLedger, useAccounts, useUpdateAccount } from "@/lib/hooks/use-accounts"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -42,13 +42,13 @@ import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Account, AccountLedgerEntry, Transaction } from "@/types"
 import {
-    BookOpen,
-    Eye,
-    MoreVertical,
-    Pencil,
-    Plus,
-    Search,
-    Trash2
+  BookOpen,
+  Eye,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Search,
+  Trash2
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -113,11 +113,11 @@ export default function AccountingPage() {
     return accountTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
   }, [viewTransactionId, accountTransactions])
 
-  
 
-  
 
-  
+
+
+
 
   const updateAccountMutation = useUpdateAccount()
 
@@ -411,7 +411,7 @@ export default function AccountingPage() {
                         const credit = entry.credit !== undefined ? entry.credit : (transactionType === "CREDIT" ? entry.amount : 0)
                         const balance = entry.balanceAfter !== undefined ? entry.balanceAfter : (entry.balance !== undefined ? entry.balance : 0)
                         const description = entry.description || entry.category || "-"
-                        
+
                         return (
                           <tr key={entry.id} className="border-b">
                             <td className="p-2 text-sm">
@@ -575,9 +575,8 @@ export default function AccountingPage() {
                           </div>
                           <div className="text-right">
                             <p
-                              className={`font-semibold ${
-                                transaction.type === "INCOME" ? "text-green-600" : "text-red-600"
-                              }`}
+                              className={`font-semibold ${transaction.type === "INCOME" ? "text-green-600" : "text-red-600"
+                                }`}
                             >
                               {transaction.type === "INCOME" ? "+" : "-"}
                               {formatCurrency(transaction.amount, { generalSettings })}
@@ -615,344 +614,344 @@ export default function AccountingPage() {
             </SheetHeader>
             {transactionDetails ? (
               <div className="space-y-4 mt-6">
-                  {/* Basic Information */}
+                {/* Basic Information */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Basic Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Type</div>
+                        <div className="text-lg font-semibold">
+                          <Badge variant={(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "default" : "destructive"}>
+                            {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "Income" : "Expense"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Amount</div>
+                        <div className={`text-lg font-semibold ${(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "text-green-600" : "text-red-600"}`}>
+                          {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "+" : "-"}
+                          {formatCurrency(transactionDetails.amount, { generalSettings })}
+                        </div>
+                      </div>
+                      {transactionDetails.paidAmount !== undefined && transactionDetails.type === "EXPENSE" && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Paid Amount</div>
+                          <div className="text-lg font-semibold">
+                            {formatCurrency(transactionDetails.paidAmount, { generalSettings })}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-sm text-muted-foreground">Occurred At</div>
+                        <div className="text-base font-semibold">
+                          {transactionDetails.occurredAt
+                            ? new Date(transactionDetails.occurredAt).toLocaleString()
+                            : "-"}
+                        </div>
+                      </div>
+                      {transactionDetails.note && (
+                        <div className="col-span-2">
+                          <div className="text-sm text-muted-foreground">Note</div>
+                          <div className="text-base mt-1">{transactionDetails.note}</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Category Information */}
+                {((transactionDetails as any).incomeExpenseCategory || (transactionDetails as any).category) && (
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Basic Information</CardTitle>
+                      <CardTitle className="text-lg">Category Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-muted-foreground">Type</div>
-                          <div className="text-lg font-semibold">
-                            <Badge variant={(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "default" : "destructive"}>
-                              {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "Income" : "Expense"}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Amount</div>
-                          <div className={`text-lg font-semibold ${(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "text-green-600" : "text-red-600"}`}>
-                            {(transactionDetails.type === "INCOME" || (transactionDetails as any).type === "IN") ? "+" : "-"}
-                            {formatCurrency(transactionDetails.amount, { generalSettings })}
-                          </div>
-                        </div>
-                        {transactionDetails.paidAmount !== undefined && transactionDetails.type === "EXPENSE" && (
-                          <div>
-                            <div className="text-sm text-muted-foreground">Paid Amount</div>
-                            <div className="text-lg font-semibold">
-                              {formatCurrency(transactionDetails.paidAmount, { generalSettings })}
-                            </div>
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm text-muted-foreground">Occurred At</div>
-                          <div className="text-base font-semibold">
-                            {transactionDetails.occurredAt
-                              ? new Date(transactionDetails.occurredAt).toLocaleString()
-                              : "-"}
-                          </div>
-                        </div>
-                        {transactionDetails.note && (
-                          <div className="col-span-2">
-                            <div className="text-sm text-muted-foreground">Note</div>
-                            <div className="text-base mt-1">{transactionDetails.note}</div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Category Information */}
-                  {((transactionDetails as any).incomeExpenseCategory || (transactionDetails as any).category) && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Category Information</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {(transactionDetails as any).incomeExpenseCategory ? (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-sm text-muted-foreground">Category Name</div>
-                              <div className="text-base font-semibold">
-                                {(transactionDetails as any).incomeExpenseCategory.name}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Category Type</div>
-                              <div className="text-base font-semibold">
-                                {(transactionDetails as any).incomeExpenseCategory.type}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-muted-foreground">Status</div>
-                              <div className="text-base font-semibold">
-                                <Badge variant={(transactionDetails as any).incomeExpenseCategory.isActive ? "default" : "secondary"}>
-                                  {(transactionDetails as any).incomeExpenseCategory.isActive ? "Active" : "Inactive"}
-                                </Badge>
-                              </div>
-                            </div>
-                            {(transactionDetails as any).incomeExpenseCategory.createdAt && (
-                              <div>
-                                <div className="text-sm text-muted-foreground">Created At</div>
-                                <div className="text-sm">
-                                  {new Date((transactionDetails as any).incomeExpenseCategory.createdAt).toLocaleString()}
-                                </div>
-                              </div>
-                            )}
-                            {(transactionDetails as any).incomeExpenseCategory.updatedAt && (
-                              <div>
-                                <div className="text-sm text-muted-foreground">Updated At</div>
-                                <div className="text-sm">
-                                  {new Date((transactionDetails as any).incomeExpenseCategory.updatedAt).toLocaleString()}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="text-sm text-muted-foreground">Category</div>
-                            <div className="text-base font-semibold">
-                              {(transactionDetails as any).category}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Account Information */}
-                  {transactionDetails.account && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Account Information</CardTitle>
-                      </CardHeader>
-                      <CardContent>
+                      {(transactionDetails as any).incomeExpenseCategory ? (
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-sm text-muted-foreground">Account Name</div>
-                            <div className="text-base font-semibold">{transactionDetails.account.name}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Account Type</div>
-                            <div className="text-base font-semibold">{transactionDetails.account.type}</div>
-                          </div>
-                          {transactionDetails.account.description && (
-                            <div className="col-span-2">
-                              <div className="text-sm text-muted-foreground">Description</div>
-                              <div className="text-base">{transactionDetails.account.description}</div>
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-sm text-muted-foreground">Current Balance</div>
+                            <div className="text-sm text-muted-foreground">Category Name</div>
                             <div className="text-base font-semibold">
-                              {formatCurrency(transactionDetails.account.currentBalance || 0, { generalSettings })}
+                              {(transactionDetails as any).incomeExpenseCategory.name}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Opening Balance</div>
+                            <div className="text-sm text-muted-foreground">Category Type</div>
                             <div className="text-base font-semibold">
-                              {formatCurrency(transactionDetails.account.openingBalance || 0, { generalSettings })}
+                              {(transactionDetails as any).incomeExpenseCategory.type}
                             </div>
                           </div>
                           <div>
                             <div className="text-sm text-muted-foreground">Status</div>
                             <div className="text-base font-semibold">
-                              <Badge variant={transactionDetails.account.isActive ? "default" : "secondary"}>
-                                {transactionDetails.account.isActive ? "Active" : "Inactive"}
+                              <Badge variant={(transactionDetails as any).incomeExpenseCategory.isActive ? "default" : "secondary"}>
+                                {(transactionDetails as any).incomeExpenseCategory.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </div>
                           </div>
-                          {transactionDetails.account.createdAt && (
+                          {(transactionDetails as any).incomeExpenseCategory.createdAt && (
                             <div>
                               <div className="text-sm text-muted-foreground">Created At</div>
                               <div className="text-sm">
-                                {new Date(transactionDetails.account.createdAt).toLocaleString()}
+                                {new Date((transactionDetails as any).incomeExpenseCategory.createdAt).toLocaleString()}
                               </div>
                             </div>
                           )}
-                          {transactionDetails.account.updatedAt && (
+                          {(transactionDetails as any).incomeExpenseCategory.updatedAt && (
                             <div>
                               <div className="text-sm text-muted-foreground">Updated At</div>
                               <div className="text-sm">
-                                {new Date(transactionDetails.account.updatedAt).toLocaleString()}
+                                {new Date((transactionDetails as any).incomeExpenseCategory.updatedAt).toLocaleString()}
                               </div>
                             </div>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Branch Information */}
-                  {transactionDetails.branch && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Branch Information</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground">Branch Name</div>
-                            <div className="text-base font-semibold">{transactionDetails.branch.name}</div>
+                      ) : (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Category</div>
+                          <div className="text-base font-semibold">
+                            {(transactionDetails as any).category}
                           </div>
-                          {transactionDetails.branch.address && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Address</div>
-                              <div className="text-base">{transactionDetails.branch.address}</div>
-                            </div>
-                          )}
-                          {transactionDetails.branch.phone && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Phone</div>
-                              <div className="text-base">{transactionDetails.branch.phone}</div>
-                            </div>
-                          )}
-                          {transactionDetails.branch.createdAt && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Created At</div>
-                              <div className="text-sm">
-                                {new Date(transactionDetails.branch.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                          {transactionDetails.branch.updatedAt && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Updated At</div>
-                              <div className="text-sm">
-                                {new Date(transactionDetails.branch.updatedAt).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {/* Contact Information */}
-                  {transactionDetails.contact && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Contact Information</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground">Contact Name</div>
-                            <div className="text-base font-semibold">{transactionDetails.contact.name}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Contact Type</div>
-                            <div className="text-base font-semibold">{transactionDetails.contact.type}</div>
-                          </div>
-                          {transactionDetails.contact.email && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Email</div>
-                              <div className="text-base">{transactionDetails.contact.email}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.phone && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Phone</div>
-                              <div className="text-base">{transactionDetails.contact.phone}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.address && (
-                            <div className="col-span-2">
-                              <div className="text-sm text-muted-foreground">Address</div>
-                              <div className="text-base">{transactionDetails.contact.address}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.balance !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Balance</div>
-                              <div className="text-base font-semibold">
-                                {formatCurrency(transactionDetails.contact.balance, { generalSettings })}
-                              </div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.creditLimit !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Credit Limit</div>
-                              <div className="text-base font-semibold">
-                                {formatCurrency(transactionDetails.contact.creditLimit, { generalSettings })}
-                              </div>
-                            </div>
-                          )}
-                          <div>
-                            <div className="text-sm text-muted-foreground">Is Individual</div>
-                            <div className="text-base font-semibold">
-                              <Badge variant={transactionDetails.contact.isIndividual ? "default" : "secondary"}>
-                                {transactionDetails.contact.isIndividual ? "Yes" : "No"}
-                              </Badge>
-                            </div>
-                          </div>
-                          {transactionDetails.contact.companyName && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Company Name</div>
-                              <div className="text-base">{transactionDetails.contact.companyName}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.companyAddress && (
-                            <div className="col-span-2">
-                              <div className="text-sm text-muted-foreground">Company Address</div>
-                              <div className="text-base">{transactionDetails.contact.companyAddress}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.companyPhone && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Company Phone</div>
-                              <div className="text-base">{transactionDetails.contact.companyPhone}</div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.createdAt && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Created At</div>
-                              <div className="text-sm">
-                                {new Date(transactionDetails.contact.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                          {transactionDetails.contact.updatedAt && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Updated At</div>
-                              <div className="text-sm">
-                                {new Date(transactionDetails.contact.updatedAt).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Timestamps */}
+                {/* Account Information */}
+                {transactionDetails.account && (
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Timestamps</CardTitle>
+                      <CardTitle className="text-lg">Account Information</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4">
-                        {transactionDetails.createdAt && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Account Name</div>
+                          <div className="text-base font-semibold">{transactionDetails.account.name}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Account Type</div>
+                          <div className="text-base font-semibold">{transactionDetails.account.type}</div>
+                        </div>
+                        {transactionDetails.account.description && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">Description</div>
+                            <div className="text-base">{transactionDetails.account.description}</div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Current Balance</div>
+                          <div className="text-base font-semibold">
+                            {formatCurrency(transactionDetails.account.currentBalance || 0, { generalSettings })}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Opening Balance</div>
+                          <div className="text-base font-semibold">
+                            {formatCurrency(transactionDetails.account.openingBalance || 0, { generalSettings })}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Status</div>
+                          <div className="text-base font-semibold">
+                            <Badge variant={transactionDetails.account.isActive ? "default" : "secondary"}>
+                              {transactionDetails.account.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </div>
+                        {transactionDetails.account.createdAt && (
                           <div>
-                            <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
-                            <div className="text-base font-semibold">
-                              {new Date(transactionDetails.createdAt).toLocaleString()}
+                            <div className="text-sm text-muted-foreground">Created At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.account.createdAt).toLocaleString()}
                             </div>
                           </div>
                         )}
-                        {transactionDetails.updatedAt && (
+                        {transactionDetails.account.updatedAt && (
                           <div>
-                            <div className="text-sm text-muted-foreground">{tCommon("updatedAt")}</div>
-                            <div className="text-base font-semibold">
-                              {new Date(transactionDetails.updatedAt).toLocaleString()}
+                            <div className="text-sm text-muted-foreground">Updated At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.account.updatedAt).toLocaleString()}
                             </div>
                           </div>
                         )}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
+                )}
+
+                {/* Branch Information */}
+                {transactionDetails.branch && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Branch Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Branch Name</div>
+                          <div className="text-base font-semibold">{transactionDetails.branch.name}</div>
+                        </div>
+                        {transactionDetails.branch.address && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Address</div>
+                            <div className="text-base">{transactionDetails.branch.address}</div>
+                          </div>
+                        )}
+                        {transactionDetails.branch.phone && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="text-base">{transactionDetails.branch.phone}</div>
+                          </div>
+                        )}
+                        {transactionDetails.branch.createdAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Created At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.branch.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                        {transactionDetails.branch.updatedAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Updated At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.branch.updatedAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Contact Information */}
+                {transactionDetails.contact && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Contact Name</div>
+                          <div className="text-base font-semibold">{transactionDetails.contact.name}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Contact Type</div>
+                          <div className="text-base font-semibold">{transactionDetails.contact.type}</div>
+                        </div>
+                        {transactionDetails.contact.email && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Email</div>
+                            <div className="text-base">{transactionDetails.contact.email}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.phone && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Phone</div>
+                            <div className="text-base">{transactionDetails.contact.phone}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.address && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">Address</div>
+                            <div className="text-base">{transactionDetails.contact.address}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.balance !== undefined && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Balance</div>
+                            <div className="text-base font-semibold">
+                              {formatCurrency(transactionDetails.contact.balance, { generalSettings })}
+                            </div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.creditLimit !== undefined && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Credit Limit</div>
+                            <div className="text-base font-semibold">
+                              {formatCurrency(transactionDetails.contact.creditLimit, { generalSettings })}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Is Individual</div>
+                          <div className="text-base font-semibold">
+                            <Badge variant={transactionDetails.contact.isIndividual ? "default" : "secondary"}>
+                              {transactionDetails.contact.isIndividual ? "Yes" : "No"}
+                            </Badge>
+                          </div>
+                        </div>
+                        {transactionDetails.contact.companyName && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Company Name</div>
+                            <div className="text-base">{transactionDetails.contact.companyName}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.companyAddress && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">Company Address</div>
+                            <div className="text-base">{transactionDetails.contact.companyAddress}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.companyPhone && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Company Phone</div>
+                            <div className="text-base">{transactionDetails.contact.companyPhone}</div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.createdAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Created At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.contact.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                        {transactionDetails.contact.updatedAt && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Updated At</div>
+                            <div className="text-sm">
+                              {new Date(transactionDetails.contact.updatedAt).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Timestamps */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Timestamps</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      {transactionDetails.createdAt && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
+                          <div className="text-base font-semibold">
+                            {new Date(transactionDetails.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                      {transactionDetails.updatedAt && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">{tCommon("updatedAt")}</div>
+                          <div className="text-base font-semibold">
+                            {new Date(transactionDetails.updatedAt).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">
                 No transaction details found

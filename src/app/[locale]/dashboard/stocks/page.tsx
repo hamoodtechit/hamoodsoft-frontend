@@ -118,7 +118,14 @@ export default function StocksPage() {
       header: t("product"),
       cell: (row) => {
         const product = row.product || productMap.get(row.productId ?? '')
-        return product?.name || row.productId || '-'
+        if (!product) return row.productId || '-'
+        if (row.variantId) {
+          const variant = product.variants?.find(v => v.id === row.variantId)
+          if (variant) {
+            return `${product.name} - ${variant.variantName}`
+          }
+        }
+        return product.name
       },
       sortable: false,
     },
@@ -185,7 +192,14 @@ export default function StocksPage() {
       width: 25,
       format: (value, row) => {
         const product = row.product || productMap.get(row.productId ?? '')
-        return product?.name || row.productId || '-'
+        if (!product) return row.productId || '-'
+        if (row.variantId) {
+          const variant = product.variants?.find(v => v.id === row.variantId)
+          if (variant) {
+            return `${product.name} - ${variant.variantName}`
+          }
+        }
+        return product.name
       },
     },
     {
@@ -427,7 +441,16 @@ export default function StocksPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold truncate">
-                              {product?.name || stock.productId || 'Unknown Product'} 
+                              {(() => {
+                                if (!product) return stock.productId || 'Unknown Product'
+                                if (stock.variantId) {
+                                  const variant = product.variants?.find(v => v.id === stock.variantId)
+                                  if (variant) {
+                                    return `${product.name} - ${variant.variantName}`
+                                  }
+                                }
+                                return product.name
+                              })()}
                               {(stock.sku || product?.sku) ? ` (SKU: ${stock.sku || product?.sku})` : ""}
                             </h4>
                             <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
@@ -494,6 +517,7 @@ export default function StocksPage() {
         defaultProductId={selectedStock?.productId ?? undefined}
         defaultUnitId={selectedStock?.unitId ?? undefined}
         defaultStockId={selectedStock?.id}
+        defaultVariantId={selectedStock?.variantId || undefined}
       />
 
       <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
@@ -529,51 +553,74 @@ export default function StocksPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getStockHistoryForProduct(historyStock.productId ?? '').map((h: StockHistory) => {
-                    const quantityChange = h.quantityChange ?? h.quantity
-                    const stockQuantity = h.stock?.quantity
-                    return (
-                      <Card key={h.id} className="border">
-                        <CardContent className="py-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {h.transactionType === "IN" ? (
-                                  <ArrowUp className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <ArrowDown className="h-4 w-4 text-red-600" />
-                                )}
-                                <Badge
-                                  variant={h.transactionType === "IN" ? "default" : "destructive"}
-                                >
-                                  {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
-                                </Badge>
-                                <span className="font-medium">
-                                  {t("quantity")}: {Math.abs(businessConfig.showPointReducing ? quantityChange : (h.itemType === "FUEL" ? (h.namedQuantity ?? quantityChange) : quantityChange))}
-                                </span>
-                                {stockQuantity !== undefined && stockQuantity !== null && (
-                                  <span className="text-sm text-muted-foreground">
-                                    ({t("currentStock") || "Current Stock"}: {stockQuantity})
+                  {(() => {
+                    const product = historyStock.product || productMap.get(historyStock.productId ?? '')
+                    return getStockHistoryForProduct(historyStock.productId ?? '').map((h: StockHistory) => {
+                      // Filter history by variant as well if it's a variant-specific stock
+                      if (historyStock.variantId && h.variantId !== historyStock.variantId) return null
+
+                      const quantityChange = h.quantityChange ?? h.quantity
+                      const stockQuantity = h.stock?.quantity
+                      
+                      let displayName = ""
+                      if (product) {
+                        displayName = product.name
+                        if (h.variantId) {
+                          const variant = product.variants?.find(v => v.id === h.variantId)
+                          if (variant) displayName += ` - ${variant.variantName}`
+                        }
+                      }
+
+                      return (
+                        <Card key={h.id} className="border">
+                          <CardContent className="py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {h.transactionType === "IN" ? (
+                                    <ArrowUp className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <ArrowDown className="h-4 w-4 text-red-600" />
+                                  )}
+                                  <Badge
+                                    variant={h.transactionType === "IN" ? "default" : "destructive"}
+                                  >
+                                    {h.transactionType === "IN" ? t("stockIn") : t("stockOut")}
+                                  </Badge>
+                                  <span className="font-medium">
+                                    {t("quantity")}: {Math.abs(businessConfig.showPointReducing ? quantityChange : (h.itemType === "FUEL" ? (h.namedQuantity ?? quantityChange) : quantityChange))}
                                   </span>
-                                )}
+                                  {h.variantId && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {displayName.split(' - ')[1] || "Variant"}
+                                    </Badge>
+                                  )}
+                                  {stockQuantity !== undefined && stockQuantity !== null && (
+                                    <span className="text-sm text-muted-foreground">
+                                      ({t("currentStock") || "Current Stock"}: {stockQuantity})
+                                    </span>
+                                  )}
+
+                                  { /* hide this */}
                                 {businessConfig.showPointReducing && h.itemType === "FUEL" && h.transactionType === "OUT" && h.namedQuantity && (
                                   <span className="text-sm text-muted-foreground">
                                     (Original: {h.namedQuantity})
                                   </span>
                                 )}
+                                </div>
+                                {h.reason && (
+                                  <p className="text-sm text-muted-foreground mt-1">{h.reason}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(h.createdAt || "").toLocaleString()}
+                                </p>
                               </div>
-                              {h.reason && (
-                                <p className="text-sm text-muted-foreground mt-1">{h.reason}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(h.createdAt || "").toLocaleString()}
-                              </p>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
+                          </CardContent>
+                        </Card>
+                      )
+                    })
+                  })()}
                 </div>
               )}
             </div>

@@ -9,6 +9,7 @@ export const createStockSchema = z.object({
     .number({ invalid_type_error: "Quantity must be a number" })
     .min(0, "Quantity must be 0 or greater"),
   sku: z.string().optional(),
+  variantId: z.string().uuid().nullable().optional(),
   purchasePrice: z
     .number({ invalid_type_error: "Purchase price must be a number" })
     .min(0, "Purchase price must be 0 or greater"),
@@ -33,6 +34,7 @@ export const adjustStockSchema = z.object({
   branchId: z.string().uuid("Branch is required"),
   stockId: z.string().uuid("Stock ID is required").optional(),
   productId: z.string().uuid("Product is required"),
+  variantId: z.string().uuid().optional(),
   unitId: z.string().uuid("Unit is required").optional(),
   transactionType: z.enum(["IN", "OUT"]),
   quantity: z
