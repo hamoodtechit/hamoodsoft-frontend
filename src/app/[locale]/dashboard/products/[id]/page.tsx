@@ -318,7 +318,8 @@ export default function ProductDetailsPage() {
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {(product.productVariants || product.variants || []).map((variant: ProductVariant) => {
+                  {(product.productVariants || product.variants || []).map((rawVariant) => {
+                    const variant = rawVariant as unknown as ProductVariant
                     const variantImage = variant.thumbnailUrl || (variant.images && Array.isArray(variant.images) && variant.images.length > 0 ? variant.images[0] : null)
                     const variantImages = variant.images && Array.isArray(variant.images) ? variant.images : []
                     return (

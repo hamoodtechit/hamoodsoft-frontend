@@ -32,7 +32,7 @@ function normalizeProduct(product: Product): Product {
       sku: pv.sku,
       price: pv.price,
       unitId: pv.unitId,
-      options: pv.options || {},
+      options: (pv.options || {}) as Record<string, string>,
       thumbnailUrl: pv.thumbnailUrl || undefined,
       images: pv.images && Array.isArray(pv.images) && pv.images.length > 0 ? pv.images : undefined,
     }))

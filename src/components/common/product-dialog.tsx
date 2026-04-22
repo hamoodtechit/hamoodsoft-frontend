@@ -103,7 +103,7 @@ function RichTextEditor({
   field,
   isLoading,
 }: {
-  field: { value: string; onChange: (value: string) => void }
+  field: { value: string | undefined; onChange: (value: string) => void }
   isLoading: boolean
 }) {
   const editor = useEditor({
@@ -717,7 +717,7 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         }
 
         return cleanedVariant
-      }).filter((v) => v.variantName && (v.variantName as string).length > 0) // Remove variants with empty names
+      }).filter((v) => v.variantName && (v.variantName as string).length > 0) as typeof data.variants // Remove variants with empty names
     }
 
     // Always set barcodeType to EAN_13

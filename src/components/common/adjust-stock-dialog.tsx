@@ -61,7 +61,7 @@ export function AdjustStockDialog({
   const tCommon = useTranslations("common")
   const { data: branches = [] } = useBranches()
   const { data: productsData } = useProducts()
-  const products = productsData?.items || []
+  const products = useMemo(() => productsData?.items || [], [productsData])
   const { data: units = [] } = useUnits()
   const adjustMutation = useAdjustStock()
 
@@ -85,7 +85,7 @@ export function AdjustStockDialog({
     defaultValues,
   })
 
-  const transactionType = form.watch("transactionType")
+  // transactionType is controlled by the form field directly
   const productId = form.watch("productId")
   const variantId = form.watch("variantId")
 
@@ -205,7 +205,7 @@ export function AdjustStockDialog({
                           </FormControl>
                           <SelectContent>
                             {products.find(p => p.id === productId)?.variants?.map((variant) => (
-                              <SelectItem key={variant.id} value={variant.id}>
+                              <SelectItem key={variant.id} value={variant.id || ""}>
                                 {variant.variantName} {variant.sku ? `(${variant.sku})` : ""}
                               </SelectItem>
                             ))}

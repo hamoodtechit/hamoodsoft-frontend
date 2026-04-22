@@ -94,8 +94,8 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const businessConfig = useMemo(() => {
     const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
     return {
-      showPointReducing: setting?.configs?.showPointReducing ?? false,
-      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+      showPointReducing: Boolean(setting?.configs?.showPointReducing ?? false),
+      pointReducingAmountPerLiter: Number(setting?.configs?.pointReducingAmountPerLiter ?? 0),
     };
   }, [settingsData]);
 
@@ -319,7 +319,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
     }
 
     const stock = findStock(product, variant || undefined);
-    return stock && stock.quantity > 0;
+    return !!(stock && stock.quantity > 0);
   };
 
   // Helper function to get available stock quantity

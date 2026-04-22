@@ -27,12 +27,14 @@ type TransactionsResponseShape = {
   }
 }
 
-function normalizeTransaction(transaction: Record<string, unknown>): Transaction {
+function normalizeTransaction(transaction: Transaction): Transaction {
+  // Access raw API fields using intersection type
+  const raw = transaction as Transaction & { incomeExpenseCategoryId?: string; incomeExpenseCategory?: unknown }
   // Normalize type: "IN" -> "INCOME", "EX" -> "EXPENSE"
   let normalizedType: "INCOME" | "EXPENSE" = "INCOME"
-  if (transaction.type === "IN") {
+  if (transaction.type === "IN" as string) {
     normalizedType = "INCOME"
-  } else if (transaction.type === "EX") {
+  } else if (transaction.type === "EX" as string) {
     normalizedType = "EXPENSE"
   } else if (transaction.type === "INCOME") {
     normalizedType = "INCOME"
@@ -43,13 +45,13 @@ function normalizeTransaction(transaction: Record<string, unknown>): Transaction
   return {
     ...transaction,
     type: normalizedType,
-    categoryId: transaction.incomeExpenseCategoryId || transaction.categoryId || null,
+    categoryId: raw.incomeExpenseCategoryId || transaction.categoryId || null,
     // Preserve all API response fields - incomeExpenseCategory is the object, category is a string
-    incomeExpenseCategory: transaction.incomeExpenseCategory || null,
+    incomeExpenseCategory: raw.incomeExpenseCategory || null,
     account: transaction.account || null,
     branch: transaction.branch || null,
-    contact: (transaction.contact as Record<string, unknown>) || null,
-  } as unknown as Transaction
+    contact: transaction.contact || null,
+  } as Transaction
 }
 
 function normalizeTransactionsList(data: PaginatedResult<Transaction> | TransactionsResponseShape | Transaction[]): PaginatedResult<Transaction> {

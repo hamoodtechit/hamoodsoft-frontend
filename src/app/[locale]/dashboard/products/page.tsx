@@ -34,7 +34,7 @@ import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Product } from "@/types"
+import { Branch, Product, ProductVariant } from "@/types"
 import { Eye, MoreVertical, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -368,7 +368,7 @@ export default function ProductsPage() {
   const { data: branchesData } = useBranches()
   const branchMap = useMemo(() => {
     const map = new Map<string, Branch>()
-    const branchesList = Array.isArray(branchesData) ? (branchesData as unknown as Branch[]) : []
+    const branchesList = Array.isArray(branchesData) ? (branchesData as Branch[]) : []
     branchesList.forEach((b) => map.set(b.id, b))
     return map
   }, [branchesData])
@@ -754,7 +754,7 @@ export default function ProductsPage() {
                 }
                 
                 // Add variant images
-                const variants = (viewProduct.productVariants || viewProduct.variants || []) as ProductVariant[]
+                const variants = (viewProduct.productVariants || viewProduct.variants || []) as (ProductVariant | { variantName?: string; sku?: string; price?: number; unitId?: string; thumbnailUrl?: string | null; images?: string[]; options?: Record<string, string> })[]
                 variants.forEach((variant) => {
                   if (variant.thumbnailUrl && !allImages.includes(variant.thumbnailUrl)) {
                     allImages.push(variant.thumbnailUrl)
@@ -886,13 +886,13 @@ export default function ProductsPage() {
                   </div>
                   <div className="space-y-2">
                     {(viewProduct.variants || viewProduct.productVariants || []).map((v, index: number) => {
-                      const variant = (v as unknown as ProductVariant).variantName ? (v as unknown as ProductVariant) : {
+                      const variant = ((v as unknown as ProductVariant).productId ? (v as unknown as ProductVariant) : {
                         variantName: v.variantName || "N/A",
                         sku: v.sku,
                         price: v.price,
                         unitId: v.unitId,
                         options: v.options || {},
-                      }
+                      }) as ProductVariant
                       return (
                       <Card key={index} className="border">
                         <CardContent className="p-4">

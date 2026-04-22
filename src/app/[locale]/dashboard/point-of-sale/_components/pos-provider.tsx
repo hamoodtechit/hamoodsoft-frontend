@@ -279,8 +279,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const businessConfig = useMemo(() => {
     const setting = settingsData?.items?.find((s) => s.name === "businessConfig");
     return {
-      showPointReducing: setting?.configs?.showPointReducing ?? false,
-      pointReducingAmountPerLiter: setting?.configs?.pointReducingAmountPerLiter ?? 0,
+      showPointReducing: Boolean(setting?.configs?.showPointReducing ?? false),
+      pointReducingAmountPerLiter: Number(setting?.configs?.pointReducingAmountPerLiter ?? 0),
     };
   }, [settingsData]);
 
@@ -327,7 +327,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   }, [stocksData])
 
   const { data: contactsData } = useContacts({ type: "CUSTOMER" })
-  const contacts = contactsData?.items || []
+  const contacts = useMemo(() => contactsData?.items || [], [contactsData])
 
   const { data: categories = [] } = useCategories(selectedBranchId || undefined)
   const { data: brandsData } = useBrands()
@@ -1219,6 +1219,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     paidAmountInput, cartTotals, discountType, cashAccountId, bankAccountId,
     paymentSplits, accounts, products, getProductVariants,
     playSound, createSaleMutation, clearCart, dispensers,
+    businessConfig.pointReducingAmountPerLiter, businessConfig.showPointReducing,
   ])
 
   // Save as draft

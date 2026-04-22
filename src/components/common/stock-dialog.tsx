@@ -77,7 +77,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
   const tCommon = useTranslations("common")
   const { data: branches = [] } = useBranches()
   const { data: productsData } = useProducts()
-  const products = productsData?.items || []
+  const products = useMemo(() => productsData?.items || [], [productsData])
   const { data: units = [] } = useUnits()
   const createMutation = useCreateStock()
 
@@ -91,8 +91,8 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
       unitId: "",
       sku: "",
       quantity: 0,
-      purchasePrice: undefined as any,
-      salePrice: undefined as any,
+      purchasePrice: 0,
+      salePrice: 0,
     }
   }, [defaultBranchId, defaultProductId])
 
@@ -160,7 +160,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
         }
       }
     } else {
-      form.setValue("salePrice", undefined as any, { shouldValidate: false })
+      form.setValue("salePrice", 0, { shouldValidate: false })
       form.setValue("unitId", "", { shouldValidate: false })
       form.setValue("sku", "", { shouldValidate: false })
       form.setValue("variantId", "")
@@ -268,7 +268,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                           </FormControl>
                           <SelectContent>
                             {products.find(p => p.id === productId)?.variants?.map((variant) => (
-                              <SelectItem key={variant.id} value={variant.id}>
+                              <SelectItem key={variant.id || ""} value={variant.id || ""}>
                                 {variant.variantName} {variant.sku ? `(${variant.sku})` : ""}
                               </SelectItem>
                             ))}

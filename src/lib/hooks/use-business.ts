@@ -4,7 +4,7 @@ import { businessApi } from "@/lib/api/business"
 import { usersApi } from "@/lib/api/users"
 import { CreateBusinessInput, UpdateBusinessInput } from "@/lib/validations/business"
 import { useAuthStore } from "@/store"
-import { Business } from "@/types"
+import { Business, User } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef } from "react"
@@ -221,7 +221,7 @@ export function useSwitchBusiness() {
     mutationFn: async (businessId: string) => {
       console.log("useSwitchBusiness mutationFn called with businessId:", businessId)
       // Get user from query cache first, fallback to store
-      const cachedUser = queryClient.getQueryData<Record<string, unknown>>(["auth", "profile"])
+      const cachedUser = queryClient.getQueryData<User>(["auth", "profile"])
       const user = cachedUser || storeUser
 
       console.log("User from cache/store:", { userId: user?.id, currentBusinessId: user?.currentBusinessId })
@@ -247,7 +247,7 @@ export function useSwitchBusiness() {
       console.log("useSwitchBusiness onSuccess called with:", { updatedUser, businessId })
 
       // Merge updated user with existing user to preserve all fields
-      const currentUser = storeUser || queryClient.getQueryData<Record<string, unknown>>(["auth", "profile"])
+      const currentUser = storeUser || queryClient.getQueryData<User>(["auth", "profile"])
 
       // IMPORTANT: Always use the businessId we sent, not the API response
       // The API might return the old currentBusinessId, so we trust what we sent

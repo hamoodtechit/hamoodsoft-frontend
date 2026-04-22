@@ -73,11 +73,12 @@ function normalizeHistoryList(data: PaginatedResult<StockHistory> | StockHistory
   }
 }
 
-function normalizeStockHistory(history: Record<string, unknown>): StockHistory {
+function normalizeStockHistory(history: StockHistory): StockHistory {
+  const raw = history as StockHistory & { quantityChange?: number }
   return {
-    ...(history as unknown as StockHistory),
-    quantity: (history.quantityChange as number) ?? (history.quantity as number) ?? 0,
-    quantityChange: (history.quantityChange as number) ?? (history.quantity as number) ?? 0,
+    ...history,
+    quantity: raw.quantityChange ?? history.quantity ?? 0,
+    quantityChange: raw.quantityChange ?? history.quantity ?? 0,
   }
 }
 

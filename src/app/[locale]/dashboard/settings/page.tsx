@@ -34,7 +34,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useUpdateSetting } from "@/lib/hooks/use-settings"
 import { useAppSettings } from "@/lib/providers/settings-provider"
-import { UpdateSettingInput } from "@/lib/validations/settings"
+import { UpdateSettingInput, updateSettingSchema } from "@/lib/validations/settings"
 import { Setting } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Edit, Image as ImageIcon, Settings, X } from "lucide-react"
@@ -62,10 +62,10 @@ export default function BusinessSettingsPage() {
 
   // Business config state (for Fuel Point Reducing)
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(DEFAULT_CONFIG)
-  const [businessConfigHasChanges, setBusinessConfigHasChanges] = useState(false)
+  const [businessConfigHasChanges, setBusinessConfigHasChanges] = useState(false) // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const form = useForm<UpdateSettingInput>({
-    resolver: zodResolver(require("@/lib/validations/settings").updateSettingSchema),
+    resolver: zodResolver(updateSettingSchema),
     defaultValues: {
       name: "",
       configs: {},
@@ -77,8 +77,8 @@ export default function BusinessSettingsPage() {
     if (setting.name === "businessConfig") {
       // For businessConfig, sync local state from the setting's configs
       setBusinessConfig({
-        showPointReducing: setting.configs?.showPointReducing ?? false,
-        pointReducingAmountPerLiter: setting.configs?.pointReducingAmountPerLiter ?? 0,
+        showPointReducing: Boolean(setting.configs?.showPointReducing ?? false),
+        pointReducingAmountPerLiter: Number(setting.configs?.pointReducingAmountPerLiter ?? 0),
       })
       setBusinessConfigHasChanges(false)
     }
@@ -274,7 +274,7 @@ export default function BusinessSettingsPage() {
                           <div>
                             <span className="text-muted-foreground">Reducing Amount: </span>
                             <span className="font-medium">
-                              {setting.configs?.pointReducingAmountPerLiter ?? 0} ml / liter
+                              {Number(setting.configs?.pointReducingAmountPerLiter ?? 0)} ml / liter
                             </span>
                           </div>
                         </>
