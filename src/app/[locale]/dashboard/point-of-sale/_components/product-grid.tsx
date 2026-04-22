@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { Container, Package, Plus } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
 export function ProductGrid() {
   const {
@@ -18,8 +19,11 @@ export function ProductGrid() {
     products, dispensers, filteredProducts,
     hasMoreProducts, isFetchingMoreProducts, fetchNextProducts,
     hasMoreDispensers, isFetchingMoreDispensers, fetchNextDispensers,
-    setShowProductDialog,
   } = usePOS()
+
+  const router = useRouter()
+  const params = useParams()
+  const locale = params.locale as string
 
   console.log("dispenser", dispensers)
   return (
@@ -45,7 +49,7 @@ export function ProductGrid() {
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs"
-                onClick={() => setShowProductDialog(true)}
+                onClick={() => router.push(`/${locale}/dashboard/products/new?returnTo=pos`)}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 New Product

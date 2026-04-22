@@ -21,7 +21,7 @@ import { Product, ProductVariant, ProductVariantInput } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Package } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 
@@ -62,7 +62,14 @@ export function ProductForm({ product }: ProductFormProps) {
   const tCommon = useTranslations("common")
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const locale = params.locale as string
+
+  // Determine where to redirect after save/cancel based on returnTo query param
+  const returnTo = searchParams.get("returnTo")
+  const redirectUrl = returnTo === "pos"
+    ? `/${locale}/dashboard/point-of-sale`
+    : `/${locale}/dashboard/products`
 
   const queryClient = useQueryClient()
   const createMutation = useCreateProduct()
@@ -470,8 +477,9 @@ export function ProductForm({ product }: ProductFormProps) {
             // Wait for cache invalidation to complete before navigating
             // so the products list shows the updated data
             await queryClient.invalidateQueries({ queryKey: ["products"] })
+            await queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
             await queryClient.invalidateQueries({ queryKey: ["product", product.id] })
-            router.push(`/${locale}/dashboard/products`)
+            router.push(redirectUrl)
           },
           onError: (error) => {
             if (process.env.NODE_ENV === "development") {
@@ -487,7 +495,8 @@ export function ProductForm({ product }: ProductFormProps) {
       onSuccess: async () => {
         // Wait for cache invalidation to complete before navigating
         await queryClient.invalidateQueries({ queryKey: ["products"] })
-        router.push(`/${locale}/dashboard/products`)
+        await queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
+        router.push(redirectUrl)
       },
       onError: (error) => {
         if (process.env.NODE_ENV === "development") {
@@ -597,7 +606,7 @@ export function ProductForm({ product }: ProductFormProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push(`/${locale}/dashboard/products`)}
+            onClick={() => router.push(redirectUrl)}
             disabled={isLoading}
           >
             {tCommon("cancel")}
