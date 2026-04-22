@@ -43,30 +43,21 @@ export function ProductVariantsSection({
   isLoading,
   isEdit,
   availableAttributes,
-  existingStocks,
+  existingStocks: _existingStocks,
 }: ProductVariantsSectionProps) {
   const t = useTranslations("products")
+  const tCommon = useTranslations("common")
 
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
   const [mediaDialogVariantIndex, setMediaDialogVariantIndex] = useState<number | null>(null)
   const [selectingThumbnail, setSelectingThumbnail] = useState(false)
 
-  // Get branches and the selected branch from the topbar
-  const { branches: branchesRaw, selectedBranchId: defaultBranchId } = useBranchSelection()
+  // Get branches from the branch selection hook
+  const { branches: branchesRaw } = useBranchSelection()
   const branches = useMemo(() => {
     return Array.isArray(branchesRaw) ? (branchesRaw as Branch[]) : []
   }, [branchesRaw])
 
-  // Build a set of variant IDs that have existing stock entries
-  const variantIdsWithStocks = useMemo(() => {
-    const ids = new Set<string>()
-    if (existingStocks && existingStocks.length > 0) {
-      existingStocks.forEach((s) => {
-        if (s.variantId) ids.add(s.variantId)
-      })
-    }
-    return ids
-  }, [existingStocks])
 
   if (fields.length === 0) return null
 
@@ -83,24 +74,25 @@ export function ProductVariantsSection({
         </div>
         <div className="space-y-2 max-h-[600px] overflow-y-auto border rounded-lg p-3 bg-muted/30">
           {fields.map((field, index) => {
-            // Check if this variant has existing stocks (cannot be removed)
+            // Check if this variant already exists in the database (has an id = was saved before)
             const variantId = form.getValues(`variants.${index}` as `variants.0`)?.id as string | undefined
-            const hasStocks = variantId ? variantIdsWithStocks.has(variantId) : false
+            const isExistingVariant = isEdit && !!variantId
 
             return (
-            <Card key={field.id} className={cn("border", hasStocks && "border-amber-300/50 bg-amber-50/30 dark:bg-amber-950/10")}>
+            <Card key={field.id} className={cn("border", isExistingVariant && "border-muted bg-muted/20")}>
               <CardContent className="p-3">
-                {hasStocks && (
+                {isExistingVariant && (
                   <div className="mb-2 flex items-center gap-1.5">
-                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400">
-                      {t("stock")} ✓
+                    <Badge variant="outline" className="text-xs border-blue-400 text-blue-700 dark:text-blue-400">
+                      Existing Variant
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      This variant has existing stock and cannot be removed
+                      This variant cannot be modified (it may have stock records)
                     </span>
                   </div>
                 )}
                 <div className="space-y-2">
+                  {/* Variant Name */}
                   <FormField
                     control={form.control}
                     name={`variants.${index}.variantName`}
@@ -111,14 +103,17 @@ export function ProductVariantsSection({
                           <Input
                             {...field}
                             placeholder={t("variantName")}
-                            disabled={isLoading}
-                            className="h-8"
+                            disabled={isLoading || isExistingVariant}
+                            readOnly={isExistingVariant}
+                            className={cn("h-8", isExistingVariant && "bg-muted")}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Options badges */}
                   <div className="flex flex-wrap gap-1.5">
                     {(() => {
                       const variantData = form.getValues(`variants.${index}`)
@@ -147,70 +142,8 @@ export function ProductVariantsSection({
                     })()}
                   </div>
                   
-                  {/* Stock & Pricing fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t">
-                    {/* Branch Selection */}
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.branchId`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            {t("branch") || "Branch"}
-                          </FormLabel>
-                          <FormControl>
-                            <select
-                              className={cn(
-                                "flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                "disabled:cursor-not-allowed disabled:opacity-50"
-                              )}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value || undefined)}
-                              disabled={isLoading}
-                            >
-                              <option value="">{t("selectBranch") || "Select branch..."}</option>
-                              {branches.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {b.name}
-                                </option>
-                              ))}
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Quantity */}
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.quantity`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            {t("quantity") || "Quantity"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              inputMode="numeric"
-                              placeholder="0"
-                              disabled={isLoading}
-                              className="h-8"
-                              value={field.value ?? ""}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                field.onChange(value === "" ? undefined : parseInt(value) || 0)
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
+                  {/* Variant Pricing & SKU */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t">
                     {/* Sell Price */}
                     <FormField
                       control={form.control}
@@ -218,15 +151,16 @@ export function ProductVariantsSection({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">
-                            {t("sellPrice") || "Sell Price"} <span className="text-destructive">*</span>
+                            {t("sellPrice")} <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               type="number"
                               placeholder="0.00"
-                              disabled={isLoading}
-                              className="h-8"
+                              disabled={isLoading || isExistingVariant}
+                              readOnly={isExistingVariant}
+                              className={cn("h-8", isExistingVariant && "bg-muted")}
                               value={field.value ?? ""}
                               onChange={(e) => {
                                 const value = e.target.value
@@ -240,52 +174,22 @@ export function ProductVariantsSection({
                       )}
                     />
 
-                    {/* Cost Price */}
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.costPrice`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            {t("costPrice") || "Cost Price"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              placeholder="0.00"
-                              disabled={isLoading}
-                              className="h-8"
-                              value={field.value ?? ""}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                field.onChange(value === "" ? undefined : parseFloat(value) || 0)
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* SKU (read-only row) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* SKU */}
                     <FormField
                       control={form.control}
                       name={`variants.${index}.sku`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">
-                            SKU <span className="text-muted-foreground">(read-only)</span>
+                            SKU {isExistingVariant && <span className="text-muted-foreground">(read-only)</span>}
                           </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               placeholder="SKU-001"
-                              disabled={isLoading || isEdit}
-                              readOnly={isEdit}
-                              className={cn("h-8", isEdit && "bg-muted")}
+                              disabled={isLoading || isExistingVariant}
+                              readOnly={isExistingVariant}
+                              className={cn("h-8", isExistingVariant && "bg-muted")}
                             />
                           </FormControl>
                           <FormMessage />
@@ -294,117 +198,227 @@ export function ProductVariantsSection({
                     />
                   </div>
 
-                  {/* Thumbnail Image */}
-                  <FormField
-                    control={form.control}
-                    name={`variants.${index}.thumbnailUrl`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">{t("thumbnail") || "Thumbnail"}</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            {field.value ? (
-                              <div className="relative inline-block">
-                                <img
-                                  src={field.value}
-                                  alt="Thumbnail"
-                                  className="h-16 w-16 rounded-md object-cover border"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute -top-1 -right-1 h-5 w-5"
-                                  onClick={() => field.onChange("")}
+                  {/* Initial Stock Section — only for NEW variants */}
+                  {!isExistingVariant && (
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {t("initialStock")} ({tCommon("optional")})
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {t("stockDescription")}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* Branch Selection */}
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.branchId`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">
+                                {t("branch")}
+                              </FormLabel>
+                              <FormControl>
+                                <select
+                                  className={cn(
+                                    "flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background",
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                    "disabled:cursor-not-allowed disabled:opacity-50"
+                                  )}
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(e.target.value || undefined)}
                                   disabled={isLoading}
                                 >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="h-16 w-16 rounded-md border border-dashed flex items-center justify-center">
-                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                              </div>
-                            )}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setMediaDialogVariantIndex(index)
-                                setSelectingThumbnail(true)
-                                setMediaDialogOpen(true)
-                              }}
-                              disabled={isLoading}
-                            >
-                              <ImageIcon className="h-3 w-3 mr-1" />
-                              {field.value ? t("changeThumbnail") || "Change" : t("selectThumbnail") || "Select"}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                                  <option value="">{t("selectBranch")}</option>
+                                  {branches.map((b) => (
+                                    <option key={b.id} value={b.id}>
+                                      {b.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                  {/* Gallery Images */}
-                  <FormField
-                    control={form.control}
-                    name={`variants.${index}.images`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">{t("images") || "Gallery Images"}</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            {field.value && field.value.length > 0 ? (
-                              <div className="flex flex-wrap gap-1.5">
-                                {field.value.map((url, imgIndex) => (
-                                  <div key={imgIndex} className="relative">
+                        {/* Quantity */}
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.quantity`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">
+                                {t("quantity")}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  inputMode="numeric"
+                                  placeholder="0"
+                                  disabled={isLoading}
+                                  className="h-8"
+                                  value={field.value ?? ""}
+                                  onChange={(e) => {
+                                    const value = e.target.value
+                                    field.onChange(value === "" ? undefined : parseInt(value) || 0)
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Cost Price */}
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.costPrice`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">
+                                {t("costPrice")}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  placeholder="0.00"
+                                  disabled={isLoading}
+                                  className="h-8"
+                                  value={field.value ?? ""}
+                                  onChange={(e) => {
+                                    const value = e.target.value
+                                    field.onChange(value === "" ? undefined : parseFloat(value) || 0)
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+
+
+                  {/* Thumbnail & Gallery — only editable for new variants */}
+                  {!isExistingVariant && (
+                    <>
+                      {/* Thumbnail Image */}
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.thumbnailUrl`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{t("thumbnail")}</FormLabel>
+                            <FormControl>
+                              <div className="space-y-2">
+                                {field.value ? (
+                                  <div className="relative inline-block">
                                     <img
-                                      src={url}
-                                      alt={`Gallery ${imgIndex + 1}`}
-                                      className="h-12 w-12 rounded-md object-cover border"
+                                      src={field.value}
+                                      alt="Thumbnail"
+                                      className="h-16 w-16 rounded-md object-cover border"
                                     />
                                     <Button
                                       type="button"
                                       variant="destructive"
                                       size="icon"
-                                      className="absolute -top-1 -right-1 h-4 w-4"
-                                      onClick={() => {
-                                        const currentImages = field.value || []
-                                        const newImages = currentImages.filter((_, i) => i !== imgIndex)
-                                        field.onChange(newImages)
-                                      }}
+                                      className="absolute -top-1 -right-1 h-5 w-5"
+                                      onClick={() => field.onChange("")}
                                       disabled={isLoading}
                                     >
-                                      <X className="h-2 w-2" />
+                                      <X className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                ))}
+                                ) : (
+                                  <div className="h-16 w-16 rounded-md border border-dashed flex items-center justify-center">
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setMediaDialogVariantIndex(index)
+                                    setSelectingThumbnail(true)
+                                    setMediaDialogOpen(true)
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  {field.value ? t("changeThumbnail") : t("selectThumbnail")}
+                                </Button>
                               </div>
-                            ) : null}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setMediaDialogVariantIndex(index)
-                                setSelectingThumbnail(false)
-                                setMediaDialogOpen(true)
-                              }}
-                              disabled={isLoading}
-                            >
-                              <ImageIcon className="h-3 w-3 mr-1" />
-                              {t("addImages") || "Add Images"}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Gallery Images */}
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.images`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">{t("images")}</FormLabel>
+                            <FormControl>
+                              <div className="space-y-2">
+                                {field.value && field.value.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {field.value.map((url, imgIndex) => (
+                                      <div key={imgIndex} className="relative">
+                                        <img
+                                          src={url}
+                                          alt={`Gallery ${imgIndex + 1}`}
+                                          className="h-12 w-12 rounded-md object-cover border"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="destructive"
+                                          size="icon"
+                                          className="absolute -top-1 -right-1 h-4 w-4"
+                                          onClick={() => {
+                                            const currentImages = field.value || []
+                                            const newImages = currentImages.filter((_, i) => i !== imgIndex)
+                                            field.onChange(newImages)
+                                          }}
+                                          disabled={isLoading}
+                                        >
+                                          <X className="h-2 w-2" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setMediaDialogVariantIndex(index)
+                                    setSelectingThumbnail(false)
+                                    setMediaDialogOpen(true)
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  {t("addImages")}
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

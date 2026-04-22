@@ -44,7 +44,7 @@ export function useInfiniteProducts(params?: Omit<ProductsListParams, "page">) {
       return undefined
     },
     initialPageParam: 1,
-    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+    staleTime: 0, // Always refetch on mount to show latest data
   })
 }
 

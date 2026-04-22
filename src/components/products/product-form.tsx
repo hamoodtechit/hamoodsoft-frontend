@@ -577,11 +577,11 @@ export function ProductForm({ product }: ProductFormProps) {
         { id: product.id, data: payload as unknown as UpdateProductInput },
         {
           onSuccess: async () => {
-            // Wait for cache invalidation to complete before navigating
-            // so the products list shows the updated data
+            // Invalidate all product and stock caches before navigating
             await queryClient.invalidateQueries({ queryKey: ["products"] })
             await queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
             await queryClient.invalidateQueries({ queryKey: ["product", product.id] })
+            await queryClient.invalidateQueries({ queryKey: ["stocks"] })
             router.push(redirectUrl)
           },
           onError: (error) => {
@@ -596,9 +596,10 @@ export function ProductForm({ product }: ProductFormProps) {
 
     createMutation.mutate(payload as unknown as CreateProductInput, {
       onSuccess: async () => {
-        // Wait for cache invalidation to complete before navigating
+        // Invalidate all product and stock caches before navigating
         await queryClient.invalidateQueries({ queryKey: ["products"] })
         await queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
+        await queryClient.invalidateQueries({ queryKey: ["stocks"] })
         router.push(redirectUrl)
       },
       onError: (error) => {
