@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { BusinessSwitcher } from "@/components/common/business-switcher"
+import { BranchSwitcher } from "@/components/common/branch-switcher"
 import { useBusinesses } from "@/lib/hooks/use-business"
 import { usePermissions } from "@/lib/providers/permissions-provider"
 import { cn } from "@/lib/utils"
@@ -447,43 +449,55 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
 
   return (
     <ScrollArea className="flex-1">
-      <nav className="p-4 space-y-8">
-        {navSections.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="space-y-2">
-            {section.title && (
-              <div className="px-3 py-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {section.title}
-              </div>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item, itemIndex) => {
-                const itemKey = `${sectionIndex}-${itemIndex}-${item.href}`
-                return renderNavItem(item, itemKey)
-              })}
-            </div>
+      <nav className="p-4 space-y-6">
+        {/* Business & Branch Switchers — always visible on mobile */}
+        <div className="space-y-2 pb-4 border-b border-slate-100 dark:border-slate-700">
+          <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Workspace</p>
+          <div className="flex flex-col gap-2 px-1">
+            <BusinessSwitcher />
+            <BranchSwitcher />
           </div>
-        ))}
+        </div>
 
-        {/* Settings at the bottom — only if user has settings permission */}
-        {canSee(settingsItem.requiredPermissions) && (
-          <div className="pt-4 border-t">
-            <Link href={`/${locale}${settingsItem.href}`} onClick={onLinkClick}>
-              <Button
-                variant={pathname?.startsWith(`/${locale}${settingsItem.href}`) ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start gap-3 h-10 px-3",
-                  pathname?.startsWith(`/${locale}${settingsItem.href}`) && "bg-secondary font-medium"
-                )}
-              >
-                <Settings className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 text-left text-sm">{settingsItem.title}</span>
-                {pathname?.startsWith(`/${locale}${settingsItem.href}`) && (
-                  <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
-                )}
-              </Button>
-            </Link>
-          </div>
-        )}
+        {/* Navigation Sections */}
+        <div className="space-y-6">
+          {navSections.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="space-y-2">
+              {section.title && (
+                <div className="px-3 py-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {section.title}
+                </div>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item, itemIndex) => {
+                  const itemKey = `${sectionIndex}-${itemIndex}-${item.href}`
+                  return renderNavItem(item, itemKey)
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Settings at the bottom — only if user has settings permission */}
+          {canSee(settingsItem.requiredPermissions) && (
+            <div className="pt-4 border-t">
+              <Link href={`/${locale}${settingsItem.href}`} onClick={onLinkClick}>
+                <Button
+                  variant={pathname?.startsWith(`/${locale}${settingsItem.href}`) ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start gap-3 h-10 px-3",
+                    pathname?.startsWith(`/${locale}${settingsItem.href}`) && "bg-secondary font-medium"
+                  )}
+                >
+                  <Settings className="h-4 w-4 flex-shrink-0" />
+                  <span className="flex-1 text-left text-sm">{settingsItem.title}</span>
+                  {pathname?.startsWith(`/${locale}${settingsItem.href}`) && (
+                    <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
+                  )}
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
       </nav>
     </ScrollArea>
   )

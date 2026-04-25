@@ -226,7 +226,7 @@ export default function IncomePage() {
                     <CardTitle className="text-lg">Basic Information</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm text-muted-foreground">Type</div>
                         <div className="text-base">
@@ -264,7 +264,7 @@ export default function IncomePage() {
                       <CardTitle className="text-lg">Category Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Name</div>
                           <div className="text-base">
@@ -283,7 +283,7 @@ export default function IncomePage() {
                       <CardTitle className="text-lg">Account Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Name</div>
                           <div className="text-base">{transactionDetails.account.name}</div>
@@ -310,7 +310,7 @@ export default function IncomePage() {
                       <CardTitle className="text-lg">Branch Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Name</div>
                           <div className="text-base">{transactionDetails.branch.name}</div>
@@ -339,7 +339,7 @@ export default function IncomePage() {
                       <CardTitle className="text-lg">Contact Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Name</div>
                           <div className="text-base">{transactionDetails.contact.name}</div>
@@ -371,7 +371,7 @@ export default function IncomePage() {
                     <CardTitle className="text-lg">Timestamps</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {transactionDetails.createdAt && (
                         <div>
                           <div className="text-sm text-muted-foreground">Created At</div>
