@@ -619,6 +619,7 @@ export function ProductForm({ product }: ProductFormProps) {
             await queryClient.invalidateQueries({ queryKey: ["product", product.id] })
             await queryClient.invalidateQueries({ queryKey: ["stocks"] })
             router.push(redirectUrl)
+            router.refresh()
           },
           onError: (error) => {
             if (process.env.NODE_ENV === "development") {
@@ -637,6 +638,7 @@ export function ProductForm({ product }: ProductFormProps) {
         await queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
         await queryClient.invalidateQueries({ queryKey: ["stocks"] })
         router.push(redirectUrl)
+        router.refresh()
       },
       onError: (error) => {
         if (process.env.NODE_ENV === "development") {
