@@ -12,17 +12,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PageLayout } from "@/components/common/page-layout"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
-import { useBranches, useDeleteBranch } from "@/lib/hooks/use-branches"
+import { useHasPermission } from "@/lib/hooks/use-permissions"
+import { PERMISSIONS } from "@/lib/utils/permissions"
 import { Branch } from "@/types"
 import { Building2, MoreVertical, Plus, Trash2, Pencil, MapPin, Phone } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { useBranches, useDeleteBranch } from "@/lib/hooks/use-branches"
 
 export default function BranchesPage() {
   const t = useTranslations("branches")
   const tCommon = useTranslations("common")
   const { data: branches = [], isLoading } = useBranches()
   const deleteBranchMutation = useDeleteBranch()
+  
+  // Permission checks
+  const canCreate = useHasPermission(PERMISSIONS.BRANCHES_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.BRANCHES_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.BRANCHES_DELETE)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -74,10 +81,12 @@ export default function BranchesPage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createBranch")}
-            </Button>
+            {canCreate && (
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createBranch")}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -90,10 +99,12 @@ export default function BranchesPage() {
               <p className="text-muted-foreground mb-4">
                 {t("noBranchesDescription")}
               </p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createBranch")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createBranch")}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -116,17 +127,21 @@ export default function BranchesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(branch)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(branch)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => handleEdit(branch)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(branch)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

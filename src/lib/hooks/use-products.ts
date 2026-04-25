@@ -63,6 +63,7 @@ export function useCreateProduct() {
     mutationFn: (data: CreateProductInput) => productsApi.createProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
       toast.success("Product created successfully!")
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
@@ -83,6 +84,7 @@ export function useUpdateProduct() {
       productsApi.updateProduct(id, data),
     onSuccess: (updatedProduct: Product) => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
       queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.id] })
       toast.success("Product updated successfully!")
     },
@@ -103,6 +105,7 @@ export function useDeleteProduct() {
     mutationFn: (id: string) => productsApi.deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
       toast.success("Product deleted successfully!")
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {

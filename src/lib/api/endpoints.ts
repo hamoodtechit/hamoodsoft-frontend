@@ -12,7 +12,10 @@ export const endpoints = {
   },
   users: {
     list: "/users",
+    create: "/users",
     update: (id: string) => `/users/${id}`,
+    remove: (id: string) => `/users/${id}/remove`,
+    resetPassword: (id: string) => `/users/${id}/reset-password`,
   },
   business: {
     create: "/business",
@@ -25,7 +28,7 @@ export const endpoints = {
     create: "/product-categories",
     list: "/product-categories",
     getById: (id: string) => `/product-categories/${id}`,
-    update: (id: string) => `/api/product-categories/${id}`,
+    update: (id: string) => `/product-categories/${id}`,
     delete: (id: string) => `/product-categories/${id}`,
   },
   branches: {

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useBusinesses } from "@/lib/hooks/use-business"
+import { usePermissions } from "@/lib/providers/permissions-provider"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store"
 import { useQueryClient } from "@tanstack/react-query"
@@ -23,6 +24,7 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react"
@@ -36,6 +38,7 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   badge?: string
+  requiredPermissions?: string[]
 }
 
 interface NavItemWithSubmenu extends NavItem {
@@ -62,26 +65,31 @@ const moduleSidebarMap: Record<string, (t: any) => NavItem> = {
     title: t("sidebar.sales"),
     href: "/dashboard/sales",
     icon: ShoppingCart,
+    requiredPermissions: ["sales:read"],
   }),
   'purchases': (t) => ({
     title: t("sidebar.purchase"),
     href: "/dashboard/purchase",
     icon: Package,
+    requiredPermissions: ["purchases:read"],
   }),
   'accounting': (t) => ({
     title: t("sidebar.accounting"),
     href: "/dashboard/accounting",
     icon: BookOpen,
+    requiredPermissions: ["accounts:read", "transactions:read", "payments:read"],
   }),
   'point-of-sale': (t) => ({
     title: t("sidebar.pointOfSale"),
     href: "/dashboard/point-of-sale",
     icon: CreditCard,
+    requiredPermissions: ["pos:sessions:read"],
   }),
   'crm': (t) => ({
     title: t("sidebar.crm"),
     href: "/dashboard/crm",
     icon: Users,
+    requiredPermissions: ["contacts:read"],
   }),
   'oil-filling-station': (t) => ({
     title: t("sidebar.oilFillingStation"),
@@ -98,6 +106,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   const { user: storeUser, businesses: storeBusinesses } = useAuthStore()
   const { data: apiBusinesses, isLoading: isLoadingBusinesses } = useBusinesses()
   const queryClient = useQueryClient()
+  const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     inventory: true,
     accounting: true,
@@ -121,10 +130,28 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     return businesses.find((b) => b.id === storeUser.currentBusinessId)
   }, [storeUser?.currentBusinessId, businesses])
 
+  const isOwner = currentBusiness?.ownerId === storeUser?.id
+
   const isLoading = isLoadingBusinesses && businesses.length === 0 && !storeBusinesses.length && !queryClient.getQueryData<any>(["businesses"])
 
   // Get enabled modules
   const enabledModules = currentBusiness?.modules || []
+
+  // Permission-based visibility check
+  const canSee = (requiredPermissions?: string[]): boolean => {
+    // Owner sees everything
+    if (isOwner) return true
+    // No permissions required = always visible
+    if (!requiredPermissions || requiredPermissions.length === 0) return true
+    // While loading permissions, show items (they'll hide after load)
+    if (isLoadingPermissions) return true
+    return hasAnyPermission(requiredPermissions)
+  }
+
+  // Filter nav items by permission
+  const filterByPermission = <T extends NavItem>(items: T[]): T[] => {
+    return items.filter((item) => canSee(item.requiredPermissions))
+  }
 
   // Build sidebar sections
   const navSections: NavSection[] = useMemo(() => {
@@ -150,55 +177,73 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           title: t("sidebar.products"),
           href: "/dashboard/products",
           icon: Package,
+          requiredPermissions: ["products:read"],
         },
         {
           title: t("sidebar.stocks"),
           href: "/dashboard/stocks",
           icon: Package,
+          requiredPermissions: ["stocks:read"],
         },
         {
           title: t("sidebar.categories"),
           href: "/dashboard/categories",
           icon: FolderTree,
+          requiredPermissions: ["product_categories:read"],
         },
         {
           title: t("sidebar.unit"),
           href: "/dashboard/units",
           icon: Ruler,
+          requiredPermissions: ["units:read"],
         },
         {
           title: t("sidebar.brands"),
           href: "/dashboard/brands",
           icon: Package,
+          requiredPermissions: ["brands:read"],
         },
         {
           title: t("sidebar.attributes"),
           href: "/dashboard/attributes",
           icon: Package,
+          requiredPermissions: ["attributes:read"],
         },
       ]
-      managementItems.push({
-        title: t("sidebar.inventory"),
-        href: "#",
-        icon: Package,
-        submenu: inventorySubmenu,
-      })
+
+      // Filter submenu items by permission, only show parent if any child is visible
+      const filteredSubmenu = filterByPermission(inventorySubmenu)
+      if (filteredSubmenu.length > 0) {
+        managementItems.push({
+          title: t("sidebar.inventory"),
+          href: "#",
+          icon: Package,
+          submenu: filteredSubmenu,
+        })
+      }
     }
 
     // Accounting
     if (enabledModules.includes('accounting')) {
-      managementItems.push({
+      const accountingItem = {
         title: t("sidebar.accounts"),
         href: "/dashboard/accounting",
         icon: Wallet,
-      })
+        requiredPermissions: ["accounts:read", "transactions:read", "payments:read"],
+      }
+      if (canSee(accountingItem.requiredPermissions)) {
+        managementItems.push(accountingItem)
+      }
     }
 
     // Other management modules
     const otherModules = ['sales', 'purchases', 'point-of-sale', 'crm']
     otherModules.forEach((moduleId) => {
       if (enabledModules.includes(moduleId)) {
-        managementItems.push(moduleSidebarMap[moduleId](t))
+        const item = moduleSidebarMap[moduleId](t)
+        if (canSee(item.requiredPermissions)) {
+          managementItems.push(item)
+        }
       }
     })
 
@@ -209,37 +254,55 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           title: t("sidebar.businessSettings"),
           href: "/dashboard/settings",
           icon: Settings,
+          requiredPermissions: ["settings:read"],
         },
         {
           title: t("sidebar.rolesPermissions"),
           href: "/dashboard/roles",
           icon: Shield,
+          requiredPermissions: ["roles:read"],
+        },
+        {
+          title: t("sidebar.team"),
+          href: "/dashboard/team",
+          icon: UserPlus,
+          requiredPermissions: ["user:manage"],
         },
         {
           title: t("sidebar.createBusiness"),
           href: "/register-business",
           icon: Plus,
+          // Always visible — any user can create their own business
         },
         {
           title: t("sidebar.branches"),
           href: "/dashboard/branches",
           icon: Building2,
+          requiredPermissions: ["branches:read"],
         },
       ]
-      managementItems.push({
-        title: t("sidebar.myBusiness"),
-        href: "#",
-        icon: Building2,
-        submenu: myBusinessSubmenu,
-      })
+
+      const filteredBusinessSubmenu = filterByPermission(myBusinessSubmenu)
+      if (filteredBusinessSubmenu.length > 0) {
+        managementItems.push({
+          title: t("sidebar.myBusiness"),
+          href: "#",
+          icon: Building2,
+          submenu: filteredBusinessSubmenu,
+        })
+      }
     }
 
     // Contacts (always available, not module-based) - appears after My Business dropdown
-    managementItems.push({
+    const contactsItem: NavItem = {
       title: t("sidebar.contacts"),
       href: "/dashboard/contacts",
       icon: Users,
-    })
+      requiredPermissions: ["contacts:read"],
+    }
+    if (canSee(contactsItem.requiredPermissions)) {
+      managementItems.push(contactsItem)
+    }
 
     if (managementItems.length > 0) {
       sections.push({
@@ -254,6 +317,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       .filter((moduleId) => enabledModules.includes(moduleId))
       .map((moduleId) => moduleSidebarMap[moduleId](t))
       .filter(Boolean)
+      .filter((item) => canSee(item.requiredPermissions))
 
     if (specialItems.length > 0) {
       sections.push({
@@ -263,7 +327,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     }
 
     return sections
-  }, [enabledModules, currentBusiness])
+  }, [enabledModules, currentBusiness, isOwner, isLoadingPermissions])
 
   const toggleSubmenu = (key: string) => {
     setOpenSubmenus((prev) => ({
@@ -367,6 +431,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     title: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
+    requiredPermissions: ["settings:read"],
   }
 
   if (isLoading) {
@@ -399,24 +464,26 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           </div>
         ))}
 
-        {/* Settings at the bottom */}
-        <div className="pt-4 border-t">
-          <Link href={`/${locale}${settingsItem.href}`} onClick={onLinkClick}>
-            <Button
-              variant={pathname?.startsWith(`/${locale}${settingsItem.href}`) ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start gap-3 h-10 px-3",
-                pathname?.startsWith(`/${locale}${settingsItem.href}`) && "bg-secondary font-medium"
-              )}
-            >
-              <Settings className="h-4 w-4 flex-shrink-0" />
-              <span className="flex-1 text-left text-sm">{settingsItem.title}</span>
-              {pathname?.startsWith(`/${locale}${settingsItem.href}`) && (
-                <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
-              )}
-            </Button>
-          </Link>
-        </div>
+        {/* Settings at the bottom — only if user has settings permission */}
+        {canSee(settingsItem.requiredPermissions) && (
+          <div className="pt-4 border-t">
+            <Link href={`/${locale}${settingsItem.href}`} onClick={onLinkClick}>
+              <Button
+                variant={pathname?.startsWith(`/${locale}${settingsItem.href}`) ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3 h-10 px-3",
+                  pathname?.startsWith(`/${locale}${settingsItem.href}`) && "bg-secondary font-medium"
+                )}
+              >
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1 text-left text-sm">{settingsItem.title}</span>
+                {pathname?.startsWith(`/${locale}${settingsItem.href}`) && (
+                  <ChevronRight className="ml-auto h-4 w-4 flex-shrink-0" />
+                )}
+              </Button>
+            </Link>
+          </div>
+        )}
       </nav>
     </ScrollArea>
   )

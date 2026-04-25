@@ -3,6 +3,7 @@
 import { AssignUserDialog } from "@/components/common/assign-user-dialog"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { PageLayout } from "@/components/common/page-layout"
+import { PermissionGuard } from "@/components/common/permission-guard"
 import { RoleDialog } from "@/components/common/role-dialog"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
@@ -93,6 +94,20 @@ export default function RolesPage() {
   }
 
   return (
+    <PermissionGuard
+      permission="roles:read"
+      fallback={
+        <PageLayout title={tSettings("accessDenied")} description={tSettings("selectBusiness")}>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-muted-foreground">
+                {tSettings("selectBusinessDescription")}
+              </p>
+            </CardContent>
+          </Card>
+        </PageLayout>
+      }
+    >
     <PageLayout
       title={t("title")}
       description={t("description")}
@@ -112,10 +127,12 @@ export default function RolesPage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createRole")}
-            </Button>
+            <PermissionGuard permission="roles:create">
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createRole")}
+              </Button>
+            </PermissionGuard>
           </div>
         </CardHeader>
         <CardContent>
@@ -162,21 +179,27 @@ export default function RolesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(role)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAssignUser(role)}>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            {t("assignUser")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(role)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          <PermissionGuard permission="roles:update">
+                            <DropdownMenuItem onClick={() => handleEdit(role)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          </PermissionGuard>
+                          <PermissionGuard permission="roles:assign">
+                            <DropdownMenuItem onClick={() => handleAssignUser(role)}>
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              {t("assignUser")}
+                            </DropdownMenuItem>
+                          </PermissionGuard>
+                          <PermissionGuard permission="roles:delete">
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(role)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          </PermissionGuard>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -231,5 +254,6 @@ export default function RolesPage() {
         isLoading={deleteRoleMutation.isPending}
       />
     </PageLayout>
+    </PermissionGuard>
   )
 }

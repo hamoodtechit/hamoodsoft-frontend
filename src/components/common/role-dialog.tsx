@@ -44,6 +44,7 @@ interface RoleDialogProps {
 }
 
 export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
+  const t = useTranslations("roles")
   const tCommon = useTranslations("common")
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
@@ -148,9 +149,9 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <DialogTitle>{isEdit ? "Edit Role" : "Create Role"}</DialogTitle>
+              <DialogTitle>{isEdit ? t("editRole") : t("createRole")}</DialogTitle>
               <DialogDescription>
-                {isEdit ? "Update role and permissions" : "Create a new role with permissions"}
+                {isEdit ? t("updateDescription") : t("createDescription")}
               </DialogDescription>
             </div>
           </div>
@@ -164,11 +165,11 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role Name</FormLabel>
+                  <FormLabel>{t("roleName")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="e.g., Manager, Supervisor"
+                      placeholder={t("roleNamePlaceholder")}
                       disabled={isLoading}
                     />
                   </FormControl>
@@ -183,11 +184,11 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
               name="allowedBranchIds"
               render={() => (
                 <FormItem>
-                  <FormLabel>Allowed Branches (Optional)</FormLabel>
+                  <FormLabel>{t("allowedBranches")}</FormLabel>
                   <FormControl>
                     <div className="rounded-md border p-3">
                       {branches.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-2">No branches available</p>
+                        <p className="text-sm text-muted-foreground py-2">{t("noBranches")}</p>
                       ) : (
                         <div className="space-y-2 max-h-[120px] overflow-y-auto pr-2">
                           {branches.map((branch) => (
@@ -215,7 +216,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
                   </FormControl>
                   <FormMessage />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Leave empty to allow access to all branches. Select specific branches to restrict access.
+                    {t("allowedBranchesHint")}
                   </p>
                 </FormItem>
               )}
@@ -227,36 +228,86 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
               name="permissions"
               render={() => (
                 <FormItem>
-                  <FormLabel>Permissions</FormLabel>
+                  <FormLabel>{t("permissions")}</FormLabel>
                   <FormControl>
                     <ScrollArea className="h-[300px] rounded-md border p-4">
                       <div className="space-y-4">
-                        {Object.entries(permissionGroups).map(([key, group]) => (
-                          <div key={key} className="space-y-2">
-                            <h4 className="text-sm font-medium">{group.label}</h4>
-                            <div className="space-y-2 pl-4">
-                              {group.permissions.map((permission) => (
-                                <div
-                                  key={permission.value}
-                                  className="flex items-center space-x-2"
+                        {Object.entries(permissionGroups).map(([key, group]) => {
+                          const allValues = group.permissions.map((p) => p.value) as string[]
+                          const checkedCount = allValues.filter((v) =>
+                            selectedPermissions.includes(v)
+                          ).length
+                          const allChecked = checkedCount === allValues.length
+                          const someChecked = checkedCount > 0 && !allChecked
+
+                          const toggleModule = () => {
+                            if (allChecked) {
+                              // Uncheck all in this module
+                              const newPerms = selectedPermissions.filter(
+                                (p) => !allValues.includes(p)
+                              )
+                              form.setValue("permissions", newPerms as any)
+                            } else {
+                              // Check all in this module
+                              const merged = [
+                                ...new Set([...selectedPermissions, ...allValues]),
+                              ]
+                              form.setValue("permissions", merged as any)
+                            }
+                          }
+
+                          return (
+                            <div key={key} className="space-y-2">
+                              {/* Module-level checkbox */}
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`module-${key}`}
+                                  checked={
+                                    allChecked
+                                      ? true
+                                      : someChecked
+                                        ? "indeterminate"
+                                        : false
+                                  }
+                                  onCheckedChange={toggleModule}
+                                  disabled={isLoading}
+                                />
+                                <label
+                                  htmlFor={`module-${key}`}
+                                  className="text-sm font-medium leading-none cursor-pointer"
                                 >
-                                  <Checkbox
-                                    id={permission.value}
-                                    checked={selectedPermissions.includes(permission.value)}
-                                    onCheckedChange={() => togglePermission(permission.value)}
-                                    disabled={isLoading}
-                                  />
-                                  <label
-                                    htmlFor={permission.value}
-                                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                  {group.label}
+                                </label>
+                              </div>
+                              {/* Individual permission checkboxes */}
+                              <div className="space-y-2 pl-6">
+                                {group.permissions.map((permission) => (
+                                  <div
+                                    key={permission.value}
+                                    className="flex items-center space-x-2"
                                   >
-                                    {permission.label}
-                                  </label>
-                                </div>
-                              ))}
+                                    <Checkbox
+                                      id={permission.value}
+                                      checked={selectedPermissions.includes(
+                                        permission.value
+                                      )}
+                                      onCheckedChange={() =>
+                                        togglePermission(permission.value)
+                                      }
+                                      disabled={isLoading}
+                                    />
+                                    <label
+                                      htmlFor={permission.value}
+                                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                    >
+                                      {permission.label}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </ScrollArea>
                   </FormControl>
@@ -272,7 +323,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading}
               >
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
@@ -281,7 +332,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
                     {tCommon("loading")}
                   </span>
                 ) : (
-                  isEdit ? "Update Role" : "Create Role"
+                  isEdit ? t("updateRole") : t("createRole")
                 )}
               </Button>
             </DialogFooter>

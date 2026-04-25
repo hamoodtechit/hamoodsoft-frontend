@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/sheet";
 import { type ContactsListParams } from "@/lib/api/contacts";
 import { useContacts, useDeleteContact } from "@/lib/hooks/use-contacts";
+import { useHasPermission } from "@/lib/hooks/use-permissions";
+import { PERMISSIONS } from "@/lib/utils/permissions";
 import { type ExportColumn } from "@/lib/utils/export";
 import { Contact } from "@/types";
 import {
@@ -96,6 +98,11 @@ export default function ContactsPage() {
     meta?.totalPages ??
     Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)));
   const currentPage = meta?.page ?? page;
+
+  // Permission checks
+  const canCreate = useHasPermission(PERMISSIONS.CONTACTS_CREATE);
+  const canUpdate = useHasPermission(PERMISSIONS.CONTACTS_UPDATE);
+  const canDelete = useHasPermission(PERMISSIONS.CONTACTS_DELETE);
 
   // Table columns configuration
   const tableColumns: Column<Contact>[] = useMemo(
@@ -310,10 +317,12 @@ export default function ContactsPage() {
                 filename="contacts"
                 disabled={isLoading || contacts.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createContact")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createContact")}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -328,10 +337,12 @@ export default function ContactsPage() {
               <p className="text-muted-foreground mb-4">
                 {t("noContactsDescription")}
               </p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createContact")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createContact")}
+                </Button>
+              )}
             </div>
           ) : viewMode === "table" ? (
             <div className="rounded-md border">
@@ -350,17 +361,21 @@ export default function ContactsPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {t("viewDetails")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(row)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {tCommon("edit")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(row)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {tCommon("delete")}
-                      </DropdownMenuItem>
+                      {canUpdate && (
+                        <DropdownMenuItem onClick={() => handleEdit(row)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {tCommon("edit")}
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(row)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {tCommon("delete")}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -447,17 +462,21 @@ export default function ContactsPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             {t("viewDetails")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(contact)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(contact)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(contact)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

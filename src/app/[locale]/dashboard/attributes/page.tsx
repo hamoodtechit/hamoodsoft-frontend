@@ -203,17 +203,21 @@ export default function AttributesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              {tCommon("edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDelete(row)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {tCommon("delete")}
-            </DropdownMenuItem>
+            {canUpdate && (
+              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                {tCommon("edit")}
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={() => handleDelete(row)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {tCommon("delete")}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -263,10 +267,12 @@ export default function AttributesPage() {
                 filename="attributes"
                 disabled={isLoading || filteredAttributes.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createAttribute")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createAttribute")}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -295,7 +301,7 @@ export default function AttributesPage() {
                   ? t("noResultsDescription") || "Try adjusting your search"
                   : t("noAttributesDescription")}
               </p>
-              {!search && (
+              {!search && canCreate && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   {t("createAttribute")}
@@ -335,17 +341,21 @@ export default function AttributesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(attribute)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {tCommon("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(attribute)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => handleEdit(attribute)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {tCommon("edit")}
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(attribute)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

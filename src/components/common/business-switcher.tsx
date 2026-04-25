@@ -133,24 +133,26 @@ export function BusinessSwitcher() {
                 <span className="flex-1 truncate">{business.name}</span>
                 <div className="flex items-center gap-1">
                   {isCurrent && <Check className="h-4 w-4 text-primary" />}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    data-edit-button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleEditBusiness(e, business)
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
-                    disabled={switchBusinessMutation.isPending}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
+                  {business.ownerId === user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      data-edit-button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleEditBusiness(e, business)
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
+                      disabled={switchBusinessMutation.isPending}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </DropdownMenuItem>
             )

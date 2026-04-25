@@ -49,6 +49,8 @@ export function useUpdateRole() {
     onSuccess: (updatedRole) => {
       queryClient.invalidateQueries({ queryKey: ["roles"] })
       queryClient.invalidateQueries({ queryKey: ["role", updatedRole.id] })
+      // Immediately refresh current user's profile to pick up permission changes
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] })
       toast.success("Role updated successfully!")
     },
     onError: (error) => {
@@ -64,6 +66,8 @@ export function useDeleteRole() {
     mutationFn: (id: string) => rolesApi.deleteRole(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles"] })
+      // Refresh profile in case deleted role was current user's
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] })
       toast.success("Role deleted successfully!")
     },
     onError: (error) => {
@@ -80,6 +84,8 @@ export function useAssignUserToRole() {
       rolesApi.assignUserToRole(roleId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles"] })
+      // Refresh profile as the assigned user's permissions may have changed
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] })
       toast.success("User assigned to role successfully!")
     },
     onError: (error) => {
