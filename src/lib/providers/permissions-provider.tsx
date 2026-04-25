@@ -3,7 +3,7 @@
 import { useRoles } from "@/lib/hooks/use-roles"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { Role, Permission } from "@/types"
+import { Role } from "@/types"
 import { createContext, useContext, useMemo, ReactNode } from "react"
 
 interface PermissionsContextValue {
@@ -30,87 +30,104 @@ interface PermissionsProviderProps {
 }
 
 export function PermissionsProvider({ children }: PermissionsProviderProps) {
-  const { user } = useAuth()
+  const { user, isLoading: isLoadingAuth } = useAuth()
   const currentBusiness = useCurrentBusiness()
   const { data: roles, isLoading: isLoadingRoles } = useRoles()
 
-  // Find user's role based on their roleId
+  const isOwner = currentBusiness?.ownerId === user?.id
+
+  // Find user's role (used for display purposes, not for permission resolution)
   const userRole = useMemo(() => {
-    if (!user || !roles || roles.length === 0) return null
-    
-    // User has roleId field - find matching role
-    if (user.roleId) {
+    if (!user) return null
+
+    // If roles are loaded, try to find the matching role
+    if (roles && roles.length > 0 && user.roleId) {
       const role = roles.find((r) => r.id === user.roleId)
       if (role) return role
     }
-    
+
     // Fallback: Get role from user's role relationship (if backend provides it)
     if (user.role) {
       return user.role
     }
-    
-    // Fallback: Default to "Owner" role if user is business owner
-    // This is a fallback - adjust based on your business logic
-    if (currentBusiness && currentBusiness.ownerId === user.id) {
-      const ownerRole = roles.find((r) => r.name === "Owner")
-      if (ownerRole) return ownerRole
-    }
-    
-    return null
-  }, [user, roles, currentBusiness])
 
-  // Extract permissions from role
+    return null
+  }, [user, roles])
+
+  // Extract permissions — prefer user.permissions from profile/login API response
+  // This avoids the chicken-and-egg problem where fetching roles requires roles:read
   const permissions = useMemo(() => {
-    if (!userRole) return []
-    return userRole.permissions || []
-  }, [userRole])
+    // Owner gets all permissions — handled at the component level via isOwner check
+    // But we still return whatever permissions exist for completeness
+
+    // Primary source: permissions array directly on the user object
+    // This comes from the backend profile/login response which resolves permissions server-side
+    if (user?.permissions && Array.isArray(user.permissions) && user.permissions.length > 0) {
+      return user.permissions as string[]
+    }
+
+    // Fallback: extract from the resolved role (if useRoles() succeeded)
+    if (userRole?.permissions && Array.isArray(userRole.permissions)) {
+      return userRole.permissions
+    }
+
+    return []
+  }, [user?.permissions, userRole])
 
   // Memoized permission check functions
   const hasPermission = useMemo(() => {
     return (permission: string): boolean => {
+      // Owner always has all permissions
+      if (isOwner) return true
       if (!permissions.length) return false
       return permissions.includes(permission)
     }
-  }, [permissions])
+  }, [permissions, isOwner])
 
   const hasAnyPermission = useMemo(() => {
     return (requiredPermissions: string[]): boolean => {
+      // Owner always has all permissions
+      if (isOwner) return true
       if (!permissions.length || !requiredPermissions.length) return false
       return requiredPermissions.some((perm) => permissions.includes(perm))
     }
-  }, [permissions])
+  }, [permissions, isOwner])
 
   const hasAllPermissions = useMemo(() => {
     return (requiredPermissions: string[]): boolean => {
+      // Owner always has all permissions
+      if (isOwner) return true
       if (!permissions.length || !requiredPermissions.length) return false
       return requiredPermissions.every((perm) => permissions.includes(perm))
     }
-  }, [permissions])
+  }, [permissions, isOwner])
 
   const hasModuleAccess = useMemo(() => {
     return (module: string): boolean => {
+      // Owner always has access
+      if (isOwner) return true
       // First check module access from business
       if (currentBusiness?.modules?.includes(module)) {
         return true
       }
-      
       // Then check if user has any permission for that module
       const modulePermissions = permissions.filter((perm) => perm.startsWith(`${module}:`))
       return modulePermissions.length > 0
     }
-  }, [currentBusiness, permissions])
+  }, [currentBusiness, permissions, isOwner])
 
   const value: PermissionsContextValue = useMemo(
     () => ({
       permissions,
       role: userRole,
-      isLoading: isLoadingRoles,
+      // Only show loading on initial load, not during background refetches
+      isLoading: isLoadingAuth && !permissions.length,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,
       hasModuleAccess,
     }),
-    [permissions, userRole, isLoadingRoles, hasPermission, hasAnyPermission, hasAllPermissions, hasModuleAccess]
+    [permissions, userRole, isLoadingAuth, hasPermission, hasAnyPermission, hasAllPermissions, hasModuleAccess]
   )
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>

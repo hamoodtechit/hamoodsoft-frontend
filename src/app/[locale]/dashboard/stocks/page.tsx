@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/sheet"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { useHasModuleAccess } from "@/lib/hooks/use-permissions"
-import { MODULES } from "@/lib/utils/permissions"
+import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
+import { MODULES, PERMISSIONS } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { useProducts } from "@/lib/hooks/use-products"
 import {
@@ -289,6 +289,8 @@ export default function StocksPage() {
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
+  const canCreate = useHasPermission(PERMISSIONS.STOCKS_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.STOCKS_UPDATE)
 
   // Secure by module access (inventory)
   useEffect(() => {
@@ -375,10 +377,12 @@ export default function StocksPage() {
                 filename="stocks"
                 disabled={isLoading || filteredStocks.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createStock")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createStock")}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -397,10 +401,12 @@ export default function StocksPage() {
               <Package className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">{t("noStocks")}</h3>
               <p className="text-muted-foreground mb-4">{t("noStocksDescription")}</p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createStock")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createStock")}
+                </Button>
+              )}
             </div>
           ) : viewMode === "table" ? (
             <div className="rounded-md border">
@@ -419,10 +425,12 @@ export default function StocksPage() {
                         <History className="mr-2 h-4 w-4" />
                         {t("viewHistory")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAdjust(row)}>
-                        <Package className="mr-2 h-4 w-4" />
-                        {t("adjustStock")}
-                      </DropdownMenuItem>
+                      {canUpdate && (
+                        <DropdownMenuItem onClick={() => handleAdjust(row)}>
+                          <Package className="mr-2 h-4 w-4" />
+                          {t("adjustStock")}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -488,10 +496,12 @@ export default function StocksPage() {
                               <History className="mr-2 h-4 w-4" />
                               {t("viewHistory")}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAdjust(stock)}>
-                              <Package className="mr-2 h-4 w-4" />
-                              {t("adjustStock")}
-                            </DropdownMenuItem>
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => handleAdjust(stock)}>
+                                <Package className="mr-2 h-4 w-4" />
+                                {t("adjustStock")}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

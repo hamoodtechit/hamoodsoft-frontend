@@ -31,6 +31,8 @@ import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeletePurchase, usePurchases } from "@/lib/hooks/use-purchases"
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useHasPermission } from "@/lib/hooks/use-permissions"
+import { PERMISSIONS } from "@/lib/utils/permissions"
 import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Purchase } from "@/types"
@@ -116,6 +118,11 @@ export default function PurchasePage() {
     meta?.totalPages ??
     Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
   const currentPage = meta?.page ?? page
+
+  // Permission checks
+  const canCreate = useHasPermission(PERMISSIONS.PURCHASES_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.PURCHASES_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.PURCHASES_DELETE)
 
   // Table columns configuration
   const tableColumns: Column<Purchase>[] = useMemo(
@@ -433,10 +440,12 @@ export default function PurchasePage() {
                 filename="purchases"
                 disabled={isLoading || purchases.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createPurchase")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createPurchase")}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -449,10 +458,12 @@ export default function PurchasePage() {
               <Package className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">{t("noPurchases")}</h3>
               <p className="text-muted-foreground mb-4">{t("noPurchasesDescription")}</p>
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createPurchase")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createPurchase")}
+                </Button>
+              )}
             </div>
           ) : viewMode === "table" ? (
             <div className="rounded-md border">
@@ -488,19 +499,21 @@ export default function PurchasePage() {
                           Add Payment
                         </DropdownMenuItem>
                       )}
-                      {row.status !== "COMPLETED" && (
+                      {row.status !== "COMPLETED" && canUpdate && (
                         <DropdownMenuItem onClick={() => handleEdit(row)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           {tCommon("edit")}
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(row)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {tCommon("delete")}
-                      </DropdownMenuItem>
+                      {canDelete && (
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(row)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {tCommon("delete")}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -588,19 +601,21 @@ export default function PurchasePage() {
                               Add Payment
                             </DropdownMenuItem>
                           )}
-                          {p.status !== "COMPLETED" && (
+                          {p.status !== "COMPLETED" && canUpdate && (
                             <DropdownMenuItem onClick={() => handleEdit(p)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               {tCommon("edit")}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(p)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {tCommon("delete")}
-                          </DropdownMenuItem>
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(p)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {tCommon("delete")}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

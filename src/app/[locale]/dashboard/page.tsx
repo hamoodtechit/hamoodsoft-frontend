@@ -4,6 +4,7 @@ import { DraggableDashboardCard } from "@/components/common/draggable-dashboard-
 import { DashboardSkeletonGrid } from "@/components/skeletons/dashboard-card-skeleton"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useUpdatePreferences } from "@/lib/hooks/use-users"
+import { usePermissions } from "@/lib/providers/permissions-provider"
 import { useAuthStore } from "@/store"
 import {
   DndContext,
@@ -56,6 +57,7 @@ interface DashboardItem {
   category?: string
   order?: number
   originalId?: string
+  requiredPermissions?: string[]
 }
 
 export default function DashboardPage() {
@@ -71,7 +73,18 @@ export default function DashboardPage() {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   
   const { user } = useAuthStore()
+  const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
   const { mutate: updatePreferences } = useUpdatePreferences()
+
+  const isOwner = currentBusiness?.ownerId === user?.id
+
+  // Permission-based visibility check
+  const canSee = (requiredPermissions?: string[]): boolean => {
+    if (isOwner) return true
+    if (!requiredPermissions || requiredPermissions.length === 0) return true
+    if (isLoadingPermissions) return true
+    return hasAnyPermission(requiredPermissions)
+  }
 
   // Load saved order from user preferences
   const [savedOrder, setSavedOrder] = useState<Record<string, string[]>>(
@@ -127,6 +140,7 @@ export default function DashboardPage() {
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
       enabled: enabledModules.includes("point-of-sale"),
       category: "main",
+      requiredPermissions: ["pos:sessions:read"],
     },
     {
       id: "sales",
@@ -137,6 +151,7 @@ export default function DashboardPage() {
       bgColor: "bg-green-50 dark:bg-green-950/20",
       enabled: enabledModules.includes("sales"),
       category: "main",
+      requiredPermissions: ["sales:read"],
     },
     {
       id: "purchase",
@@ -147,6 +162,7 @@ export default function DashboardPage() {
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
       enabled: enabledModules.includes("purchases"),
       category: "main",
+      requiredPermissions: ["purchases:read"],
     },
     {
       id: "contacts",
@@ -157,6 +173,7 @@ export default function DashboardPage() {
       bgColor: "bg-pink-50 dark:bg-pink-950/20",
       enabled: true, // Always available
       category: "main",
+      requiredPermissions: ["contacts:read"],
     },
     // Inventory submenu items
     {
@@ -168,6 +185,7 @@ export default function DashboardPage() {
       bgColor: "bg-orange-50 dark:bg-orange-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["products:read"],
     },
     {
       id: "stocks",
@@ -178,6 +196,7 @@ export default function DashboardPage() {
       bgColor: "bg-teal-50 dark:bg-teal-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["stocks:read"],
     },
     {
       id: "categories",
@@ -188,6 +207,7 @@ export default function DashboardPage() {
       bgColor: "bg-indigo-50 dark:bg-indigo-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["product_categories:read"],
     },
     {
       id: "brands",
@@ -198,6 +218,7 @@ export default function DashboardPage() {
       bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["brands:read"],
     },
     {
       id: "units",
@@ -208,6 +229,7 @@ export default function DashboardPage() {
       bgColor: "bg-amber-50 dark:bg-amber-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["units:read"],
     },
     {
       id: "attributes",
@@ -218,6 +240,7 @@ export default function DashboardPage() {
       bgColor: "bg-rose-50 dark:bg-rose-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
+      requiredPermissions: ["attributes:read"],
     },
     // Accounting submenu items
     {
@@ -229,6 +252,7 @@ export default function DashboardPage() {
       bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
       enabled: enabledModules.includes("accounting"),
       category: "accounting",
+      requiredPermissions: ["accounts:read"],
     },
     {
       id: "income",
@@ -239,6 +263,7 @@ export default function DashboardPage() {
       bgColor: "bg-green-50 dark:bg-green-950/20",
       enabled: enabledModules.includes("accounting"),
       category: "accounting",
+      requiredPermissions: ["transactions:read"],
     },
     {
       id: "expense",
@@ -249,6 +274,7 @@ export default function DashboardPage() {
       bgColor: "bg-red-50 dark:bg-red-950/20",
       enabled: enabledModules.includes("accounting"),
       category: "accounting",
+      requiredPermissions: ["transactions:read"],
     },
     // Business management
     {
@@ -260,6 +286,7 @@ export default function DashboardPage() {
       bgColor: "bg-slate-50 dark:bg-slate-950/20",
       enabled: true, // Always available
       category: "business",
+      requiredPermissions: ["branches:read"],
     },
     {
       id: "settings",
@@ -270,6 +297,7 @@ export default function DashboardPage() {
       bgColor: "bg-gray-50 dark:bg-gray-950/20",
       enabled: true, // Always available
       category: "business",
+      requiredPermissions: ["settings:read"],
     },
     {
       id: "roles",
@@ -280,6 +308,7 @@ export default function DashboardPage() {
       bgColor: "bg-red-50 dark:bg-red-950/20",
       enabled: true, // Always available
       category: "business",
+      requiredPermissions: ["roles:read"],
     },
     {
       id: "team",
@@ -290,6 +319,7 @@ export default function DashboardPage() {
       bgColor: "bg-violet-50 dark:bg-violet-950/20",
       enabled: true, // Always available
       category: "business",
+      requiredPermissions: ["user:manage"],
     },
     // Special modules
     {
@@ -314,8 +344,8 @@ export default function DashboardPage() {
     },
   ]
 
-  // Filter enabled items
-  const enabledItems = allItems.filter((item) => item.enabled)
+  // Filter enabled items AND permission-visible items
+  const enabledItems = allItems.filter((item) => item.enabled && canSee(item.requiredPermissions))
 
   // Apply saved order to items
   const orderedItems = useMemo(() => {

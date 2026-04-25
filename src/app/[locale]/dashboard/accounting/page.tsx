@@ -240,17 +240,21 @@ export default function AccountingPage() {
                 <BookOpen className="mr-2 h-4 w-4" />
                 {t("viewLedger")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEditAccount(row)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                {tCommon("edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeleteAccount(row)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {tCommon("delete")}
-              </DropdownMenuItem>
+              {canUpdateAccount && (
+                <DropdownMenuItem onClick={() => handleEditAccount(row)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {tCommon("edit")}
+                </DropdownMenuItem>
+              )}
+              {canDeleteAccount && (
+                <DropdownMenuItem
+                  onClick={() => handleDeleteAccount(row)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {tCommon("delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ),
@@ -307,10 +311,12 @@ export default function AccountingPage() {
                 <CardTitle>{t("accounts")}</CardTitle>
                 <CardDescription>{t("accountsDescription")}</CardDescription>
               </div>
-              <Button onClick={handleCreateAccount}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createAccount")}
-              </Button>
+              {canCreateAccount && (
+                <Button onClick={handleCreateAccount}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createAccount")}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

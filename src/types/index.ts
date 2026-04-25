@@ -9,6 +9,7 @@ export interface User {
   currentBusinessId?: string | null
   preferences?: Record<string, unknown> | null
   role?: Role | null
+  permissions?: string[]
   createdAt?: string
   updatedAt?: string
 }

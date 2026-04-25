@@ -395,17 +395,21 @@ export default function CategoriesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(category)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  {tCommon("edit")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(category)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {tCommon("delete")}
-                </DropdownMenuItem>
+                {canUpdate && (
+                  <DropdownMenuItem onClick={() => handleEdit(category)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {tCommon("edit")}
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(category)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {tCommon("delete")}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -467,17 +471,21 @@ export default function CategoriesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              {tCommon("edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDelete(row)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {tCommon("delete")}
-            </DropdownMenuItem>
+            {canUpdate && (
+              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                {tCommon("edit")}
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={() => handleDelete(row)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {tCommon("delete")}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -518,10 +526,12 @@ export default function CategoriesPage() {
                 filename="categories"
                 disabled={isLoading || filteredCategoriesForTable.length === 0}
               />
-              <Button onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("createCategory")}
-              </Button>
+              {canCreate && (
+                <Button onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("createCategory")}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -550,7 +560,7 @@ export default function CategoriesPage() {
                   ? t("noResultsDescription") || "Try adjusting your search"
                   : t("noCategoriesDescription")}
               </p>
-              {!search && (
+              {!search && canCreate && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   {t("createCategory")}

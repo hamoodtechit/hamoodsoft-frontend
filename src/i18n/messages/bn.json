@@ -502,7 +502,11 @@
     "noPermissions": "কোনো অনুমতি নির্ধারণ করা হয়নি",
     "permissionsCount": "{count}টি অনুমতি",
     "permissionsCountPlural": "{count}টি অনুমতি",
-    "morePermissions": "+{count}টি আরও"
+    "morePermissions": "+{count}টি আরও",
+    "allowedBranches": "অনুমোদিত শাখাসমূহ (ঐচ্ছিক)",
+    "allowedBranchesHint": "সব শাখায় অ্যাক্সেস দিতে খালি রাখুন। নির্দিষ্ট শাখায় সীমাবদ্ধ করতে নির্বাচন করুন।",
+    "noBranches": "কোনো শাখা পাওয়া যায়নি",
+    "updateRole": "ভূমিকা আপডেট করুন"
   },
   "settings": {
     "title": "ব্যবসার সেটিংস",

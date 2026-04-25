@@ -1,6 +1,8 @@
 "use client"
 
-import { useUIStore } from "@/store"
+import { useCurrentBusiness } from "@/lib/hooks/use-business"
+import { usePermissions } from "@/lib/providers/permissions-provider"
+import { useUIStore, useAuthStore } from "@/store"
 import { cn } from "@/lib/utils"
 import {
   BarChart2,
@@ -25,7 +27,12 @@ export function Sidebar() {
   const params = useParams()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
   const { toggleSidebar, sidebarOpen } = useUIStore()
+  const { user } = useAuthStore()
   const t = useTranslations()
+  const currentBusiness = useCurrentBusiness()
+  const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
+
+  const isOwner = currentBusiness?.ownerId === user?.id
 
   const [currentHash, setCurrentHash] = useState("")
 
@@ -38,6 +45,14 @@ export function Sidebar() {
     }
   }, [])
 
+  // Permission-based visibility check
+  const canSee = (requiredPermissions?: string[]): boolean => {
+    if (isOwner) return true
+    if (!requiredPermissions || requiredPermissions.length === 0) return true
+    if (isLoadingPermissions) return true
+    return hasAnyPermission(requiredPermissions)
+  }
+
   const navItems = [
     {
       id: "dashboard-top",
@@ -46,6 +61,7 @@ export function Sidebar() {
       color: "text-blue-500",
       hash: "#dashboard-top",
       activePrefixes: [],
+      requiredPermissions: [] as string[],
     },
     {
       id: "management-section",
@@ -54,6 +70,7 @@ export function Sidebar() {
       color: "text-cyan-400",
       hash: "#management-section",
       activePrefixes: ["/crm", "/contacts"],
+      requiredPermissions: ["contacts:read"],
     },
     {
       id: "inventory-section",
@@ -62,6 +79,7 @@ export function Sidebar() {
       color: "text-emerald-400",
       hash: "#inventory-section",
       activePrefixes: ["/products", "/stocks", "/categories", "/units", "/brands", "/attributes", "/inventory"],
+      requiredPermissions: ["products:read", "stocks:read", "units:read", "brands:read", "product_categories:read"],
     },
     {
       id: "accounting-section",
@@ -70,14 +88,16 @@ export function Sidebar() {
       color: "text-indigo-400",
       hash: "#accounting-section",
       activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale"],
+      requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read"],
     },
     {
       id: "reports-section",
-      title: "Reports", // Keeping literal if no translation key
+      title: "Reports",
       icon: BarChart2,
       color: "text-purple-400",
       hash: "#reports-section",
       activePrefixes: ["/reports"],
+      requiredPermissions: [] as string[],
     },
     {
       id: "modules-section",
@@ -86,6 +106,7 @@ export function Sidebar() {
       color: "text-orange-400",
       hash: "#modules-section",
       activePrefixes: ["/oil-filling-station"],
+      requiredPermissions: [] as string[],
     },
     {
       id: "my-business-section",
@@ -94,6 +115,7 @@ export function Sidebar() {
       color: "text-rose-400",
       hash: "#my-business-section",
       activePrefixes: ["/settings", "/roles", "/branches", "/team"],
+      requiredPermissions: ["settings:read", "roles:read", "user:manage", "branches:read"],
     },
     {
       id: "settings-section",
@@ -103,8 +125,12 @@ export function Sidebar() {
       hash: "#settings-section",
       marginTop: true,
       activePrefixes: ["/settings"],
+      requiredPermissions: ["settings:read"],
     },
   ]
+
+  // Filter items by permission
+  const visibleNavItems = navItems.filter((item) => canSee(item.requiredPermissions))
 
   // If we are on exactly `/dashboard`, we can just hash-link. 
   // If we are on `/dashboard/products`, we link to `/dashboard#inventory-section`.
@@ -147,7 +173,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-1 w-full pl-4 mt-4 flex-1 overflow-y-auto no-scrollbar" id="sidebar-nav">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon
           
           let isActuallyActive = false
@@ -172,7 +198,7 @@ export function Sidebar() {
               href={href}
               className={cn(
                 "nav-item flex items-center gap-4 px-4 py-3.5 rounded-l-2xl transition-colors cursor-pointer overflow-hidden",
-                item.marginTop && "mt-2",
+                (item as any).marginTop && "mt-2",
                 // Active State (bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white)
                 // Inactive State (text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50)
                 isActuallyActive
@@ -212,3 +238,4 @@ export function Sidebar() {
     </aside>
   )
 }
+

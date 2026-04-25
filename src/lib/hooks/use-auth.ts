@@ -8,6 +8,7 @@ import {
   ResetPasswordInput,
 } from "@/lib/validations/auth"
 import { useAuthStore } from "@/store"
+import { User } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect } from "react"
@@ -136,10 +137,16 @@ export function useAuth() {
     queryFn: () => authApi.getProfile(),
     enabled: !!token && isAuthenticated,
     retry: false,
-    // Don't refetch on window focus to prevent loading on tab change
-    refetchOnWindowFocus: false,
-    // Don't refetch on mount if we have cached data
-    refetchOnMount: false,
+    // Re-fetch permissions when user returns to tab (catches role changes)
+    refetchOnWindowFocus: true,
+    // Refetch on mount to ensure fresh permissions after navigation
+    refetchOnMount: true,
+    // Background polling every 60 seconds for live permission sync
+    refetchInterval: 60 * 1000,
+    // Only poll when the tab is visible (saves resources)
+    refetchIntervalInBackground: false,
+    // Keep previous data while refetching to prevent UI flicker
+    placeholderData: (prev: User | undefined) => prev,
   })
 
   // Update store when profile data is fetched from API
@@ -154,7 +161,10 @@ export function useAuth() {
         const dataChanged = 
           data.currentBusinessId !== storeUser.currentBusinessId ||
           data.name !== storeUser.name ||
-          data.email !== storeUser.email
+          data.email !== storeUser.email ||
+          // Detect permission changes for live role update sync
+          JSON.stringify(data.permissions) !== JSON.stringify(storeUser.permissions) ||
+          data.roleId !== storeUser.roleId
         
         if (dataChanged) {
           // Merge to preserve any store updates while applying API changes

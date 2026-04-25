@@ -17,7 +17,9 @@ export const PERMISSIONS = {
   
   // Stocks
   STOCKS_READ: "stocks:read",
+  STOCKS_CREATE: "stocks:create",
   STOCKS_UPDATE: "stocks:update",
+  STOCKS_DELETE: "stocks:delete",
   
   // Categories
   CATEGORIES_READ: "product_categories:read",

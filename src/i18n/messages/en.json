@@ -243,7 +243,8 @@
     "costPricePlaceholder": "e.g., 800",
     "branch": "Branch",
     "selectBranch": "Select a branch",
-    "initialStock": "Initial Stock"
+    "initialStock": "Initial Stock",
+    "attributes": "Attributes"
   },
   "productVariants": {
     "createVariant": "Create Variant",
@@ -643,7 +644,11 @@
     "noPermissions": "No permissions assigned",
     "permissionsCount": "{count} permission",
     "permissionsCountPlural": "{count} permissions",
-    "morePermissions": "+{count} more"
+    "morePermissions": "+{count} more",
+    "allowedBranches": "Allowed Branches (Optional)",
+    "allowedBranchesHint": "Leave empty to allow access to all branches. Select specific branches to restrict access.",
+    "noBranches": "No branches available",
+    "updateRole": "Update Role"
   },
   "settings": {
     "title": "Business Settings",
