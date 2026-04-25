@@ -92,7 +92,7 @@ export function Sidebar() {
     },
     {
       id: "reports-section",
-      title: "Reports",
+      title: t("sidebar.reports"),
       icon: BarChart2,
       color: "text-purple-400",
       hash: "#reports-section",
