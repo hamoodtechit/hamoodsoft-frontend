@@ -17,12 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
 import { useAuthStore, useUIStore } from "@/store"
-import { ChevronDown, Languages, Moon, Search, Sun, User } from "lucide-react"
+import { ChevronDown, Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
+import { MobileSidebar } from "./mobile-sidebar"
 import { NotificationPanel } from "./notification-panel"
 
 export function DashboardHeader() {
@@ -40,6 +41,7 @@ export function DashboardHeader() {
   const { setTheme } = useTheme()
   const logoutMutation = useLogout()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const switchLanguage = (newLocale: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,10 +57,29 @@ export function DashboardHeader() {
   ] as const
 
   return (
-    <header className="h-[76px] bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between px-8 z-10 shrink-0 sticky top-0 transition-colors duration-300">
+    <>
+    <MobileSidebar open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen} />
+    <header className="h-[76px] bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between px-4 sm:px-6 md:px-8 z-10 shrink-0 sticky top-0 transition-colors duration-300">
       
-      {/* Search Bar */}
-      <div className="flex items-center bg-slate-100 dark:bg-slate-900/50 border border-transparent rounded-xl px-4 py-2.5 w-full max-w-md focus-within:ring-4 focus-within:ring-blue-50 dark:focus-within:ring-blue-900/30 focus-within:border-blue-200 dark:focus-within:border-blue-700 transition-all focus-within:bg-white dark:focus-within:bg-slate-900 shadow-inner dark:shadow-none hidden sm:flex cursor-text" onClick={() => setSearchOpen(true)}>
+      {/* Mobile: Hamburger + Search Icon */}
+      <div className="flex items-center gap-1 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          id="mobile-menu-button"
+          aria-label="Open navigation menu"
+          onClick={() => setMobileSidebarOpen(true)}
+          className="text-slate-600 dark:text-slate-300"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Search">
+          <Search className="w-5 h-5 text-slate-400" />
+        </Button>
+      </div>
+
+      {/* Desktop: Full Search Bar */}
+      <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-900/50 border border-transparent rounded-xl px-4 py-2.5 w-full max-w-md focus-within:ring-4 focus-within:ring-blue-50 dark:focus-within:ring-blue-900/30 focus-within:border-blue-200 dark:focus-within:border-blue-700 transition-all focus-within:bg-white dark:focus-within:bg-slate-900 shadow-inner dark:shadow-none cursor-text" onClick={() => setSearchOpen(true)}>
         <Search className="text-slate-400 mr-3 w-[18px] h-[18px]" />
         <input 
             type="text" 
@@ -68,24 +89,18 @@ export function DashboardHeader() {
         />
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2 sm:hidden flex-1">
-        <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
-           <Search className="w-5 h-5 text-slate-400" />
-        </Button>
-      </div>
-
       {/* Right Header Actions */}
-      <div className="flex items-center gap-4 lg:gap-6">
+      <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
         
-        {/* Switchers - Hidden on very small screens */}
-        <div className="hidden min-[600px]:flex items-center gap-2">
+        {/* Switchers - Hidden on mobile (accessible via mobile sidebar) */}
+        <div className="hidden md:flex items-center gap-2">
           <BusinessSwitcher />
           <BranchSwitcher />
           <POSSessionIndicator />
         </div>
 
         {/* Global Settings (Theme & Lang for desktop) */}
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
@@ -194,5 +209,6 @@ export function DashboardHeader() {
 
       <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
+    </>
   )
 }

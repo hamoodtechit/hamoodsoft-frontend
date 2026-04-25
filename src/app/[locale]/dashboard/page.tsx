@@ -512,7 +512,7 @@ export default function DashboardPage() {
             onDragEnd={(event) => handleDragEnd(event, category)}
           >
             <SortableContext items={itemIds} strategy={rectSortingStrategy}>
-              <div className="flex flex-wrap gap-x-8 gap-y-10 md:gap-x-12">
+              <div className="flex flex-wrap gap-x-4 sm:gap-x-6 md:gap-x-10 gap-y-8 md:gap-y-10">
                 {itemsToShow.map((item) => {
                   const Icon = item.icon
                   return (
@@ -546,7 +546,7 @@ export default function DashboardPage() {
       {/* Header Text */}
       <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4" id="dashboard-top">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors">
             {t("sidebar.dashboard")}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors">

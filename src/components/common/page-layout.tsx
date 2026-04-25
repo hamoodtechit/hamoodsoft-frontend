@@ -31,7 +31,7 @@ export function PageLayout({
       <div>
         {showBackButton && <BackButton href={backHref} label={backLabel} />}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
           {description && (
             <p className="text-muted-foreground mt-2">{description}</p>
           )}

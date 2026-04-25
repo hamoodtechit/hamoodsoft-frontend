@@ -383,7 +383,7 @@ export default function AccountingPage() {
             ) : ledgerData ? (
               <ScrollArea className="max-h-[60vh]">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                     <div>
                       <div className="text-sm text-muted-foreground">{t("openingBalance")}</div>
                       <div className="text-lg font-semibold">
@@ -471,7 +471,7 @@ export default function AccountingPage() {
               <div className="py-8 text-center text-muted-foreground">{tCommon("loading")}</div>
             ) : accountDetails ? (
               <div className="space-y-6 mt-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-muted-foreground">{t("name")}</div>
                     <div className="text-lg font-semibold">{accountDetails.name}</div>
@@ -626,7 +626,7 @@ export default function AccountingPage() {
                     <CardTitle className="text-lg">Basic Information</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm text-muted-foreground">Type</div>
                         <div className="text-lg font-semibold">
@@ -676,7 +676,7 @@ export default function AccountingPage() {
                     </CardHeader>
                     <CardContent>
                       {(transactionDetails as any).incomeExpenseCategory ? (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <div className="text-sm text-muted-foreground">Category Name</div>
                             <div className="text-base font-semibold">
@@ -733,7 +733,7 @@ export default function AccountingPage() {
                       <CardTitle className="text-lg">Account Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Account Name</div>
                           <div className="text-base font-semibold">{transactionDetails.account.name}</div>
@@ -796,7 +796,7 @@ export default function AccountingPage() {
                       <CardTitle className="text-lg">Branch Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Branch Name</div>
                           <div className="text-base font-semibold">{transactionDetails.branch.name}</div>
@@ -841,7 +841,7 @@ export default function AccountingPage() {
                       <CardTitle className="text-lg">Contact Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-muted-foreground">Contact Name</div>
                           <div className="text-base font-semibold">{transactionDetails.contact.name}</div>
@@ -937,7 +937,7 @@ export default function AccountingPage() {
                     <CardTitle className="text-lg">Timestamps</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {transactionDetails.createdAt && (
                         <div>
                           <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
