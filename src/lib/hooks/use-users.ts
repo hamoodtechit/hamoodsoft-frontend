@@ -1,7 +1,9 @@
 "use client"
 
 import { usersApi } from "@/lib/api/users"
-import { UpdateUserInput } from "@/lib/validations/users"
+import type { CreateUserInput, ResetUserPasswordInput } from "@/lib/api/users"
+import type { UpdateUserInput } from "@/lib/validations/users"
+import type { EditUserInput } from "@/lib/validations/users"
 import { useAuthStore } from "@/store"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -12,6 +14,24 @@ export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: () => usersApi.getUsers(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateUserInput) => usersApi.createUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      toast.success("Team member added successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to add team member. Please try again."))
+    },
   })
 }
 
@@ -38,6 +58,56 @@ export function useUpdateUser() {
     onError: (error) => {
       console.error("Update user error:", error)
       toast.error(extractError(error, "Failed to update profile. Please try again."))
+    },
+  })
+}
+
+export function useEditUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: EditUserInput }) => {
+      const apiData: { name?: string; email?: string; roleId?: string } = {
+        name: data.name,
+        email: data.email,
+        roleId: data.roleId && data.roleId.length > 0 ? data.roleId : undefined,
+      }
+      return usersApi.updateUser(id, apiData)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      toast.success("Team member updated successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update team member. Please try again."))
+    },
+  })
+}
+
+export function useRemoveUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => usersApi.removeUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      toast.success("Team member removed successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to remove team member. Please try again."))
+    },
+  })
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ResetUserPasswordInput }) =>
+      usersApi.resetUserPassword(id, data),
+    onSuccess: () => {
+      toast.success("Password reset successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to reset password. Please try again."))
     },
   })
 }

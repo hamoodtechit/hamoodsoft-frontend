@@ -23,6 +23,7 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react"
@@ -214,6 +215,11 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           title: t("sidebar.rolesPermissions"),
           href: "/dashboard/roles",
           icon: Shield,
+        },
+        {
+          title: t("sidebar.team"),
+          href: "/dashboard/team",
+          icon: UserPlus,
         },
         {
           title: t("sidebar.createBusiness"),

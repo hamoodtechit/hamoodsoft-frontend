@@ -37,6 +37,7 @@ import {
   Store,
   TrendingDown,
   TrendingUp,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react"
@@ -110,7 +111,7 @@ export default function DashboardPage() {
     main: 4,
     inventory: 6,
     accounting: 999, // Show all accounting items (no "See More" button)
-    business: 3,
+    business: 9,
     modules: 2,
   }
 
@@ -277,6 +278,16 @@ export default function DashboardPage() {
       icon: Shield,
       color: "text-red-600",
       bgColor: "bg-red-50 dark:bg-red-950/20",
+      enabled: true, // Always available
+      category: "business",
+    },
+    {
+      id: "team",
+      title: t("sidebar.team"),
+      href: "/dashboard/team",
+      icon: UserPlus,
+      color: "text-violet-600",
+      bgColor: "bg-violet-50 dark:bg-violet-950/20",
       enabled: true, // Always available
       category: "business",
     },

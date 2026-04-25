@@ -12,7 +12,10 @@ export const endpoints = {
   },
   users: {
     list: "/users",
+    create: "/users",
     update: (id: string) => `/users/${id}`,
+    remove: (id: string) => `/users/${id}/remove`,
+    resetPassword: (id: string) => `/users/${id}/reset-password`,
   },
   business: {
     create: "/business",

@@ -93,7 +93,7 @@ export function Sidebar() {
       icon: Building2,
       color: "text-rose-400",
       hash: "#my-business-section",
-      activePrefixes: ["/settings", "/roles", "/branches"],
+      activePrefixes: ["/settings", "/roles", "/branches", "/team"],
     },
     {
       id: "settings-section",
