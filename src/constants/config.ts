@@ -4,7 +4,7 @@ export const config = {
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   },
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://erp-srv.hamoodtech.com/api",
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://pfs-srv.patwarypump.com/api",
     timeout: 30000,
   },
   i18n: {
