@@ -183,7 +183,22 @@ export function useCurrentBusiness() {
   // Get current business based on user's currentBusinessId
   const currentBusiness = useMemo(() => {
     if (!user?.currentBusinessId || !businesses || businesses.length === 0) return null
-    return businesses.find((b: Business) => b.id === user.currentBusinessId) || null
+    const foundBusiness = businesses.find((b: Business) => b.id === user.currentBusinessId) || null
+    if (foundBusiness) {
+      return {
+        ...foundBusiness,
+        modules: [
+          'inventory',
+          'sales',
+          'purchases',
+          'accounting',
+          'point-of-sale',
+          'crm',
+          'oil-filling-station',
+        ],
+      }
+    }
+    return null
   }, [user?.currentBusinessId, businesses])
 
   return currentBusiness

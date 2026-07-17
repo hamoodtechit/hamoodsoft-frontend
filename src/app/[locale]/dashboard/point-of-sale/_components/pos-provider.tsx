@@ -675,9 +675,9 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const updateQuantity = useCallback((index: number, delta: number) => {
     const updatedCart = [...cart]
     const item = updatedCart[index]
-    const newQuantity = Math.max(0.001, item.quantity + delta)
+    const newQuantity = Math.max(0, item.quantity + delta)
 
-    if (newQuantity < 0.001) return
+    if (newQuantity < 0) return
 
     if (item.productId?.startsWith("fuel-") && item.dispenserId) {
       const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
@@ -723,7 +723,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const setQuantityFn = useCallback((index: number, quantity: number) => {
     const updatedCart = [...cart]
     const item = updatedCart[index]
-    const newQuantity = Math.max(0.001, quantity)
+    const newQuantity = Math.max(0, quantity || 0)
 
     if (item.productId?.startsWith("fuel-") && item.dispenserId) {
       const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
@@ -1105,7 +1105,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         const itemData = {
           sku: sku,
           productId: isFuel ? undefined : item.productId,
-          variantId: item.variantId,
+          variantId: isFuel ? undefined : item.variantId,
           itemName: item.itemName,
           itemDescription: item.itemDescription || "",
           unit: item.unit,
@@ -1238,11 +1238,13 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const items = cart.map((item) => {
+        const isFuel = item.productId?.startsWith("fuel-")
         const sku = item.sku || item.productId || `temp-sku-${item.productId}-${Date.now()}`
 
         return {
           sku: sku,
-          variantId: item.variantId,
+          productId: isFuel ? undefined : item.productId,
+          variantId: isFuel ? undefined : item.variantId,
           itemName: item.itemName,
           itemDescription: item.itemDescription || "",
           unit: item.unit,
@@ -1251,6 +1253,10 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
           discountType: item.discountType,
           discountAmount: item.discountAmount,
           totalPrice: calculateItemTotalFn(item),
+          itemType: isFuel ? "fuel" : "product",
+          fuelTypeId: isFuel ? item.productId?.replace("fuel-", "") : undefined,
+          tankerId: isFuel ? dispensers.find(d => d.id === item.dispenserId)?.tankerId : undefined,
+          dispenserId: item.dispenserId,
         }
       })
 

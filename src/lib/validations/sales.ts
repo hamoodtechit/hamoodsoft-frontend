@@ -6,10 +6,17 @@ export const saleItemSchema = z.object({
   itemDescription: z.string().optional(),
   unit: z.string().min(1, "Unit is required"),
   price: z.number().min(0, "Price must be greater than or equal to 0"),
-  quantity: z.number().min(1, "Quantity must be greater than 0"),
+  quantity: z.number().min(0.001, "Quantity must be greater than 0"),
   discountType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional().default("NONE"),
   discountAmount: z.number().min(0, "Discount amount must be greater than or equal to 0").optional().default(0),
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
+  actualQuantity: z.number().optional(),
+  itemType: z.enum(["product", "fuel"]).optional(),
+  productId: z.string().optional(),
+  variantId: z.string().optional(),
+  fuelTypeId: z.string().optional(),
+  tankerId: z.string().optional(),
+  dispenserId: z.string().optional(),
 })
 
 export const paymentSchema = z.object({
