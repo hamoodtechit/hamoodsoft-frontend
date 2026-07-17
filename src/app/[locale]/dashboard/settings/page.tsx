@@ -32,14 +32,14 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { useUpdateSetting } from "@/lib/hooks/use-settings"
+import { useUpdateSetting, useCreateSetting } from "@/lib/hooks/use-settings"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { UpdateSettingInput, updateSettingSchema } from "@/lib/validations/settings"
 import { Setting } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Edit, Image as ImageIcon, Settings, X } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 
 interface BusinessConfig {
@@ -56,6 +56,7 @@ export default function BusinessSettingsPage() {
   const t = useTranslations("settings")
   const { settings, isLoading, generalSettings, taxSettings, invoiceSettings } = useAppSettings()
   const updateMutation = useUpdateSetting()
+  const createMutation = useCreateSetting()
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isMediaDialogOpen, setIsMediaDialogOpen] = useState(false)
@@ -98,13 +99,52 @@ export default function BusinessSettingsPage() {
         showPointReducing: businessConfig.showPointReducing,
         pointReducingAmountPerLiter: businessConfig.pointReducingAmountPerLiter,
       }
+      
+      if (editingSetting.id.startsWith("new-")) {
+        createMutation.mutate(
+          {
+            name: "businessConfig",
+            configs,
+          },
+          {
+            onSuccess: () => {
+              setIsDialogOpen(false)
+              setEditingSetting(null)
+              form.reset()
+              setBusinessConfigHasChanges(false)
+            },
+          }
+        )
+        return
+      }
+
       updateMutation.mutate(
-        { id: editingSetting.id, data: { name: "businessConfig", configs } },
+        {
+          id: editingSetting.id,
+          data: { name: "businessConfig", configs },
+        },
         {
           onSuccess: () => {
             setIsDialogOpen(false)
             setEditingSetting(null)
+            form.reset()
             setBusinessConfigHasChanges(false)
+          },
+        }
+      )
+      return
+    }
+
+    if (editingSetting.id.startsWith("new-")) {
+      createMutation.mutate(
+        {
+          name: editingSetting.name,
+          configs: data.configs,
+        },
+        {
+          onSuccess: () => {
+            setIsDialogOpen(false)
+            setEditingSetting(null)
             form.reset()
           },
         }
@@ -151,6 +191,21 @@ export default function BusinessSettingsPage() {
     return descriptions[name] || "Configure this setting"
   }
 
+  const displaySettings = useMemo(() => {
+    const defaultSettingNames = ["general", "taxRate", "invoice", "email", "sms", "businessConfig"]
+    const map = new Map<string, Setting>()
+    settings.forEach(s => map.set(s.name, s))
+    
+    // Ensure all default settings are present in the list
+    defaultSettingNames.forEach(name => {
+      if (!map.has(name)) {
+        map.set(name, { id: `new-${name}`, name, configs: {} } as Setting)
+      }
+    })
+    
+    return Array.from(map.values())
+  }, [settings])
+
   return (
     <PageLayout title={t("title")} description={t("description")} maxWidth="full">
       <Card>
@@ -168,13 +223,13 @@ export default function BusinessSettingsPage() {
         <CardContent>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : settings.length === 0 ? (
+          ) : displaySettings.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               No settings found
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {settings.map((setting) => (
+              {displaySettings.map((setting) => (
                 <Card key={setting.id} className="relative">
                   <CardHeader>
                     <div className="flex items-start justify-between">
