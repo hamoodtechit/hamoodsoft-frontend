@@ -1116,14 +1116,14 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     <div className="text-xs text-muted-foreground mt-1 bg-muted/60 p-1.5 rounded-md flex justify-between">
                                       <span>Points deduction:</span>
                                       <span className="font-medium text-destructive">
-                                        -{(fuelItem.quantity - actualQty).toFixed(2)} L
+                                        -{(fuelItem.quantity - actualQty).toFixed(3)} L
                                       </span>
                                     </div>
                                   )}
                                   {businessConfig?.showPointReducing && fuelItem.quantity > 0 && (
                                     <div className="text-xs mt-1 flex justify-between font-medium">
                                       <span>Actual delivery:</span>
-                                      <span className="text-primary">{actualQty.toFixed(2)} L</span>
+                                      <span className="text-primary">{actualQty.toFixed(3)} L</span>
                                     </div>
                                   )}
                                 </div>

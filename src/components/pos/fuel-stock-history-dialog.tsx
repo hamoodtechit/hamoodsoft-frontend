@@ -168,14 +168,14 @@ export function FuelStockHistoryDialog({
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold">
-                            {isIn ? "+" : "-"}{Math.abs(businessConfig.showPointReducing ? qty : (h.namedQuantity ?? qty)).toFixed(2)} L
+                            {isIn ? "+" : "-"}{Math.abs(businessConfig.showPointReducing ? qty : (h.namedQuantity ?? qty)).toFixed(3)} L
                           </span>
                           <Badge variant={isIn ? "default" : "destructive"} className="h-5 px-1.5 text-[10px]">
                             {isIn ? "IN" : "OUT"}
                           </Badge>
                           {businessConfig.showPointReducing && !isIn && h.namedQuantity && (
                             <span className="text-[10px] text-muted-foreground ml-1">
-                              (Original: {h.namedQuantity.toFixed(2)} L)
+                              (Original: {h.namedQuantity.toFixed(3)} L)
                             </span>
                           )}
                         </div>

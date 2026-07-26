@@ -110,8 +110,8 @@ export function CartItemRow({ item, index }: CartItemRowProps) {
             {/* Point Reduction Display */}
             {businessConfig?.showPointReducing && businessConfig?.pointReducingAmountPerLiter > 0 && item.quantity > 0 && (
               <div className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium px-2 py-1 rounded border border-amber-500/20 flex items-center justify-between">
-                <span>Deduction: -{(item.quantity * businessConfig.pointReducingAmountPerLiter / 1000).toFixed(2)} L</span>
-                <span className="font-bold">Delivery: {(item.quantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000).toFixed(2)} L</span>
+                <span>Deduction: -{(item.quantity * businessConfig.pointReducingAmountPerLiter / 1000).toFixed(3)} L</span>
+                <span className="font-bold">Delivery: {(item.quantity * (1000 - businessConfig.pointReducingAmountPerLiter) / 1000).toFixed(3)} L</span>
               </div>
             )}
 

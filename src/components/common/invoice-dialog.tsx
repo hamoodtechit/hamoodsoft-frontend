@@ -425,7 +425,7 @@ export function InvoiceDialog({
                           <div>{item.quantity} {item.unit}</div>
                           {(!isPurchase && (item.itemType === "FUEL" || item.productId?.startsWith("fuel-") || item.sku?.startsWith("FUEL-"))) && businessConfig?.showPointReducing && (businessConfig?.pointReducingAmountPerLiter ?? 0) > 0 && item.quantity > 0 && (
                             <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5" title="Actual Delivery After Points Deduction">
-                              Actual: {(item.actualQuantity ?? calculateActualQuantity(item.quantity)).toFixed(2)} {item.unit}
+                              Actual: {(item.actualQuantity ?? calculateActualQuantity(item.quantity)).toFixed(3)} {item.unit}
                             </div>
                           )}
                         </td>
