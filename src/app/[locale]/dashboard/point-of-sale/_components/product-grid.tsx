@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { usePOS } from "./pos-provider"
 import { ProductCard } from "./product-card"
 import { DispenserCard } from "./dispenser-card"
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { Container, Package, Plus } from "lucide-react"
+import { Container, Droplets, Fuel, Package, Plus } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 export function ProductGrid() {
@@ -25,21 +26,39 @@ export function ProductGrid() {
   const params = useParams()
   const locale = params.locale as string
 
-  console.log("dispenser", dispensers)
+  const filteredDispensers = useMemo(() => {
+    return dispensers.filter((d) => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [dispensers, searchQuery])
+
+  const groupedDispensers = useMemo(() => {
+    const groups: Record<string, { fuelTypeName: string; price: number; items: typeof dispensers }> = {}
+    filteredDispensers.forEach((disp) => {
+      const fuelType = disp.tanker?.fuelType
+      const key = fuelType?.id || "other"
+      const name = fuelType?.name || "Other Fuels"
+      const price = fuelType?.price || 0
+      if (!groups[key]) {
+        groups[key] = { fuelTypeName: name, price, items: [] }
+      }
+      groups[key].items.push(disp)
+    })
+    return Object.values(groups)
+  }, [filteredDispensers])
+
   return (
-    <Card className="flex-1 flex flex-col overflow-hidden">
-      <CardHeader className="flex-shrink-0 py-3">
+    <Card className="flex-1 flex flex-col overflow-hidden border-border/80 shadow-xs">
+      <CardHeader className="flex-shrink-0 py-3 px-4 border-b bg-muted/20">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold flex items-center gap-2">
             {posMode === "standard" ? (
               <>
-                <Package className="h-4 w-4" />
-                Products
+                <Package className="h-4 w-4 text-primary" />
+                <span>Products</span>
               </>
             ) : (
               <>
-                <Container className="h-4 w-4" />
-                Select Dispenser
+                <Fuel className="h-4 w-4 text-primary" />
+                <span>Fuel Dispensers</span>
               </>
             )}
           </CardTitle>
@@ -48,54 +67,47 @@ export function ProductGrid() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 text-xs font-medium shadow-2xs"
                 onClick={() => router.push(`/${locale}/dashboard/products/new?returnTo=pos`)}
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
+                <Plus className="h-3.5 w-3.5 mr-1 text-primary" />
                 New Product
               </Button>
             )}
-            <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+            <Badge variant="secondary" className="text-xs font-medium px-2 h-6 bg-secondary/80">
               {posMode === "standard" ? products.length : dispensers.length} items
             </Badge>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0">
+      <CardContent className="flex-1 min-h-0 p-3 sm:p-4">
         <ScrollArea className="h-full pr-2">
           {isLoadingProducts || isLoadingDispensers ? (
             <div className="py-20">
               <SystemLoader text={`Loading ${posMode === "standard" ? "products" : "dispensers"}...`} />
             </div>
           ) : posMode === "standard" && products.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {searchQuery ? "No products found" : "No products available"}
+            <div className="text-center py-12 text-muted-foreground font-medium">
+              {searchQuery ? "No products found matching your search" : "No products available"}
             </div>
           ) : posMode === "petrol" && (dispensers.length === 0) ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No dispensers found
+            <div className="text-center py-12 text-muted-foreground font-medium">
+              {searchQuery ? "No dispensers found matching your search" : "No dispensers available"}
             </div>
-          ) : (
+          ) : posMode === "standard" ? (
+            /* Standard Products View */
             <div className={cn(
-              "py-2",
+              "py-1",
               productViewMode === "grid"
-                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-                : "space-y-2"
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
+                : "space-y-2.5"
             )}>
-              {posMode === "standard" ? (
-                filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))
-              ) : (
-                dispensers
-                  .filter((d) => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((dispenser) => (
-                    <DispenserCard key={dispenser.id} dispenser={dispenser} />
-                  ))
-              )}
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
 
               {/* Load More Button - Products */}
-              {posMode === "standard" && hasMoreProducts && (
+              {hasMoreProducts && (
                 <div className={cn(
                   "flex justify-center py-6",
                   productViewMode === "grid" ? "col-span-full" : "w-full"
@@ -105,44 +117,69 @@ export function ProductGrid() {
                     size="lg"
                     disabled={isFetchingMoreProducts}
                     onClick={() => fetchNextProducts()}
-                    className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto"
+                    className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto font-semibold"
                   >
                     {isFetchingMoreProducts ? (
                       <div className="flex items-center gap-2">
                         <div className="animate-spin text-lg">⏳</div>
-                        Loading...
+                        Loading more products...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 text-primary" />
                         Load More Products
                       </div>
                     )}
                   </Button>
                 </div>
               )}
+            </div>
+          ) : (
+            /* Grouped Full-Width Fuel Dispensers View */
+            <div className="space-y-6 py-1 w-full">
+              {groupedDispensers.map((group) => (
+                <div key={group.fuelTypeName} className="border border-border/80 rounded-xl overflow-hidden bg-background shadow-2xs">
+                  {/* Fuel Type Group Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-muted/40 border-b border-border/60">
+                    <div className="flex items-center gap-2.5">
+                      <Droplets className="h-4 w-4 text-primary" />
+                      <span className="font-bold text-base text-foreground">{group.fuelTypeName}</span>
+                      <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
+                        {group.items.length} {group.items.length === 1 ? "dispenser" : "dispensers"}
+                      </Badge>
+                    </div>
+                    <div className="font-black text-base text-primary">
+                      {group.price.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ L</span>
+                    </div>
+                  </div>
+
+                  {/* Full Width List of Dispensers in this Fuel Group */}
+                  <div className="p-2.5 sm:p-3 space-y-2 w-full">
+                    {group.items.map((dispenser) => (
+                      <DispenserCard key={dispenser.id} dispenser={dispenser} />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
               {/* Load More Button - Dispensers */}
-              {posMode === "petrol" && hasMoreDispensers && (
-                <div className={cn(
-                  "flex justify-center py-6",
-                  productViewMode === "grid" ? "col-span-full" : "w-full"
-                )}>
+              {hasMoreDispensers && (
+                <div className="flex justify-center py-6 w-full">
                   <Button
                     variant="outline"
                     size="lg"
                     disabled={isFetchingMoreDispensers}
                     onClick={() => fetchNextDispensers()}
-                    className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto"
+                    className="px-12 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all w-full md:w-auto font-semibold"
                   >
                     {isFetchingMoreDispensers ? (
                       <div className="flex items-center gap-2">
                         <div className="animate-spin text-lg">⏳</div>
-                        Loading...
+                        Loading more dispensers...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 text-primary" />
                         Load More Dispensers
                       </div>
                     )}

@@ -11,99 +11,75 @@ interface DispenserCardProps {
 }
 
 export function DispenserCard({ dispenser }: DispenserCardProps) {
-  const { handleDispenserClick, cart, productViewMode } = usePOS()
+  const { handleDispenserClick, cart } = usePOS()
 
   const tanker = dispenser.tanker
   const fuelType = tanker?.fuelType
   const inCart = cart.some((item) => item.dispenserId === dispenser.id)
-  const fuelLevel = tanker ? (tanker.currentFuel / tanker.capacity) * 100 : 0
-
-  if (productViewMode === "list") {
-    return (
-      <button
-        onClick={() => handleDispenserClick(dispenser)}
-        className={cn(
-          "flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
-          "bg-gradient-to-br", getRandomGradient(dispenser.id, 'subtle'),
-          "hover:border-primary/50 hover:bg-primary/5",
-          inCart && "border-primary/30 ring-1 ring-primary/20"
-        )}
-      >
-        <div className={cn(
-          "w-10 h-10 rounded flex-shrink-0 border flex overflow-hidden bg-gradient-to-br",
-          getRandomGradient(dispenser.id, 'vibrant')
-        )}>
-          <Droplets className="h-6 w-6 m-auto text-primary" />
-        </div>
-        <div className="flex-1 text-left">
-          <div className="font-bold text-sm truncate">{dispenser.name}</div>
-          <div className="text-xs text-muted-foreground">{fuelType?.name || 'Loading...'}</div>
-        </div>
-        <div className="text-right">
-          <div className="font-black text-primary">{fuelType?.price.toFixed(2)}</div>
-          <div className="text-[10px] text-muted-foreground">per Liter</div>
-        </div>
-        <div className="ml-4 w-24">
-          <div className="text-[10px] mb-1">Level: {tanker?.currentFuel || 0}L</div>
-          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn("h-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")}
-              style={{ width: `${fuelLevel}%` }}
-            />
-          </div>
-        </div>
-      </button>
-    )
-  }
+  const fuelLevel = tanker && tanker.capacity ? Math.min(100, Math.max(0, (tanker.currentFuel / tanker.capacity) * 100)) : 0
 
   return (
     <button
       onClick={() => handleDispenserClick(dispenser)}
       className={cn(
-        "group relative border-2 rounded-xl overflow-hidden p-4",
+        "w-full flex items-center justify-between gap-3 sm:gap-4 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg border transition-all text-left group",
         "bg-gradient-to-br", getRandomGradient(dispenser.id, 'subtle'),
-        "transition-all duration-200 ease-in-out",
-        "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
-        "active:scale-[0.98]",
-        "flex flex-col h-full",
-        inCart && "border-primary/40 shadow-md shadow-primary/5"
+        "hover:border-primary/50 hover:shadow-sm hover:bg-primary/[0.03]",
+        "active:scale-[0.99]",
+        inCart ? "border-primary/50 shadow-xs ring-1 ring-primary/30 bg-primary/[0.05]" : "border-border/60 bg-background"
       )}
     >
-      <div className="flex items-center justify-between mb-3">
+      {/* Left: Icon & Name */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className={cn(
-          "h-10 w-10 flex items-center justify-center rounded-lg bg-gradient-to-br text-primary",
+          "w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 border flex items-center justify-center bg-gradient-to-br shadow-2xs transition-transform group-hover:scale-105",
           getRandomGradient(dispenser.id, 'vibrant')
         )}>
-          <Droplets className="h-6 w-6" />
+          <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
         </div>
-        {inCart && (
-          <div className="rounded-full bg-primary text-primary-foreground p-1 shadow-md">
-            <Check className="h-3 w-3" />
-          </div>
-        )}
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          <span className="font-bold text-sm sm:text-base truncate text-foreground">
+            {dispenser.name}
+          </span>
+          {tanker && (
+            <span className="text-xs font-semibold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded shrink-0">
+              {tanker.name}
+            </span>
+          )}
+          {inCart && (
+            <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-2xs shrink-0">
+              ✓
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="text-left flex-1">
-        <h3 className="font-bold text-sm truncate mb-1">{dispenser.name}</h3>
-        <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider font-semibold">
-          {fuelType?.name || 'Loading...'}
-        </p>
-
-        <div className="flex items-end justify-between mt-auto">
-          <div>
-            <div className="text-lg font-black text-primary">{fuelType?.price.toFixed(2)}</div>
-            <div className="text-[10px] text-muted-foreground">Price/Liter</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs font-bold">{tanker?.currentFuel || 0}L</div>
-            <div className="text-[10px] text-muted-foreground">Current Level</div>
-          </div>
+      {/* Middle: Tanker Fuel Level indicator */}
+      <div className="hidden md:flex flex-col items-end justify-center w-44 lg:w-52 px-2">
+        <div className="flex justify-between w-full text-xs font-semibold mb-1">
+          <span className="text-muted-foreground">Level</span>
+          <span className={cn(fuelLevel < 20 ? "text-destructive font-bold" : "text-foreground font-semibold")}>
+            {tanker?.currentFuel || 0}L <span className="text-muted-foreground font-normal">/ {tanker?.capacity || 0}L</span>
+          </span>
         </div>
-        <div className="w-full h-2 bg-muted rounded-full overflow-hidden mt-3">
+        <div className="w-full h-2 bg-secondary/80 rounded-full overflow-hidden border border-border/40">
           <div
-            className={cn("h-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")}
+            className={cn("h-full transition-all duration-500 rounded-full", fuelLevel < 20 ? "bg-destructive" : "bg-primary")}
             style={{ width: `${fuelLevel}%` }}
           />
+        </div>
+      </div>
+
+      {/* Right: Price & Action */}
+      <div className="flex items-center gap-3 sm:gap-4 text-right flex-shrink-0 pl-2 sm:pl-3 border-l border-border/40">
+        <div className="font-black text-base sm:text-lg text-primary leading-none whitespace-nowrap">
+          {fuelType?.price !== undefined ? `${fuelType.price.toFixed(2)}` : '0.00'} <span className="text-xs font-normal text-muted-foreground">/ L</span>
+        </div>
+        <div className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-2xs",
+          inCart ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground group-hover:bg-primary group-hover:text-primary-foreground"
+        )}>
+          <span className="text-base font-bold leading-none">+</span>
         </div>
       </div>
     </button>
