@@ -106,7 +106,17 @@ export function AdjustStockDialog({
   }, [productId, products, variantId, defaultStockId, form])
 
   const onSubmit = (data: AdjustStockInput) => {
-    adjustMutation.mutate(data, {
+    const cleanedData = { ...data }
+    if (!cleanedData.variantId) {
+      delete cleanedData.variantId
+    }
+    if (!cleanedData.stockId) {
+      delete cleanedData.stockId
+    }
+    if (!cleanedData.unitId) {
+      delete cleanedData.unitId
+    }
+    adjustMutation.mutate(cleanedData, {
       onSuccess: () => {
         onOpenChange(false)
         form.reset(defaultValues)
@@ -126,7 +136,13 @@ export function AdjustStockDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="flex flex-col flex-1 min-h-0"
+          >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
                 <FormField

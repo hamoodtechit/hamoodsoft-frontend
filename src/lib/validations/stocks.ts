@@ -1,15 +1,15 @@
 import { z } from "zod"
 
 export const createStockSchema = z.object({
-  branchId: z.string().uuid("Branch is required"),
-  productId: z.string().uuid("Product is required"),
-  unitId: z.string().uuid("Unit is required"),
+  branchId: z.string().min(1, "Branch is required"),
+  productId: z.string().min(1, "Product is required"),
+  unitId: z.string().min(1, "Unit is required"),
   itemType: z.enum(["PRODUCT", "FUEL"]).optional(),
   quantity: z
     .number({ invalid_type_error: "Quantity must be a number" })
     .min(0, "Quantity must be 0 or greater"),
   sku: z.string().optional(),
-  variantId: z.string().uuid().nullable().optional(),
+  variantId: z.string().optional().nullable().or(z.literal("")),
   purchasePrice: z
     .number({ invalid_type_error: "Purchase price must be a number" })
     .min(0, "Purchase price must be 0 or greater"),
@@ -19,7 +19,7 @@ export const createStockSchema = z.object({
 })
 
 export const updateStockSchema = z.object({
-  unitId: z.string().uuid("Unit is required").optional(),
+  unitId: z.string().min(1, "Unit is required").optional().or(z.literal("")),
   purchasePrice: z
     .number({ invalid_type_error: "Purchase price must be a number" })
     .min(0, "Purchase price must be 0 or greater")
@@ -31,11 +31,11 @@ export const updateStockSchema = z.object({
 })
 
 export const adjustStockSchema = z.object({
-  branchId: z.string().uuid("Branch is required"),
-  stockId: z.string().uuid("Stock ID is required").optional(),
-  productId: z.string().uuid("Product is required"),
-  variantId: z.string().uuid().optional(),
-  unitId: z.string().uuid("Unit is required").optional(),
+  branchId: z.string().min(1, "Branch is required"),
+  stockId: z.string().min(1, "Stock ID is required").optional().or(z.literal("")),
+  productId: z.string().min(1, "Product is required"),
+  variantId: z.string().optional().nullable().or(z.literal("")),
+  unitId: z.string().min(1, "Unit is required").optional().or(z.literal("")),
   transactionType: z.enum(["IN", "OUT"]),
   quantity: z
     .number({ invalid_type_error: "Quantity must be a number" })
