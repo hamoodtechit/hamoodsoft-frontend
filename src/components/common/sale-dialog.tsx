@@ -112,6 +112,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
     fuelTypeName: string;
     sellingPrice: number;
     quantity: number; // named/told quantity
+    amount?: number; // amount in taka
     tankerId: string;
     tankerName: string;
   }
@@ -131,7 +132,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   // Fuel total calculation
   const fuelTotal = useMemo(() => {
     return fuelSaleItems.reduce((sum, item) => {
-      return sum + (item.quantity || 0) * (item.sellingPrice || 0);
+      return sum + (item.amount !== undefined ? item.amount : (item.quantity || 0) * (item.sellingPrice || 0));
     }, 0);
   }, [fuelSaleItems]);
 
@@ -482,7 +483,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
           price: fuelItem.sellingPrice,
           quantity: fuelItem.quantity, // named/told quantity
           actualQuantity: actualQty, // actual (reduced) quantity
-          totalPrice: fuelItem.quantity * fuelItem.sellingPrice,
+          totalPrice: fuelItem.amount !== undefined ? fuelItem.amount : fuelItem.quantity * fuelItem.sellingPrice,
           fuelTypeId: fuelItem.fuelTypeId,
           tankerId: fuelItem.tankerId || undefined,
           itemType: "FUEL",
@@ -1051,7 +1052,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                 )}
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
                                 {/* Fuel Type */}
                                 <div className="space-y-2">
                                   <Label className="text-sm">
@@ -1062,19 +1063,23 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     onValueChange={(val) => {
                                       const ft = fuelTypes.find((f) => f.id === val);
                                       const autoTankers = tankers.filter((t) => t.fuelTypeId === val);
+                                      const newPrice = ft?.price || 0;
                                       setFuelSaleItems((prev) =>
-                                        prev.map((item, i) =>
-                                          i === fuelIndex
-                                            ? {
-                                                ...item,
-                                                fuelTypeId: val,
-                                                fuelTypeName: ft?.name || "",
-                                                sellingPrice: ft?.price || 0,
-                                                tankerId: autoTankers.length > 0 ? autoTankers[0].id : "",
-                                                tankerName: autoTankers.length > 0 ? autoTankers[0].name : "",
-                                              }
-                                            : item
-                                        )
+                                        prev.map((item, i) => {
+                                          if (i !== fuelIndex) return item;
+                                          const newAmount = item.amount !== undefined ? item.amount : Number((item.quantity * newPrice).toFixed(2));
+                                          const newQty = item.amount !== undefined && newPrice > 0 ? Number((item.amount / newPrice).toFixed(4)) : item.quantity;
+                                          return {
+                                            ...item,
+                                            fuelTypeId: val,
+                                            fuelTypeName: ft?.name || "",
+                                            sellingPrice: newPrice,
+                                            quantity: newQty,
+                                            amount: newAmount,
+                                            tankerId: autoTankers.length > 0 ? autoTankers[0].id : "",
+                                            tankerName: autoTankers.length > 0 ? autoTankers[0].name : "",
+                                          };
+                                        })
                                       );
                                     }}
                                   >
@@ -1097,11 +1102,11 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                     Quantity (L) <span className="text-destructive">*</span>
                                   </Label>
                                   <NumericInput
-                                    value={fuelItem.quantity}
+                                    value={Number(fuelItem.quantity.toFixed(3))}
                                     onValueChange={(val) => {
                                       setFuelSaleItems((prev) =>
                                         prev.map((item, i) =>
-                                          i === fuelIndex ? { ...item, quantity: val } : item
+                                          i === fuelIndex ? { ...item, quantity: val, amount: Number((val * item.sellingPrice).toFixed(2)) } : item
                                         )
                                       );
                                     }}
@@ -1121,6 +1126,48 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                                       <span className="text-primary">{actualQty.toFixed(2)} L</span>
                                     </div>
                                   )}
+                                </div>
+
+                                {/* Amount (Taka) */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm">
+                                    Amount (৳) <span className="text-destructive">*</span>
+                                  </Label>
+                                  <NumericInput
+                                    value={fuelItem.amount !== undefined ? fuelItem.amount : Number((fuelItem.quantity * fuelItem.sellingPrice).toFixed(2))}
+                                    onValueChange={(val) => {
+                                      setFuelSaleItems((prev) =>
+                                        prev.map((item, i) => {
+                                          if (i !== fuelIndex) return item;
+                                          const qty = item.sellingPrice > 0 ? Number((val / item.sellingPrice).toFixed(4)) : 0;
+                                          return { ...item, amount: val, quantity: qty };
+                                        })
+                                      );
+                                    }}
+                                    min={0}
+                                  />
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {[100, 200, 500, 1000, 2000].map((amt) => (
+                                      <Button
+                                        key={amt}
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-2 text-[10px] font-bold bg-muted/40 hover:bg-primary hover:text-primary-foreground"
+                                        onClick={() => {
+                                          setFuelSaleItems((prev) =>
+                                            prev.map((item, i) => {
+                                              if (i !== fuelIndex) return item;
+                                              const qty = item.sellingPrice > 0 ? Number((amt / item.sellingPrice).toFixed(4)) : 0;
+                                              return { ...item, amount: amt, quantity: qty };
+                                            })
+                                          );
+                                        }}
+                                      >
+                                        {amt}৳
+                                      </Button>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
 

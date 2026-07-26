@@ -38,6 +38,7 @@ export interface CartItem {
   discountType: "NONE" | "PERCENTAGE" | "FIXED"
   discountAmount: number
   totalPrice: number
+  sellByAmount?: number
 }
 
 export type SaleType = "DRAFT" | "QUOTATION" | "SUSPEND" | "CREDIT_SALES" | "CARD"
@@ -195,6 +196,8 @@ interface POSContextValue {
   calculateItemTotal: (item: CartItem) => number
   updateQuantity: (index: number, delta: number) => void
   setQuantity: (index: number, quantity: number) => void
+  setFuelByAmount: (index: number, amountTaka: number) => void
+  businessConfig: { showPointReducing: boolean; pointReducingAmountPerLiter: number }
   addToCartWithSku: (product: Product, sku: string, variant: ProductVariant | null, stock: Stock | undefined) => void
   handleProductClick: (product: Product) => void
   handleDispenserClick: (dispenser: Dispenser) => void
@@ -686,10 +689,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
     if (newQuantity < 0) return
 
-    if (item.productId?.startsWith("fuel-") && item.dispenserId) {
+    if (item.productId?.startsWith("fuel-") || item.dispenserId) {
+      delete updatedCart[index].sellByAmount
       const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
       const tanker = dispenser?.tanker
-      const availableFuel = tanker?.currentFuel || 0
+      const availableFuel = tanker?.currentFuel || 999999
       if (newQuantity > availableFuel) {
         playSound("error")
         toast.error(`Only ${availableFuel}L available in ${tanker?.name || "tanker"}`)
@@ -732,10 +736,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     const item = updatedCart[index]
     const newQuantity = Math.max(0, quantity || 0)
 
-    if (item.productId?.startsWith("fuel-") && item.dispenserId) {
+    if (item.productId?.startsWith("fuel-") || item.dispenserId) {
+      delete updatedCart[index].sellByAmount
       const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
       const tanker = dispenser?.tanker
-      const availableFuel = tanker?.currentFuel || 0
+      const availableFuel = tanker?.currentFuel || 999999
       if (newQuantity > availableFuel) {
         playSound("error")
         toast.error(`Only ${availableFuel}L available in ${tanker?.name || "tanker"}`)
@@ -772,6 +777,34 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     updatedCart[index].totalPrice = calculateItemTotalFn(updatedCart[index])
     setCart(updatedCart)
   }, [cart, products, getProductVariants, playSound, dispensers])
+
+  const setFuelByAmount = useCallback((index: number, amountTaka: number) => {
+    const updatedCart = [...cart]
+    const item = updatedCart[index]
+    const amount = Math.max(0, amountTaka || 0)
+
+    if (item && item.price > 0) {
+      const calculatedQty = Number((amount / item.price).toFixed(4))
+      const dispenser = dispensers.find((d: Dispenser) => d.id === item.dispenserId)
+      const tanker = dispenser?.tanker
+      const availableFuel = tanker?.currentFuel || 999999
+
+      if (calculatedQty > availableFuel) {
+        playSound("error")
+        toast.error(`Only ${availableFuel}L available in ${tanker?.name || "tanker"}`)
+        updatedCart[index].quantity = availableFuel
+        updatedCart[index].sellByAmount = undefined
+        updatedCart[index].totalPrice = calculateItemTotalFn(updatedCart[index])
+      } else {
+        updatedCart[index].quantity = calculatedQty
+        updatedCart[index].sellByAmount = amount
+        updatedCart[index].totalPrice = calculateItemTotalFn(updatedCart[index])
+        playSound("add")
+      }
+      updatedCart[index].availableQuantity = availableFuel
+      setCart(updatedCart)
+    }
+  }, [cart, dispensers, playSound])
 
   const addToCartWithSku = useCallback((
     product: Product,
@@ -1102,7 +1135,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
       const items = cart.map((item) => {
         const sku = item.sku || item.productId || `temp-sku-${item.productId}-${Date.now()}`
-        const isFuel = item.productId?.startsWith("fuel-")
+        const isFuel = item.productId?.startsWith("fuel-") || Boolean(item.dispenserId)
 
         let actualQuantity: number | undefined = undefined;
         if (isFuel && businessConfig.showPointReducing && businessConfig.pointReducingAmountPerLiter > 0) {
@@ -1327,11 +1360,12 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     activeSession, isLoadingSession, refetchSession,
     cart, setCart, cartTotals,
     playSound, getProductVariants, calculateItemTotal,
-    updateQuantity, setQuantity: setQuantityFn, addToCartWithSku,
+    updateQuantity, setQuantity: setQuantityFn, setFuelByAmount, addToCartWithSku,
     handleProductClick, handleDispenserClick,
     handleBarcodeScan: handleBarcodeScanFn,
     addPaymentSplit, removePaymentSplit, updatePaymentSplit: updatePaymentSplitFn,
     removeFromCart, clearCart, handleCalculatorInput, handleCheckout, handleSaveDraft,
+    businessConfig,
   }
 
   return <POSContext.Provider value={value}>{children}</POSContext.Provider>
@@ -1340,11 +1374,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 // ── Pure utility (no deps) ───────────────────────────────────────────────────
 
 function calculateItemTotalFn(item: CartItem) {
-  const total = item.price * item.quantity
+  const subtotal = item.sellByAmount !== undefined ? item.sellByAmount : (item.price * item.quantity)
   if (item.discountType === "PERCENTAGE") {
-    return total * (1 - item.discountAmount / 100)
+    return subtotal * (1 - item.discountAmount / 100)
   } else if (item.discountType === "FIXED") {
-    return total - item.discountAmount
+    return subtotal - item.discountAmount
   }
-  return total
+  return subtotal
 }
