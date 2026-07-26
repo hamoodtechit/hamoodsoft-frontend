@@ -27,7 +27,20 @@ export function useCreateBrand() {
 
   return useMutation({
     mutationFn: (data: CreateBrandInput) => brandsApi.create(data),
-    onSuccess: () => {
+    onSuccess: (newBrand: Brand) => {
+      queryClient.setQueriesData({ queryKey: ["brands"] }, (oldData: any) => {
+        if (!oldData) return oldData
+        if (Array.isArray(oldData)) {
+          return [...oldData, newBrand]
+        }
+        if (Array.isArray(oldData.items)) {
+          return {
+            ...oldData,
+            items: [...oldData.items, newBrand],
+          }
+        }
+        return oldData
+      })
       queryClient.invalidateQueries({ queryKey: ["brands"] })
       toast.success("Brand created successfully!")
     },

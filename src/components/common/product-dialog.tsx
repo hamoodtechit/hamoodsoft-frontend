@@ -846,7 +846,13 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="space-y-5"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -1780,6 +1786,15 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         unit={null}
         open={isUnitDialogOpen}
         onOpenChange={setIsUnitDialogOpen}
+        onSubmitCreate={(_data, createdUnit) => {
+          if (createdUnit?.id) {
+            form.setValue("unitId", createdUnit.id, {
+              shouldDirty: true,
+            })
+            form.clearErrors("unitId")
+          }
+          setIsUnitDialogOpen(false)
+        }}
       />
 
       {/* Brand Creation Dialog */}
@@ -1787,15 +1802,17 @@ export function ProductDialog({ product, open, onOpenChange }: ProductDialogProp
         brand={null}
         open={isBrandDialogOpen}
         onOpenChange={setIsBrandDialogOpen}
-        onSubmitCreate={(data) => {
-          createBrandMutation.mutate(data, {
-            onSuccess: () => {
-              setIsBrandDialogOpen(false)
-            },
-          })
+        onSubmitCreate={(_data, createdBrand) => {
+          if (createdBrand?.id) {
+            form.setValue("brandId", createdBrand.id, {
+              shouldDirty: true,
+            })
+            form.clearErrors("brandId")
+          }
+          setIsBrandDialogOpen(false)
         }}
         onSubmitUpdate={() => {}}
-        isLoading={createBrandMutation.isPending}
+        isLoading={false}
       />
 
       {/* Category Creation Dialog */}

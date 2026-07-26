@@ -221,6 +221,15 @@ export function ProductBasicInfoSection({
         unit={null}
         open={isUnitDialogOpen}
         onOpenChange={setIsUnitDialogOpen}
+        onSubmitCreate={(_data, createdUnit) => {
+          if (createdUnit?.id) {
+            form.setValue("unitId", createdUnit.id, {
+              shouldDirty: true,
+            })
+            form.clearErrors("unitId")
+          }
+          setIsUnitDialogOpen(false)
+        }}
       />
 
       {/* Brand Creation Dialog */}
@@ -230,9 +239,12 @@ export function ProductBasicInfoSection({
         onOpenChange={setIsBrandDialogOpen}
         onSubmitCreate={(_data, createdBrand) => {
           // BrandDialog handles the mutation internally.
-          // Auto-select the newly created brand in the form.
+          // Auto-select the newly created brand in the form and clear any validation error.
           if (createdBrand?.id) {
-            form.setValue("brandId", createdBrand.id)
+            form.setValue("brandId", createdBrand.id, {
+              shouldDirty: true,
+            })
+            form.clearErrors("brandId")
             onBrandChange?.(createdBrand.id)
           }
           setIsBrandDialogOpen(false)
