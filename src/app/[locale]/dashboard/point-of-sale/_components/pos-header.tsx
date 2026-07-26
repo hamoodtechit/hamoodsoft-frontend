@@ -26,15 +26,6 @@ export function POSHeader() {
         <div className="h-6 w-[1px] bg-border" />
 
         <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border">
-          <Button
-            variant={posMode === "standard" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setPosMode("standard")}
-            className={cn("h-8 px-3 transition-all", posMode === "standard" && "shadow-sm")}
-          >
-            <Package className="h-4 w-4 mr-2" />
-            Standard
-          </Button>
           {currentBusiness?.modules?.includes("oil-filling-station") && (
             <Button
               variant={posMode === "petrol" ? "secondary" : "ghost"}
@@ -46,6 +37,15 @@ export function POSHeader() {
               Petrol Pump
             </Button>
           )}
+          <Button
+            variant={posMode === "standard" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setPosMode("standard")}
+            className={cn("h-8 px-3 transition-all", posMode === "standard" && "shadow-sm")}
+          >
+            <Package className="h-4 w-4 mr-2" />
+            Standard
+          </Button>
         </div>
       </div>
 

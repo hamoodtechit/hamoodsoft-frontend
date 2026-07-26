@@ -231,7 +231,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all")
   const [selectedBrandId, setSelectedBrandId] = useState<string>("all")
   const [barcodeInput, setBarcodeInput] = useState("")
-  const [posMode, setPosMode] = useState<"standard" | "petrol">("standard")
+  const [posMode, setPosMode] = useState<"standard" | "petrol">("petrol")
   const [selectedContactId, setSelectedContactId] = useState<string>("")
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -289,6 +289,13 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       setTaxRate(taxSettings.rate)
     }
   }, [taxSettings?.rate])
+
+  // Fallback to standard mode if the business doesn't have the oil-filling-station module
+  useEffect(() => {
+    if (currentBusiness && !currentBusiness.modules?.includes("oil-filling-station") && posMode === "petrol") {
+      setPosMode("standard")
+    }
+  }, [currentBusiness, posMode])
 
   // Payment
   const [paidAmountInput, setPaidAmountInput] = useState<number>(0)
