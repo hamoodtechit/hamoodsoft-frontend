@@ -61,34 +61,22 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // Handle different error status codes
       switch (error.response.status) {
-        case 401:
-          // Don't retry refresh token endpoint or if already retried
-          if (
-            originalRequest?.url?.includes("/auth/refresh") ||
-            originalRequest?._retry
-          ) {
-            // Refresh failed or already retried - clear auth and redirect
-            if (typeof window !== "undefined") {
-              const currentPath = window.location.pathname
-              const isAuthPage = 
-                currentPath.includes("/login") ||
-                currentPath.includes("/register") ||
-                currentPath.includes("/forgot-password") ||
-                currentPath.includes("/reset-password")
-              const isOnboardingRoute = 
-                currentPath.includes("/register-business") ||
-                currentPath.includes("/select-modules")
-              
-              // Don't redirect if already on auth page (prevents infinite loops)
-              if (!isAuthPage && !isOnboardingRoute) {
-                localStorage.removeItem("auth-storage")
-                window.location.href = "/login"
-              }
-            }
+        case 401: {
+          const requestUrl = originalRequest?.url || ""
+          const isAuthEndpoint =
+            requestUrl.includes("/auth/login") ||
+            requestUrl.includes("/auth/register") ||
+            requestUrl.includes("/auth/refresh") ||
+            requestUrl.includes("/auth/request-password-reset") ||
+            requestUrl.includes("/auth/reset-password") ||
+            requestUrl.includes("/auth/google")
+
+          // Don't attempt token refresh for auth endpoints or if already retried
+          if (isAuthEndpoint || originalRequest?._retry) {
             return Promise.reject(error)
           }
 
-          // Try to refresh token
+          // Try to refresh token for normal protected endpoints
           if (!isRefreshing) {
             isRefreshing = true
 
@@ -107,7 +95,6 @@ apiClient.interceptors.response.use(
               }
 
               // Call refresh API (create a separate axios instance to avoid interceptor loop)
-              // The API uses the current access token in Authorization header and empty body
               const refreshAxios = axios.create({
                 baseURL: config.api.baseUrl,
                 timeout: config.api.timeout,
@@ -119,7 +106,7 @@ apiClient.interceptors.response.use(
               
               const refreshResponse = await refreshAxios.post(
                 "/auth/refresh",
-                undefined // Empty body as per API spec (curl -d '')
+                undefined // Empty body as per API spec
               )
 
               const refreshData = refreshResponse.data.data || refreshResponse.data
@@ -156,17 +143,21 @@ apiClient.interceptors.response.use(
               // Retry the original request
               return apiClient(originalRequest)
             } catch (refreshError) {
-              // Refresh failed - clear auth and redirect
+              // Refresh failed - clear auth and redirect if not on auth page
               processQueue(refreshError, null)
               
               if (typeof window !== "undefined") {
                 const currentPath = window.location.pathname
+                const isAuthPage = 
+                  currentPath.includes("/login") ||
+                  currentPath.includes("/register") ||
+                  currentPath.includes("/forgot-password") ||
+                  currentPath.includes("/reset-password")
                 const isOnboardingRoute = 
                   currentPath.includes("/register-business") ||
-                  currentPath.includes("/select-modules") ||
-                  currentPath.includes("/dashboard")
+                  currentPath.includes("/select-modules")
                 
-                if (!isOnboardingRoute) {
+                if (!isAuthPage && !isOnboardingRoute) {
                   localStorage.removeItem("auth-storage")
                   window.location.href = "/login"
                 }
@@ -191,6 +182,7 @@ apiClient.interceptors.response.use(
                 return Promise.reject(err)
               })
           }
+        }
         case 403:
           // Forbidden
           break
