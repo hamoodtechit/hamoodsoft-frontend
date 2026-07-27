@@ -3,8 +3,8 @@ import { ApiResponse, Role } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
 
-// Permission pattern: lowercase letters and underscores only
-const permissionPattern = /^[a-z_]+:[a-z_]+$/
+// Permission pattern: lowercase letters, underscores, and colons
+const permissionPattern = /^[a-z_]+:[a-z_:]+$/
 
 // Normalize role data from API response (with rolePermissions) to frontend format
 const normalizeRole = (role: Record<string, any>): Role => {

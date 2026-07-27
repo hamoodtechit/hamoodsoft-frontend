@@ -88,7 +88,7 @@ export function Sidebar() {
       color: "text-indigo-400",
       hash: "#accounting-section",
       activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale"],
-      requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read"],
+      requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read", "pos:sessions:read"],
     },
     {
       id: "reports-section",

@@ -135,6 +135,10 @@ export const DEFAULT_OWNER_PERMISSIONS_BY_MODULE: ModulePermissionGroup[] = [
       'dispenser_readings:delete',
     ],
   },
+  {
+    module: 'pos',
+    permissions: ['pos:sessions:read', 'pos:sessions:create'],
+  },
 ]
 
 // Frontend-friendly permission groups with labels for UI display
@@ -324,6 +328,14 @@ export const permissionGroups = {
       { value: "dispenser_readings:read", label: "Read Readings" },
       { value: "dispenser_readings:create", label: "Create Readings" },
       { value: "dispenser_readings:delete", label: "Delete Readings" },
+    ],
+  },
+  // Point of Sale (POS) module
+  pos: {
+    label: "Point of Sale (POS)",
+    permissions: [
+      { value: "pos:sessions:read", label: "Read / Access POS" },
+      { value: "pos:sessions:create", label: "Open / Close POS Sessions" },
     ],
   },
 } as const

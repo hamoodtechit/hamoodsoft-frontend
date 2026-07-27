@@ -61,7 +61,7 @@ export function RoleDialog({ role, open, onOpenChange }: RoleDialogProps) {
   })
 
   // Permission pattern for validation
-  const permissionPattern = /^[a-z_]+:[a-z_]+$/
+  const permissionPattern = /^[a-z_]+:[a-z_:]+$/
 
   // Update form when role changes
   useEffect(() => {
