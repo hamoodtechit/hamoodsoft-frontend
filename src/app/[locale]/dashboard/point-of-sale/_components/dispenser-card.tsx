@@ -37,17 +37,17 @@ export function DispenserCard({ dispenser }: DispenserCardProps) {
         )}>
           <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
         </div>
-        <div className="min-w-0 flex-1 flex items-center gap-2">
-          <span className="font-bold text-sm sm:text-base truncate text-foreground">
+        <div className="min-w-0 flex-1 flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2">
+          <span className="font-bold text-xs sm:text-base truncate text-foreground">
             {dispenser.name}
           </span>
           {tanker && (
-            <span className="text-xs font-semibold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded shrink-0">
+            <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground bg-secondary/80 px-1.5 sm:px-2 py-0.5 rounded shrink-0">
               {tanker.name}
             </span>
           )}
           {inCart && (
-            <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-2xs shrink-0">
+            <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold shadow-2xs shrink-0">
               ✓
             </span>
           )}

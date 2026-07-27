@@ -99,8 +99,8 @@ export function ProductGrid() {
             <div className={cn(
               "py-1",
               productViewMode === "grid"
-                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
-                : "space-y-2.5"
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
+                : "space-y-2 sm:space-y-2.5"
             )}>
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
