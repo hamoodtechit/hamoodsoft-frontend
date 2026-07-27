@@ -106,7 +106,7 @@ export function Sidebar() {
       color: "text-orange-400",
       hash: "#modules-section",
       activePrefixes: ["/oil-filling-station"],
-      requiredPermissions: [] as string[],
+      requiredPermissions: ["fuel_types:read", "tankers:read", "dispensers:read", "dispenser_readings:read"],
     },
     {
       id: "my-business-section",

@@ -3,6 +3,7 @@
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { PageLayout } from "@/components/common/page-layout"
+import { PermissionGuard } from "@/components/common/permission-guard"
 import { FuelTypeDialog } from "@/components/pos/fuel-type-dialog"
 import { FuelStockHistoryDialog } from "@/components/pos/fuel-stock-history-dialog"
 import { TankerDialog } from "@/components/pos/tanker-dialog"
@@ -121,21 +122,25 @@ export default function OilFillingStationPage() {
             }}>
               <History className="mr-2 h-4 w-4" /> History
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
-              setSelectedFuelType(row)
-              setIsFuelDialogOpen(true)
-            }}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => {
-                setFuelTypeToDelete(row)
-                setIsFuelDeleteDialogOpen(true)
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            <PermissionGuard permission="fuel_types:update">
+              <DropdownMenuItem onClick={() => {
+                setSelectedFuelType(row)
+                setIsFuelDialogOpen(true)
+              }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+            </PermissionGuard>
+            <PermissionGuard permission="fuel_types:delete">
+              <DropdownMenuItem 
+                onClick={() => {
+                  setFuelTypeToDelete(row)
+                  setIsFuelDeleteDialogOpen(true)
+                }}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </PermissionGuard>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -198,21 +203,25 @@ export default function OilFillingStationPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {
-              setSelectedTanker(row)
-              setIsTankerDialogOpen(true)
-            }}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => {
-                setTankerToDelete(row)
-                setIsTankerDeleteDialogOpen(true)
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            <PermissionGuard permission="tankers:update">
+              <DropdownMenuItem onClick={() => {
+                setSelectedTanker(row)
+                setIsTankerDialogOpen(true)
+              }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+            </PermissionGuard>
+            <PermissionGuard permission="tankers:delete">
+              <DropdownMenuItem 
+                onClick={() => {
+                  setTankerToDelete(row)
+                  setIsTankerDeleteDialogOpen(true)
+                }}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </PermissionGuard>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -255,21 +264,25 @@ export default function OilFillingStationPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {
-              setSelectedDispenser(row)
-              setIsDispenserDialogOpen(true)
-            }}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => {
-                setDispenserToDelete(row)
-                setIsDispenserDeleteDialogOpen(true)
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            <PermissionGuard permission="dispensers:update">
+              <DropdownMenuItem onClick={() => {
+                setSelectedDispenser(row)
+                setIsDispenserDialogOpen(true)
+              }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+            </PermissionGuard>
+            <PermissionGuard permission="dispensers:delete">
+              <DropdownMenuItem 
+                onClick={() => {
+                  setDispenserToDelete(row)
+                  setIsDispenserDeleteDialogOpen(true)
+                }}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </PermissionGuard>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -326,15 +339,17 @@ export default function OilFillingStationPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => {
-                setReadingToDelete(row)
-                setIsReadingDeleteDialogOpen(true)
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            <PermissionGuard permission="dispenser_readings:delete">
+              <DropdownMenuItem 
+                onClick={() => {
+                  setReadingToDelete(row)
+                  setIsReadingDeleteDialogOpen(true)
+                }}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </PermissionGuard>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -365,37 +380,49 @@ export default function OilFillingStationPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="fuel-types">Fuel Types</TabsTrigger>
-            <TabsTrigger value="tankers">Tankers</TabsTrigger>
-            <TabsTrigger value="dispensers">Dispensers</TabsTrigger>
+            <PermissionGuard permission="fuel_types:read">
+              <TabsTrigger value="fuel-types">Fuel Types</TabsTrigger>
+            </PermissionGuard>
+            <PermissionGuard permission="tankers:read">
+              <TabsTrigger value="tankers">Tankers</TabsTrigger>
+            </PermissionGuard>
+            <PermissionGuard permission="dispensers:read">
+              <TabsTrigger value="dispensers">Dispensers</TabsTrigger>
+            </PermissionGuard>
             {/* TODO: Re-enable when readings feature is ready */}
             {/* <TabsTrigger value="readings">Readings</TabsTrigger> */}
           </TabsList>
           
           <div className="flex items-center gap-2">
             {activeTab === "fuel-types" && (
-              <Button onClick={() => {
-                setSelectedFuelType(null)
-                setIsFuelDialogOpen(true)
-              }}>
-                <Plus className="mr-2 h-4 w-4" /> Add Fuel Type
-              </Button>
+              <PermissionGuard permission="fuel_types:create">
+                <Button onClick={() => {
+                  setSelectedFuelType(null)
+                  setIsFuelDialogOpen(true)
+                }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Fuel Type
+                </Button>
+              </PermissionGuard>
             )}
             {activeTab === "tankers" && (
-              <Button onClick={() => {
-                setSelectedTanker(null)
-                setIsTankerDialogOpen(true)
-              }}>
-                <Plus className="mr-2 h-4 w-4" /> Add Tanker
-              </Button>
+              <PermissionGuard permission="tankers:create">
+                <Button onClick={() => {
+                  setSelectedTanker(null)
+                  setIsTankerDialogOpen(true)
+                }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Tanker
+                </Button>
+              </PermissionGuard>
             )}
             {activeTab === "dispensers" && (
-              <Button onClick={() => {
-                setSelectedDispenser(null)
-                setIsDispenserDialogOpen(true)
-              }}>
-                <Plus className="mr-2 h-4 w-4" /> Add Dispenser
-              </Button>
+              <PermissionGuard permission="dispensers:create">
+                <Button onClick={() => {
+                  setSelectedDispenser(null)
+                  setIsDispenserDialogOpen(true)
+                }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Dispenser
+                </Button>
+              </PermissionGuard>
             )}
             {/* TODO: Re-enable when readings feature is ready */}
             {/* {activeTab === "readings" && (
@@ -408,33 +435,39 @@ export default function OilFillingStationPage() {
 
         <TabsContent value="dashboard" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Tankers</CardTitle>
-                <Container className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{tankersData?.meta.total || 0}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Fuel Types</CardTitle>
-                <Droplets className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{fuelTypesData?.meta.total || 0}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Dispensers</CardTitle>
-                <Fuel className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dispensersData?.meta.total || 0}</div>
-              </CardContent>
-            </Card>
+            <PermissionGuard permission="tankers:read">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Tankers</CardTitle>
+                  <Container className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{tankersData?.meta.total || 0}</div>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
+            <PermissionGuard permission="fuel_types:read">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Fuel Types</CardTitle>
+                  <Droplets className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{fuelTypesData?.meta.total || 0}</div>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
+            <PermissionGuard permission="dispensers:read">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Dispensers</CardTitle>
+                  <Fuel className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dispensersData?.meta.total || 0}</div>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
             {/* <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Readings</CardTitle>
@@ -465,27 +498,33 @@ export default function OilFillingStationPage() {
                   Welcome to the Petrol Pump management dashboard. Here you can configure your tankers, dispensers, and track fuel readings.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                  <div className="p-4 border rounded-lg space-y-2">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Droplets className="h-4 w-4" /> Fuel Types
-                    </h3>
-                    <p className="text-sm text-muted-foreground">Define fuels like Diesel, Octane, or Petrol and set their price.</p>
-                    <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("fuel-types")}>Manage Fuel Types &rarr;</Button>
-                  </div>
-                  <div className="p-4 border rounded-lg space-y-2">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Container className="h-4 w-4" /> Tankers
-                    </h3>
-                    <p className="text-sm text-muted-foreground">Track underground tanks, capacity, and fuel levels.</p>
-                    <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("tankers")}>Manage Tankers &rarr;</Button>
-                  </div>
-                  <div className="p-4 border rounded-lg space-y-2">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Fuel className="h-4 w-4" /> Dispensers
-                    </h3>
-                    <p className="text-sm text-muted-foreground">Manage fuel pumps connected to your tankers.</p>
-                    <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("dispensers")}>Manage Dispensers &rarr;</Button>
-                  </div>
+                  <PermissionGuard permission="fuel_types:read">
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Droplets className="h-4 w-4" /> Fuel Types
+                      </h3>
+                      <p className="text-sm text-muted-foreground">Define fuels like Diesel, Octane, or Petrol and set their price.</p>
+                      <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("fuel-types")}>Manage Fuel Types &rarr;</Button>
+                    </div>
+                  </PermissionGuard>
+                  <PermissionGuard permission="tankers:read">
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Container className="h-4 w-4" /> Tankers
+                      </h3>
+                      <p className="text-sm text-muted-foreground">Track underground tanks, capacity, and fuel levels.</p>
+                      <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("tankers")}>Manage Tankers &rarr;</Button>
+                    </div>
+                  </PermissionGuard>
+                  <PermissionGuard permission="dispensers:read">
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Fuel className="h-4 w-4" /> Dispensers
+                      </h3>
+                      <p className="text-sm text-muted-foreground">Manage fuel pumps connected to your tankers.</p>
+                      <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("dispensers")}>Manage Dispensers &rarr;</Button>
+                    </div>
+                  </PermissionGuard>
                   {/* <div className="p-4 border rounded-lg space-y-2">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Gauge className="h-4 w-4" /> Readings
