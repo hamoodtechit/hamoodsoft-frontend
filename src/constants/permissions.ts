@@ -115,6 +115,26 @@ export const DEFAULT_OWNER_PERMISSIONS_BY_MODULE: ModulePermissionGroup[] = [
     module: 'media',
     permissions: ['media:read', 'media:create', 'media:update', 'media:delete'],
   },
+  {
+    module: 'petrol-pump',
+    permissions: [
+      'fuel_types:read',
+      'fuel_types:create',
+      'fuel_types:update',
+      'fuel_types:delete',
+      'tankers:read',
+      'tankers:create',
+      'tankers:update',
+      'tankers:delete',
+      'dispensers:read',
+      'dispensers:create',
+      'dispensers:update',
+      'dispensers:delete',
+      'dispenser_readings:read',
+      'dispenser_readings:create',
+      'dispenser_readings:delete',
+    ],
+  },
 ]
 
 // Frontend-friendly permission groups with labels for UI display
@@ -283,6 +303,27 @@ export const permissionGroups = {
       { value: "media:create", label: "Create Media" },
       { value: "media:update", label: "Update Media" },
       { value: "media:delete", label: "Delete Media" },
+    ],
+  },
+  // Petrol Pump module
+  petrol_pump: {
+    label: "Petrol Pump",
+    permissions: [
+      { value: "fuel_types:read", label: "Read Fuel Types" },
+      { value: "fuel_types:create", label: "Create Fuel Types" },
+      { value: "fuel_types:update", label: "Update Fuel Types" },
+      { value: "fuel_types:delete", label: "Delete Fuel Types" },
+      { value: "tankers:read", label: "Read Tankers" },
+      { value: "tankers:create", label: "Create Tankers" },
+      { value: "tankers:update", label: "Update Tankers" },
+      { value: "tankers:delete", label: "Delete Tankers" },
+      { value: "dispensers:read", label: "Read Dispensers" },
+      { value: "dispensers:create", label: "Create Dispensers" },
+      { value: "dispensers:update", label: "Update Dispensers" },
+      { value: "dispensers:delete", label: "Delete Dispensers" },
+      { value: "dispenser_readings:read", label: "Read Readings" },
+      { value: "dispenser_readings:create", label: "Create Readings" },
+      { value: "dispenser_readings:delete", label: "Delete Readings" },
     ],
   },
 } as const
