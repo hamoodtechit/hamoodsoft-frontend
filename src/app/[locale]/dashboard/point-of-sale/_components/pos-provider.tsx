@@ -1121,11 +1121,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       if (saleType === "SUSPEND") status = "DRAFT"
 
       const paidAmountRaw =
-        paymentMethod === "CREDIT" || saleType === "CREDIT_SALES"
+        paymentMethod === "CREDIT" || saleType === "CREDIT_SALES" || saleType === "DRAFT" || saleType === "QUOTATION" || saleType === "SUSPEND"
           ? 0
           : paymentMethod === "MIXED"
-            ? paidAmountInput
-            : cartTotals.total
+            ? paymentSplits.reduce((acc, s) => acc + (Number(s.amount) || 0), 0)
+            : paidAmountInput
       const paidAmount = Math.min(Math.max(0, paidAmountRaw || 0), cartTotals.total)
 
       let paymentStatus: "PAID" | "DUE" | "PARTIAL" = "PAID"
@@ -1168,7 +1168,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         amount: number
         branchId: string
         contactId?: string
-        notes: string
+        note: string
         occurredAt: string
         type: "SALE_PAYMENT" | "PURCHASE_PAYMENT"
       }[] = []
@@ -1180,7 +1180,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
             amount: paidAmount,
             branchId: selectedBranchId,
             contactId: selectedContactId || undefined,
-            notes: `Payment for sale`,
+            note: `Payment for sale`,
             occurredAt: new Date().toISOString(),
             type: "SALE_PAYMENT",
           })
@@ -1190,7 +1190,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
             amount: paidAmount,
             branchId: selectedBranchId,
             contactId: selectedContactId || undefined,
-            notes: `Payment for sale`,
+            note: `Payment for sale`,
             occurredAt: new Date().toISOString(),
             type: "SALE_PAYMENT",
           })
@@ -1203,7 +1203,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
                 amount: split.amount,
                 branchId: selectedBranchId,
                 contactId: selectedContactId || undefined,
-                notes: `Payment for sale${account ? ` (${account.name})` : ""}`,
+                note: `Payment for sale${account ? ` (${account.name})` : ""}`,
                 occurredAt: new Date().toISOString(),
                 type: "SALE_PAYMENT",
               })
