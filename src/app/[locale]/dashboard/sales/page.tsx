@@ -288,7 +288,7 @@ export default function SalesPage() {
         id: "discountAmount",
         header: t("discount") || "Discount",
         accessorKey: "discountAmount",
-        cell: (row) => row.discountAmount ? `${row.discountAmount.toFixed(2)}${row.discountType === "PERCENTAGE" ? "%" : ""}` : "-",
+        cell: (row) => row.discountAmount ? row.discountAmount.toFixed(2) : "-",
         sortable: true,
       },
       {
@@ -336,7 +336,7 @@ export default function SalesPage() {
       {
         key: "discountAmount",
         header: "Discount",
-        format: (value, row) => row.discountAmount ? `${row.discountAmount.toFixed(2)}${row.discountType === "PERCENTAGE" ? "%" : ""}` : "-",
+        format: (value, row) => row.discountAmount ? row.discountAmount.toFixed(2) : "-",
       },
       {
         key: "paidAmount",
@@ -515,6 +515,11 @@ export default function SalesPage() {
 
   const calculateTotal = (sale: Sale) => {
     return sale.totalPrice || 0
+  }
+
+  const calculateSubtotal = (sale: Sale) => {
+    const items = getSaleItems(sale)
+    return items.reduce((sum, item) => sum + (item.totalPrice || 0), 0)
   }
 
   return (
@@ -827,17 +832,23 @@ export default function SalesPage() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="rounded-lg border p-3 bg-muted/20">
-                  <p className="text-xs text-muted-foreground">{t("total")}</p>
+                  <p className="text-xs text-muted-foreground">{t("subtotal") || "Subtotal"}</p>
                   <p className="font-medium text-lg">
-                    {calculateTotal(viewSale).toFixed(2)}
+                    {calculateSubtotal(viewSale).toFixed(2)}
                   </p>
                 </div>
                 <div className="rounded-lg border p-3 bg-muted/20">
                   <p className="text-xs text-muted-foreground">{t("discount") || "Discount"}</p>
                   <p className="font-medium text-lg text-amber-600">
-                    {viewSale.discountAmount ? `${viewSale.discountAmount.toFixed(2)}${viewSale.discountType === "PERCENTAGE" ? "%" : ""}` : "0.00"}
+                    {viewSale.discountAmount ? viewSale.discountAmount.toFixed(2) : "0.00"}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 bg-muted/20">
+                  <p className="text-xs text-muted-foreground">{t("total")}</p>
+                  <p className="font-medium text-lg">
+                    {calculateTotal(viewSale).toFixed(2)}
                   </p>
                 </div>
                 <div className="rounded-lg border p-3 bg-muted/20">
@@ -931,9 +942,19 @@ export default function SalesPage() {
                                   <span>
                                     {t("price")}: {item.price.toFixed(2)}
                                   </span>
-                                  <span className="font-medium">
+                                  <span>
                                     {t("subtotal")}:{" "}
                                     {(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                  {(item.discountAmount ?? 0) > 0 && (
+                                    <span className="text-amber-600">
+                                      {t("discount") || "Discount"}:{" "}
+                                      {(item.discountAmount ?? 0).toFixed(2)}{item.discountType === "PERCENTAGE" ? "%" : ""}
+                                    </span>
+                                  )}
+                                  <span className="font-medium text-primary">
+                                    {t("total") || "Total"}:{" "}
+                                    {(item.totalPrice || 0).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
