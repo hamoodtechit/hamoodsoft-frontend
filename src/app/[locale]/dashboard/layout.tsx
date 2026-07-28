@@ -165,7 +165,9 @@ export default function DashboardLayout({
                !isPOS && "p-4 sm:p-6 md:p-8 lg:p-10"
              )}
           >
-            {children}
+            <div className={cn("w-full h-full", !isPOS && "max-w-[1600px] mx-auto")}>
+              {children}
+            </div>
           </div>
         </main>
       </div>
