@@ -9,9 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppSettings } from "@/lib/providers/settings-provider";
-import { useSettings } from "@/lib/hooks/use-settings";
 import { formatCurrency } from "@/lib/utils/currency";
-import { Purchase, Sale, SaleItem, PurchaseItem, Setting } from "@/types";
+import { Purchase, Sale, SaleItem, PurchaseItem } from "@/types";
 import { Download, History, Printer } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -33,16 +32,6 @@ export function InvoiceDialog({
 }: InvoiceDialogProps) {
   const t = useTranslations("sales");
   const { generalSettings, invoiceSettings } = useAppSettings();
-  const { data: settingsData } = useSettings();
-  
-  const setting = settingsData?.items?.find((s: Setting) => s.name === "businessConfig");
-  const businessConfig = (setting?.configs as { showPointReducing?: boolean; pointReducingAmountPerLiter?: number }) || {};
-
-  const calculateActualQuantity = (namedQuantity: number): number => {
-    const { showPointReducing, pointReducingAmountPerLiter = 0 } = businessConfig;
-    if (!showPointReducing || pointReducingAmountPerLiter <= 0) return namedQuantity;
-    return (namedQuantity * (1000 - pointReducingAmountPerLiter)) / 1000;
-  };
 
   const transaction = sale || purchase;
   const isPurchase = !!purchase;
@@ -423,12 +412,6 @@ export function InvoiceDialog({
                         )}
                         <td className={`text-center ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           <div>{item.quantity} {item.unit}</div>
-                          {/* {(!isPurchase && (item.itemType === "FUEL" || item.productId?.startsWith("fuel-"))) && businessConfig?.showPointReducing && item.quantity > 0 && (
-                            <div className="text-xs text-muted-foreground mt-0.5" title="Actual Delivery"> */}
-                              {/* Use actualQuantity from item if backend provided it, otherwise calculate it */}
-                              {/* {(item.actualQuantity ?? calculateActualQuantity(item.quantity)).toFixed(2)} {item.unit}
-                            </div>
-                          )} */}
                         </td>
                         <td className={`text-right ${isPosNarrow ? "py-2 px-2" : "py-3 px-4"}`}>
                           {formatCurrency(item.price, { generalSettings })}

@@ -650,7 +650,13 @@ export function ProductForm({ product }: ProductFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.stopPropagation()
+          form.handleSubmit(onSubmit)(e)
+        }}
+        className="space-y-6"
+      >
         {/* Basic Information */}
         <Card>
           <CardHeader>

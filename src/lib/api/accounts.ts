@@ -93,13 +93,6 @@ export const accountsApi = {
 
   getAccountById: async (id: string): Promise<Account> => {
     const response = await apiClient.get<ApiResponse<Account>>(endpoints.accounts.getById(id))
-    console.log("=".repeat(80))
-    console.log("💳 GET ACCOUNT BY ID API RESPONSE")
-    console.log("=".repeat(80))
-    console.log("Account ID:", id)
-    console.log("Full Response:", JSON.stringify(response.data, null, 2))
-    console.log("Account Data:", JSON.stringify(response.data.data, null, 2))
-    console.log("=".repeat(80))
     return response.data.data
   },
 
@@ -123,19 +116,6 @@ export const accountsApi = {
       endpoints.accounts.ledger(id),
       { params: cleanParams }
     )
-    console.log("=".repeat(80))
-    console.log("📊 GET ACCOUNT LEDGER API RESPONSE")
-    console.log("=".repeat(80))
-    console.log("Account ID:", id)
-    console.log("Params:", JSON.stringify(cleanParams, null, 2))
-    console.log("Full Response:", JSON.stringify(response.data, null, 2))
-    console.log("Ledger Data:", JSON.stringify(response.data.data, null, 2))
-    console.log("Opening Balance:", response.data.data.openingBalance)
-    console.log("Closing Balance:", response.data.data.closingBalance)
-    console.log("Total Debit:", response.data.data.totals.debit)
-    console.log("Total Credit:", response.data.data.totals.credit)
-    console.log("Entries Count:", response.data.data.items.length)
-    console.log("=".repeat(80))
     return response.data.data
   },
 }

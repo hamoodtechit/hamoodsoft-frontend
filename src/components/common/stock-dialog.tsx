@@ -174,7 +174,14 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
   }, [open, defaultValues, form])
 
   const onSubmit = (data: CreateStockInput) => {
-    createMutation.mutate(data, {
+    const cleanedData = { ...data }
+    if (!cleanedData.variantId) {
+      delete cleanedData.variantId
+    }
+    if (!cleanedData.sku) {
+      delete cleanedData.sku
+    }
+    createMutation.mutate(cleanedData, {
       onSuccess: () => {
         onOpenChange(false)
         form.reset(defaultValues)
@@ -194,7 +201,13 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="flex flex-col flex-1 min-h-0"
+          >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
                 <FormField
@@ -286,7 +299,7 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t("unit")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t("selectUnit")} />

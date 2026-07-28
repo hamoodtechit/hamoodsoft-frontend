@@ -16,22 +16,39 @@ interface AuthState {
   logout: () => void
 }
 
+// AbortController for cleaning up the event listener (SSR/test safety)
+let listenerAbortController: AbortController | null = null
+
+function setupAuthListener() {
+  // Clean up any previous listener before setting a new one
+  if (listenerAbortController) {
+    listenerAbortController.abort()
+  }
+
+  listenerAbortController = new AbortController()
+
+  window.addEventListener("auth-token-refreshed", ((event: CustomEvent<{ token: string; refreshToken?: string }>) => {
+    const { token, refreshToken } = event.detail
+    const store = useAuthStore.getState()
+    useAuthStore.setState({
+      token,
+      refreshToken: refreshToken || store.refreshToken,
+      isAuthenticated: !!(token && store.user && store.user.id)
+    })
+  }) as EventListener, { signal: listenerAbortController.signal })
+}
+
+/** Remove the auth-token-refreshed listener. Call during SSR cleanup or tests. */
+export function cleanupAuthListeners() {
+  if (listenerAbortController) {
+    listenerAbortController.abort()
+    listenerAbortController = null
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => {
-      // Listen for token refresh events from API client
-      if (typeof window !== "undefined") {
-        window.addEventListener("auth-token-refreshed", ((event: CustomEvent<{ token: string; refreshToken?: string }>) => {
-          const { token, refreshToken } = event.detail
-          const { user } = get()
-          set({
-            token,
-            refreshToken: refreshToken || get().refreshToken,
-            isAuthenticated: !!(token && user && user.id)
-          })
-        }) as EventListener)
-      }
-
       return {
         user: null,
         token: null,
@@ -81,14 +98,19 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         businesses: state.businesses, // Persist businesses for immediate access
       }),
-      // Recalculate isAuthenticated after rehydration
+      // Recalculate isAuthenticated after rehydration and set up listener
       onRehydrateStorage: () => (state) => {
         if (state) {
           // Recalculate isAuthenticated based on user and token after rehydration
           state.isAuthenticated = !!(state.user && state.user.id && state.token)
-          // Keep businesses from localStorage (they'll be refreshed by API if needed)
         }
       },
     }
   )
 )
+
+// Initialize global event listener (client-side only)
+if (typeof window !== "undefined") {
+  setupAuthListener()
+}
+

@@ -42,42 +42,52 @@ export function ProductCard({ product }: ProductCardProps) {
         onClick={() => !isOutOfStock && handleProductClick(product)}
         disabled={isOutOfStock}
         className={cn(
-          "w-full flex items-center gap-4 p-3 border rounded-xl transition-all",
+          "w-full flex items-center justify-between gap-3 px-3.5 py-2 border rounded-xl transition-all group",
           "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
           "hover:border-primary/50 hover:shadow-md",
           isOutOfStock && "opacity-60",
           inCart && "border-primary/40 shadow-sm"
         )}
       >
-        <div className={cn(
-          "w-12 h-12 rounded flex-shrink-0 overflow-hidden border bg-gradient-to-br",
-          getRandomGradient(product.id, 'vibrant')
-        )}>
-          {productImage ? (
-            <Image
-              src={productImage}
-              alt={product.name}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
-              unoptimized
-            />
-          ) : (
-            <Package className="h-6 w-6 m-auto text-foreground/20" />
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={cn(
+            "w-9 h-9 rounded-lg flex-shrink-0 overflow-hidden border bg-gradient-to-br flex items-center justify-center",
+            getRandomGradient(product.id, 'vibrant')
+          )}>
+            {productImage ? (
+              <Image
+                src={productImage}
+                alt={product.name}
+                width={36}
+                height={36}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <Package className="h-4 w-4 text-foreground/40" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1 text-left flex items-center gap-2">
+            <span className="font-bold text-sm truncate text-foreground" title={product.name}>
+              {product.name}
+            </span>
+            {product.unit?.suffix && (
+              <span className="text-xs font-semibold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded flex-shrink-0">
+                {product.unit.suffix}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-right flex-shrink-0 pl-2">
+          <div className="font-black text-base text-primary leading-tight whitespace-nowrap">
+            {displayPrice.toFixed(2)} <span className="text-xs font-medium text-muted-foreground">/ {product.unit?.suffix || 'unit'}</span>
+          </div>
+          {managesStock && (
+            <Badge variant={isOutOfStock ? "destructive" : "outline"} className="text-xs font-medium px-2 py-0.5 whitespace-nowrap">
+              {isOutOfStock ? "OOS" : `${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)} qty`}
+            </Badge>
           )}
         </div>
-        <div className="flex-1 text-left">
-          <div className="font-bold text-sm truncate">{product.name}</div>
-        </div>
-        <div className="text-right">
-          <div className="font-black text-primary">{displayPrice.toFixed(2)}</div>
-          <div className="text-[10px] text-muted-foreground">{product.unit?.suffix}</div>
-        </div>
-        {managesStock && (
-          <Badge variant={isOutOfStock ? "destructive" : "outline"} className="ml-2 text-[10px]">
-            {isOutOfStock ? "OOS" : `In: ${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)}`}
-          </Badge>
-        )}
       </button>
     )
   }
@@ -120,27 +130,34 @@ export function ProductCard({ product }: ProductCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-12 w-12 text-foreground/20" />
+            <Package className="h-10 w-10 text-foreground/20" />
           </div>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+      <div className="px-2.5 py-2 flex-1 flex flex-col justify-between gap-1">
         <div>
-          <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-1.5 text-left">
-            {product.name}
-          </h3>
-          <div className="text-lg font-bold text-primary text-left">
-            {displayPrice.toFixed(2)}
+          <div className="flex items-center justify-between gap-1 mb-0.5">
+            <h3 className="font-bold text-sm leading-tight truncate text-foreground text-left" title={product.name}>
+              {product.name}
+            </h3>
+            {product.unit?.suffix && (
+              <span className="text-[11px] font-semibold text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded shrink-0">
+                {product.unit.suffix}
+              </span>
+            )}
+          </div>
+          <div className="text-base font-black text-primary text-left truncate">
+            {displayPrice.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ {product.unit?.suffix || 'unit'}</span>
           </div>
         </div>
         {managesStock && (
           <Badge
             variant={isOutOfStock ? "destructive" : "secondary"}
-            className="text-[10px] self-start"
+            className="text-xs font-medium self-start px-1.5 py-0 mt-0.5 truncate max-w-full"
           >
-            {isOutOfStock ? "Out of Stock" : `${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)} available`}
+            {isOutOfStock ? "Out of Stock" : `${hasMultipleVariants ? totalStockQuantity : (stock?.quantity || 0)} qty`}
           </Badge>
         )}
       </div>

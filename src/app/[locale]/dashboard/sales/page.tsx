@@ -280,12 +280,15 @@ export default function SalesPage() {
       {
         id: "totalAmount",
         header: t("total"),
-        accessorKey: "totalAmount",
-        cell: (row) => {
-          const items = getSaleItems(row)
-          const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-          return total.toFixed(2)
-        },
+        accessorKey: "totalPrice",
+        cell: (row) => row.totalPrice?.toFixed(2) || "0.00",
+        sortable: true,
+      },
+      {
+        id: "discountAmount",
+        header: t("discount") || "Discount",
+        accessorKey: "discountAmount",
+        cell: (row) => row.discountAmount ? row.discountAmount.toFixed(2) : "-",
         sortable: true,
       },
       {
@@ -294,6 +297,15 @@ export default function SalesPage() {
         accessorKey: "paidAmount",
         cell: (row) => row.paidAmount?.toFixed(2) || "0.00",
         sortable: true,
+      },
+      {
+        id: "dueAmount",
+        header: t("dueAmount") || "Due Amount",
+        cell: (row) => {
+           const due = Math.max(0, (row.totalPrice || 0) - (row.paidAmount || 0))
+           return <span className="text-red-600 dark:text-red-400 font-medium">{due.toFixed(2)}</span>
+        },
+        sortable: false,
       },
       {
         id: "items",
@@ -319,16 +331,22 @@ export default function SalesPage() {
       {
         key: "totalAmount",
         header: "Total Amount",
-        format: (value, row) => {
-          const items = getSaleItems(row)
-          const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-          return total.toFixed(2)
-        },
+        format: (value, row) => row.totalPrice?.toFixed(2) || "0.00",
+      },
+      {
+        key: "discountAmount",
+        header: "Discount",
+        format: (value, row) => row.discountAmount ? row.discountAmount.toFixed(2) : "-",
       },
       {
         key: "paidAmount",
         header: "Paid Amount",
         format: (value) => (value ? Number(value).toFixed(2) : "0.00"),
+      },
+      {
+        key: "dueAmount",
+        header: "Due Amount",
+        format: (value, row) => Math.max(0, (row.totalPrice || 0) - (row.paidAmount || 0)).toFixed(2),
       },
       {
         key: "items",
@@ -496,8 +514,12 @@ export default function SalesPage() {
   }
 
   const calculateTotal = (sale: Sale) => {
+    return sale.totalPrice || 0
+  }
+
+  const calculateSubtotal = (sale: Sale) => {
     const items = getSaleItems(sale)
-    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    return items.reduce((sum, item) => sum + (item.totalPrice || 0), 0)
   }
 
   return (
@@ -810,17 +832,35 @@ export default function SalesPage() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="rounded-lg border p-3">
+              <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="rounded-lg border p-3 bg-muted/20">
+                  <p className="text-xs text-muted-foreground">{t("subtotal") || "Subtotal"}</p>
+                  <p className="font-medium text-lg">
+                    {calculateSubtotal(viewSale).toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 bg-muted/20">
+                  <p className="text-xs text-muted-foreground">{t("discount") || "Discount"}</p>
+                  <p className="font-medium text-lg text-amber-600">
+                    {viewSale.discountAmount ? viewSale.discountAmount.toFixed(2) : "0.00"}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 bg-muted/20">
                   <p className="text-xs text-muted-foreground">{t("total")}</p>
                   <p className="font-medium text-lg">
                     {calculateTotal(viewSale).toFixed(2)}
                   </p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border p-3 bg-muted/20">
                   <p className="text-xs text-muted-foreground">{t("paidAmount")}</p>
                   <p className="font-medium text-lg text-green-600">
                     {viewSale.paidAmount?.toFixed(2) || "0.00"}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3 bg-muted/20">
+                  <p className="text-xs text-muted-foreground">{t("dueAmount") || "Due Amount"}</p>
+                  <p className="font-medium text-lg text-red-600">
+                    {Math.max(0, calculateTotal(viewSale) - (viewSale.paidAmount || 0)).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -902,9 +942,19 @@ export default function SalesPage() {
                                   <span>
                                     {t("price")}: {item.price.toFixed(2)}
                                   </span>
-                                  <span className="font-medium">
+                                  <span>
                                     {t("subtotal")}:{" "}
                                     {(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                  {(item.discountAmount ?? 0) > 0 && (
+                                    <span className="text-amber-600">
+                                      {t("discount") || "Discount"}:{" "}
+                                      {(item.discountAmount ?? 0).toFixed(2)}{item.discountType === "PERCENTAGE" ? "%" : ""}
+                                    </span>
+                                  )}
+                                  <span className="font-medium text-primary">
+                                    {t("total") || "Total"}:{" "}
+                                    {(item.totalPrice || 0).toFixed(2)}
                                   </span>
                                 </div>
                               </div>

@@ -323,6 +323,12 @@
     "salePriceRequired": "বিক্রয় মূল্য প্রয়োজন",
     "validationError": "দয়া করে স্টক ত্রুটিগুলি ঠিক করুন"
   },
+  "sales": {
+    "discount": "ডিসকাউন্ট",
+    "dueAmount": "বকেয়া",
+    "subtotal": "উপমোট",
+    "total": "মোট"
+  },
   "purchases": {
     "title": "ক্রয়",
     "description": "ক্রয় অর্ডার এবং সরবরাহকারী পরিচালনা করুন",

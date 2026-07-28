@@ -97,6 +97,7 @@ const moduleSidebarMap: Record<string, (t: any) => NavItem> = {
     title: t("sidebar.oilFillingStation"),
     href: "/dashboard/oil-filling-station",
     icon: Fuel,
+    requiredPermissions: ["fuel_types:read", "tankers:read", "dispensers:read", "dispenser_readings:read"],
   }),
 }
 

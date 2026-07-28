@@ -1,7 +1,7 @@
 import { z } from "zod"
 
-// Permission pattern: lowercase letters and underscores only, format: resource:action
-const permissionPattern = /^[a-z_]+:[a-z_]+$/
+// Permission pattern: lowercase letters, underscores, and colons, format: resource:action
+const permissionPattern = /^[a-z_]+:[a-z_:]+$/
 
 // Helper function to normalize permission strings (convert camelCase to snake_case)
 export function normalizePermission(permission: string): string {
@@ -16,17 +16,17 @@ export function normalizePermission(permission: string): string {
   
   // Convert camelCase to snake_case
   // Example: productCategories:read -> product_categories:read
-  const [resource, action] = permission.split(":")
-  if (!resource || !action) {
+  const parts = permission.split(":")
+  if (parts.length < 2 || !parts[0] || !parts[1]) {
     return permission // Return as-is if format is invalid
   }
   
   // Convert camelCase resource to snake_case
-  const normalizedResource = resource
+  const normalizedResource = parts[0]
     .replace(/([a-z])([A-Z])/g, "$1_$2") // Insert underscore before capital letters
     .toLowerCase()
   
-  const normalizedAction = action.toLowerCase()
+  const normalizedAction = parts.slice(1).map((p) => p.toLowerCase()).join(":")
   const normalized = `${normalizedResource}:${normalizedAction}`
   
   // Only return if it matches the pattern after normalization

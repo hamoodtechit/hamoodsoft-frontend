@@ -55,21 +55,21 @@ export function CategoryBar() {
 
   return (
     <Card className="flex-shrink-0">
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Droplets className="h-4 w-4 text-primary" />
-              Petrol Pump Mode
+      <CardContent className="p-2.5 sm:p-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold">
+              <Droplets className="h-4 w-4 text-primary shrink-0" />
+              <span>Petrol Pump Mode</span>
             </div>
-            <Badge variant="outline">Select Dispenser Below</Badge>
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-2 py-0.5">Select Dispenser Below</Badge>
           </div>
 
           {/* Branch Selector for Petrol Pump */}
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <Select value={selectedBranchId || ""} onValueChange={switchBranch}>
-              <SelectTrigger className="h-8 w-[200px] text-xs">
+              <SelectTrigger className="h-8 w-full sm:w-[200px] text-xs">
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>

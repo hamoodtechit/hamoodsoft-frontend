@@ -476,6 +476,8 @@
     "totalPrice": "Total Price",
     "subtotal": "Subtotal",
     "total": "Total",
+    "discount": "Discount",
+    "dueAmount": "Due Amount",
     "discountType": "Discount Type",
     "discountAmount": "Discount Amount",
     "discountNone": "None",

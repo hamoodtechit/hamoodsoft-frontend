@@ -36,9 +36,17 @@ interface UnitDialogProps {
   unit: Unit | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSubmitCreate?: (data: CreateUnitInput, createdUnit?: Unit) => void
+  onSubmitUpdate?: (id: string, data: UpdateUnitInput) => void
 }
 
-export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
+export function UnitDialog({
+  unit,
+  open,
+  onOpenChange,
+  onSubmitCreate,
+  onSubmitUpdate,
+}: UnitDialogProps) {
   const tCommon = useTranslations("common")
   const createUnitMutation = useCreateUnit()
   const updateUnitMutation = useUpdateUnit()
@@ -76,6 +84,7 @@ export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
         },
         {
           onSuccess: () => {
+            onSubmitUpdate?.(unit.id, data as UpdateUnitInput)
             onOpenChange(false)
             form.reset()
           },
@@ -83,7 +92,8 @@ export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
       )
     } else {
       createUnitMutation.mutate(data as CreateUnitInput, {
-        onSuccess: () => {
+        onSuccess: (createdUnit: Unit) => {
+          onSubmitCreate?.(data as CreateUnitInput, createdUnit)
           onOpenChange(false)
           form.reset()
         },
@@ -111,7 +121,13 @@ export function UnitDialog({ unit, open, onOpenChange }: UnitDialogProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="space-y-4"
+          >
             {/* Unit Name */}
             <FormField
               control={form.control}

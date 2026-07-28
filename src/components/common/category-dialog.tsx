@@ -142,7 +142,13 @@ export function CategoryDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="space-y-4"
+          >
             {/* Category Name */}
             <FormField
               control={form.control}

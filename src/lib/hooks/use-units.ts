@@ -2,6 +2,7 @@
 
 import { unitsApi } from "@/lib/api/units"
 import { CreateUnitInput, UpdateUnitInput } from "@/lib/validations/units"
+import { Unit } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { extractError } from "@/lib/utils/error"
@@ -26,7 +27,20 @@ export function useCreateUnit() {
 
   return useMutation({
     mutationFn: (data: CreateUnitInput) => unitsApi.createUnit(data),
-    onSuccess: () => {
+    onSuccess: (newUnit: Unit) => {
+      queryClient.setQueriesData({ queryKey: ["units"] }, (oldData: any) => {
+        if (!oldData) return oldData
+        if (Array.isArray(oldData)) {
+          return [...oldData, newUnit]
+        }
+        if (Array.isArray(oldData.items)) {
+          return {
+            ...oldData,
+            items: [...oldData.items, newUnit],
+          }
+        }
+        return oldData
+      })
       queryClient.invalidateQueries({ queryKey: ["units"] })
       toast.success("Unit created successfully!")
     },
