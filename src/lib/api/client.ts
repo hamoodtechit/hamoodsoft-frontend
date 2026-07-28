@@ -88,10 +88,10 @@ apiClient.interceptors.response.use(
               }
 
               const parsed = JSON.parse(authStorage)
-              const currentToken = parsed?.state?.token
+              const refreshToken = parsed?.state?.refreshToken
 
-              if (!currentToken) {
-                throw new Error("No access token available")
+              if (!refreshToken) {
+                throw new Error("No refresh token available")
               }
 
               // Call refresh API (create a separate axios instance to avoid interceptor loop)
@@ -100,7 +100,7 @@ apiClient.interceptors.response.use(
                 timeout: config.api.timeout,
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": `Bearer ${currentToken}`,
+                  "Authorization": `Bearer ${refreshToken}`,
                 },
               })
               

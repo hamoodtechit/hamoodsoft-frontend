@@ -93,21 +93,17 @@ export const purchasesApi = {
       })
     }
     
-    console.log("GET /purchases - Request params:", cleanParams)
+
     const response = await apiClient.get<ApiResponse<PaginatedResult<Purchase> | PurchasesResponseShape | Purchase[]>>(
       endpoints.purchases.list,
       { params: cleanParams }
     )
-    console.log("GET /purchases - Response:", response.data)
-    console.log("GET /purchases - Normalized data:", normalizePurchasesList(response.data.data))
+
     return normalizePurchasesList(response.data.data)
   },
 
   getPurchaseById: async (id: string): Promise<Purchase> => {
-    console.log(`GET /purchases/${id} - Request`)
     const response = await apiClient.get<ApiResponse<Purchase>>(endpoints.purchases.getById(id))
-    console.log(`GET /purchases/${id} - Response:`, response.data)
-    console.log(`GET /purchases/${id} - Purchase data:`, response.data.data)
     return normalizePurchase(response.data.data)
   },
 

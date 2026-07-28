@@ -92,18 +92,6 @@ export const paymentsApi = {
 
   getPaymentById: async (id: string): Promise<Payment> => {
     const response = await apiClient.get<ApiResponse<Payment>>(endpoints.payments.getById(id))
-    console.log("=".repeat(80))
-    console.log("💰 GET PAYMENT BY ID API RESPONSE")
-    console.log("=".repeat(80))
-    console.log("Payment ID:", id)
-    console.log("Full Response:", JSON.stringify(response.data, null, 2))
-    console.log("Payment Data:", JSON.stringify(response.data.data, null, 2))
-    console.log("Payment Type:", response.data.data.type)
-    console.log("Amount:", response.data.data.amount)
-    console.log("Account:", response.data.data.account?.name)
-    console.log("Sale ID:", response.data.data.saleId)
-    console.log("Purchase ID:", response.data.data.purchaseId)
-    console.log("=".repeat(80))
     return response.data.data
   },
 
