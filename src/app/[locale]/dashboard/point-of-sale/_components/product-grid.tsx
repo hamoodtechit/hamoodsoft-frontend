@@ -5,12 +5,17 @@ import { usePOS } from "./pos-provider"
 import { ProductCard } from "./product-card"
 import { DispenserCard } from "./dispenser-card"
 import { SystemLoader } from "@/components/common/system-loader"
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { usePOSLayout } from "@/lib/hooks/use-pos-layout"
+import { SortableFuelGroup } from "./sortable-fuel-group"
+import { SortableProductWrapper } from "./sortable-product-wrapper"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { Container, Droplets, Fuel, Package, Plus } from "lucide-react"
+import { Container, Droplets, Fuel, Package, Plus, Star } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 export function ProductGrid() {
@@ -22,6 +27,19 @@ export function ProductGrid() {
     hasMoreDispensers, isFetchingMoreDispensers, fetchNextDispensers,
   } = usePOS()
 
+  const {
+    fuelTypeOrder, updateFuelTypeOrder,
+    pinnedProductIds, togglePinnedProduct, reorderPinnedProducts,
+    isLoaded
+  } = usePOSLayout()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   const router = useRouter()
   const params = useParams()
   const locale = params.locale as string
@@ -31,7 +49,7 @@ export function ProductGrid() {
   }, [dispensers, searchQuery])
 
   const groupedDispensers = useMemo(() => {
-    const groups: Record<string, { fuelTypeName: string; price: number; color?: string; items: typeof dispensers }> = {}
+    const groups: Record<string, { key: string; fuelTypeName: string; price: number; color?: string; items: typeof dispensers }> = {}
     filteredDispensers.forEach((disp) => {
       const fuelType = disp.tanker?.fuelType
       const key = fuelType?.id || "other"
@@ -39,12 +57,67 @@ export function ProductGrid() {
       const price = fuelType?.price || 0
       const color = fuelType?.color
       if (!groups[key]) {
-        groups[key] = { fuelTypeName: name, price, color, items: [] }
+        groups[key] = { key, fuelTypeName: name, price, color, items: [] }
       }
       groups[key].items.push(disp)
     })
     return Object.values(groups)
   }, [filteredDispensers])
+
+  const sortedGroupedDispensers = useMemo(() => {
+    if (!isLoaded || fuelTypeOrder.length === 0) return groupedDispensers;
+    
+    return [...groupedDispensers].sort((a, b) => {
+      const indexA = fuelTypeOrder.indexOf(a.key)
+      const indexB = fuelTypeOrder.indexOf(b.key)
+      if (indexA === -1 && indexB === -1) return 0
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
+  }, [groupedDispensers, fuelTypeOrder, isLoaded])
+
+  const pinnedProducts = useMemo(() => {
+    if (!isLoaded || pinnedProductIds.length === 0) return []
+    const pinned = filteredProducts.filter((p) => pinnedProductIds.includes(p.id))
+    return pinned.sort((a, b) => {
+      const indexA = pinnedProductIds.indexOf(a.id)
+      const indexB = pinnedProductIds.indexOf(b.id)
+      if (indexA === -1 && indexB === -1) return 0
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
+  }, [filteredProducts, pinnedProductIds, isLoaded])
+
+  const unpinnedProducts = useMemo(() => {
+    if (!isLoaded) return filteredProducts
+    return filteredProducts.filter((p) => !pinnedProductIds.includes(p.id))
+  }, [filteredProducts, pinnedProductIds, isLoaded])
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = sortedGroupedDispensers.findIndex((g) => g.key === active.id)
+      const newIndex = sortedGroupedDispensers.findIndex((g) => g.key === over.id)
+
+      const reordered = arrayMove(sortedGroupedDispensers, oldIndex, newIndex)
+      updateFuelTypeOrder(reordered.map((g) => g.key))
+    }
+  }
+
+  const handleProductDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = pinnedProducts.findIndex((p) => p.id === active.id)
+      const newIndex = pinnedProducts.findIndex((p) => p.id === over.id)
+      
+      const reordered = arrayMove(pinnedProducts, oldIndex, newIndex)
+      reorderPinnedProducts(reordered.map((p) => p.id))
+    }
+  }
 
   return (
     <Card className="flex-1 flex flex-col overflow-hidden border-border/80 shadow-xs">
@@ -97,21 +170,55 @@ export function ProductGrid() {
             </div>
           ) : posMode === "standard" ? (
             /* Standard Products View */
-            <div className={cn(
-              "py-1",
-              productViewMode === "grid"
-                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
-                : "space-y-2 sm:space-y-2.5"
-            )}>
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="space-y-6">
+              {pinnedProducts.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    Quick Picks
+                  </div>
+                  <div className={cn(
+                    "py-1",
+                    productViewMode === "grid"
+                      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
+                      : "space-y-2 sm:space-y-2.5"
+                  )}>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProductDragEnd}>
+                      <SortableContext items={pinnedProducts.map(p => p.id)}>
+                        {pinnedProducts.map((product) => (
+                          <SortableProductWrapper key={product.id} id={product.id}>
+                            <ProductCard 
+                              product={product} 
+                              isPinned={true} 
+                              onTogglePin={() => togglePinnedProduct(product.id)} 
+                            />
+                          </SortableProductWrapper>
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                </div>
+              )}
 
+              <div className={cn(
+                "py-1",
+                productViewMode === "grid"
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
+                  : "space-y-2 sm:space-y-2.5"
+              )}>
+                {unpinnedProducts.map((product) => (
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    isPinned={false}
+                    onTogglePin={() => togglePinnedProduct(product.id)} 
+                  />
+                ))}
+              </div>
               {/* Load More Button - Products */}
               {hasMoreProducts && (
                 <div className={cn(
-                  "flex justify-center py-6",
-                  productViewMode === "grid" ? "col-span-full" : "w-full"
+                  "flex justify-center py-6 w-full"
                 )}>
                   <Button
                     variant="outline"
@@ -138,33 +245,37 @@ export function ProductGrid() {
           ) : (
             /* Grouped Full-Width Fuel Dispensers View */
             <div className="space-y-6 py-1 w-full">
-              {groupedDispensers.map((group) => (
-                <div key={group.fuelTypeName} className="border border-border/80 rounded-xl overflow-hidden bg-background shadow-2xs">
-                  {/* Fuel Type Group Header */}
-                  <div 
-                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60"
-                    style={group.color ? { backgroundColor: `${group.color}25`, borderBottomColor: `${group.color}50` } : { backgroundColor: 'var(--muted)' }}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Droplets className="h-4 w-4" style={{ color: group.color || 'var(--primary)' }} />
-                      <span className="font-bold text-base text-foreground">{group.fuelTypeName}</span>
-                      <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
-                        {group.items.length} {group.items.length === 1 ? "dispenser" : "dispensers"}
-                      </Badge>
-                    </div>
-                    <div className="font-black text-base text-primary">
-                      {group.price.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ L</span>
-                    </div>
-                  </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sortedGroupedDispensers.map(g => g.key)} strategy={verticalListSortingStrategy}>
+                  {sortedGroupedDispensers.map((group) => (
+                    <SortableFuelGroup key={group.key} id={group.key}>
+                      {/* Fuel Type Group Header */}
+                      <div 
+                        className="flex flex-wrap items-center justify-between gap-3 px-10 py-2.5 border-b border-border/60"
+                        style={group.color ? { backgroundColor: `${group.color}25`, borderBottomColor: `${group.color}50` } : { backgroundColor: 'var(--muted)' }}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Droplets className="h-4 w-4" style={{ color: group.color || 'var(--primary)' }} />
+                          <span className="font-bold text-base text-foreground">{group.fuelTypeName}</span>
+                          <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
+                            {group.items.length} {group.items.length === 1 ? "dispenser" : "dispensers"}
+                          </Badge>
+                        </div>
+                        <div className="font-black text-base text-primary">
+                          {group.price.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ L</span>
+                        </div>
+                      </div>
 
-                  {/* Full Width List of Dispensers in this Fuel Group */}
-                  <div className="p-2.5 sm:p-3 space-y-2 w-full">
-                    {group.items.map((dispenser) => (
-                      <DispenserCard key={dispenser.id} dispenser={dispenser} />
-                    ))}
-                  </div>
-                </div>
-              ))}
+                      {/* Full Width List of Dispensers in this Fuel Group */}
+                      <div className="p-2.5 sm:p-3 space-y-2 w-full">
+                        {group.items.map((dispenser) => (
+                          <DispenserCard key={dispenser.id} dispenser={dispenser} />
+                        ))}
+                      </div>
+                    </SortableFuelGroup>
+                  ))}
+                </SortableContext>
+              </DndContext>
 
               {/* Load More Button - Dispensers */}
               {hasMoreDispensers && (

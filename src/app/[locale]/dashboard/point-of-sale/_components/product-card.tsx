@@ -5,14 +5,16 @@ import { usePOS } from "./pos-provider"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { getRandomGradient } from "@/lib/utils/aesthetics"
-import { Check, Package } from "lucide-react"
+import { Check, Package, Star } from "lucide-react"
 import type { Product } from "@/types"
 
 interface ProductCardProps {
   product: Product
+  isPinned?: boolean
+  onTogglePin?: (e: React.MouseEvent) => void
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, isPinned, onTogglePin }: ProductCardProps) {
   const {
     getProductVariants, handleProductClick,
     cartProductIdSet, lastSelectedProductId, productViewMode,
@@ -79,6 +81,17 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-4 text-right flex-shrink-0 pl-2">
+          {onTogglePin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin(e);
+              }}
+              className="p-1 hover:bg-muted rounded-full transition-colors"
+            >
+              <Star className={cn("h-4 w-4", isPinned ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
+            </button>
+          )}
           <div className="font-black text-base text-primary leading-tight whitespace-nowrap">
             {displayPrice.toFixed(2)} <span className="text-xs font-medium text-muted-foreground">/ {product.unit?.suffix || 'unit'}</span>
           </div>
@@ -113,6 +126,19 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="absolute right-2 top-2 z-10 rounded-full bg-primary text-primary-foreground p-1.5 shadow-md">
           <Check className="h-3.5 w-3.5" />
         </div>
+      )}
+
+      {/* Pin Button */}
+      {onTogglePin && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(e);
+          }}
+          className="absolute left-2 top-2 z-10 p-1.5 bg-background/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-background transition-colors"
+        >
+          <Star className={cn("h-4 w-4", isPinned ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
+        </button>
       )}
 
       {/* Product Image */}
