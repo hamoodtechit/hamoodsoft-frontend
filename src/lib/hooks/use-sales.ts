@@ -44,7 +44,6 @@ export function useCreateSale() {
     mutationFn: (data: CreateSaleInput) => salesApi.createSale(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
-      toast.success("Sale created successfully!")
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =
@@ -65,7 +64,6 @@ export function useUpdateSale() {
     onSuccess: (updatedSale: Sale) => {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
       queryClient.invalidateQueries({ queryKey: ["sale", updatedSale.id] })
-      toast.success("Sale updated successfully!")
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const message =

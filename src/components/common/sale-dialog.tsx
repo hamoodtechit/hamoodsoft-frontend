@@ -445,7 +445,6 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
               type: "manual",
               message: "This product is out of stock",
             });
-            return;
           }
         }
       }
@@ -456,7 +455,9 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
         { id: sale.id, data: data as UpdateSaleInput },
         {
           onSuccess: () => {
+            toast.success("Sale updated successfully!");
             onOpenChange(false);
+            form.reset(defaultValues);
           },
         },
       );
@@ -533,6 +534,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
       createMutation.mutate(fuelSaleData, {
         onSuccess: () => {
+          toast.success("Sale created successfully!");
           onOpenChange(false);
           form.reset(defaultValues);
           setFuelSaleItems([]);
@@ -592,6 +594,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
 
     createMutation.mutate(saleData, {
       onSuccess: () => {
+        toast.success("Sale created successfully!");
         onOpenChange(false);
         form.reset(defaultValues);
       },
