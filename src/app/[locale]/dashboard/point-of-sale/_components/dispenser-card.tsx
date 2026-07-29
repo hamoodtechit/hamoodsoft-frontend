@@ -23,19 +23,19 @@ export function DispenserCard({ dispenser }: DispenserCardProps) {
       onClick={() => handleDispenserClick(dispenser)}
       className={cn(
         "w-full flex items-center justify-between gap-3 sm:gap-4 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg border transition-all text-left group",
-        "bg-gradient-to-br", getRandomGradient(dispenser.id, 'subtle'),
-        "hover:border-primary/50 hover:shadow-sm hover:bg-primary/[0.03]",
+        "hover:shadow-sm hover:brightness-95 dark:hover:brightness-110",
         "active:scale-[0.99]",
         inCart ? "border-primary/50 shadow-xs ring-1 ring-primary/30 bg-primary/[0.05]" : "border-border/60 bg-background"
       )}
+      style={!inCart && fuelType?.color ? { backgroundColor: `${fuelType.color}15`, borderColor: `${fuelType.color}40` } : undefined}
     >
       {/* Left: Icon & Name */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className={cn(
-          "w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 border flex items-center justify-center bg-gradient-to-br shadow-2xs transition-transform group-hover:scale-105",
-          getRandomGradient(dispenser.id, 'vibrant')
-        )}>
-          <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <div 
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 border flex items-center justify-center shadow-2xs transition-transform group-hover:scale-105"
+          style={fuelType?.color ? { backgroundColor: `${fuelType.color}30`, borderColor: `${fuelType.color}50` } : { backgroundColor: 'var(--muted)', borderColor: 'var(--border)' }}
+        >
+          <Droplets className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: fuelType?.color || 'currentColor' }} />
         </div>
         <div className="min-w-0 flex-1 flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2">
           <span className="font-bold text-xs sm:text-base truncate text-foreground">

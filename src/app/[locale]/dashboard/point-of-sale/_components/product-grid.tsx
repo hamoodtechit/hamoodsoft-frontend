@@ -31,14 +31,15 @@ export function ProductGrid() {
   }, [dispensers, searchQuery])
 
   const groupedDispensers = useMemo(() => {
-    const groups: Record<string, { fuelTypeName: string; price: number; items: typeof dispensers }> = {}
+    const groups: Record<string, { fuelTypeName: string; price: number; color?: string; items: typeof dispensers }> = {}
     filteredDispensers.forEach((disp) => {
       const fuelType = disp.tanker?.fuelType
       const key = fuelType?.id || "other"
       const name = fuelType?.name || "Other Fuels"
       const price = fuelType?.price || 0
+      const color = fuelType?.color
       if (!groups[key]) {
-        groups[key] = { fuelTypeName: name, price, items: [] }
+        groups[key] = { fuelTypeName: name, price, color, items: [] }
       }
       groups[key].items.push(disp)
     })
@@ -140,9 +141,12 @@ export function ProductGrid() {
               {groupedDispensers.map((group) => (
                 <div key={group.fuelTypeName} className="border border-border/80 rounded-xl overflow-hidden bg-background shadow-2xs">
                   {/* Fuel Type Group Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-muted/40 border-b border-border/60">
+                  <div 
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60"
+                    style={group.color ? { backgroundColor: `${group.color}25`, borderBottomColor: `${group.color}50` } : { backgroundColor: 'var(--muted)' }}
+                  >
                     <div className="flex items-center gap-2.5">
-                      <Droplets className="h-4 w-4 text-primary" />
+                      <Droplets className="h-4 w-4" style={{ color: group.color || 'var(--primary)' }} />
                       <span className="font-bold text-base text-foreground">{group.fuelTypeName}</span>
                       <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
                         {group.items.length} {group.items.length === 1 ? "dispenser" : "dispensers"}
