@@ -34,6 +34,9 @@ export function ShortcutsDialog() {
             { key: "F3", label: "Toggle View Mode" },
             { key: "F4", label: "Clear Cart" },
             { key: "/", label: "Focus Barcode" },
+            { key: "1-9", label: "Add Item" },
+            { key: "+ / -", label: "Adjust Quantity" },
+            { key: "Enter", label: "Review / Pay" },
             { key: "?", label: "Show this help" },
             { key: "ESC", label: "Close Dialogs" },
           ].map((s) => (
