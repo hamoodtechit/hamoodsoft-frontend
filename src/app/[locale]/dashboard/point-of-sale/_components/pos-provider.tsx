@@ -498,7 +498,9 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
   // Keep paidAmountInput sane when totals/payment method change
   const cartTotals = useMemo(() => {
-    const itemsSubtotal = cart.reduce((sum, item) => sum + calculateItemTotalFn(item), 0)
+    const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+    
+    const itemsSubtotal = round2(cart.reduce((sum, item) => sum + calculateItemTotalFn(item), 0))
 
     let saleDiscount = 0
     if (discountType === "PERCENTAGE") {
@@ -506,10 +508,11 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     } else if (discountType === "FIXED") {
       saleDiscount = discountAmount
     }
+    saleDiscount = round2(saleDiscount)
 
-    const afterDiscount = Math.max(0, itemsSubtotal - saleDiscount)
-    const calculatedTax = (afterDiscount * taxRate) / 100
-    const total = afterDiscount + calculatedTax
+    const afterDiscount = round2(Math.max(0, itemsSubtotal - saleDiscount))
+    const calculatedTax = round2((afterDiscount * taxRate) / 100)
+    const total = round2(afterDiscount + calculatedTax)
 
     return {
       itemsSubtotal,
@@ -1379,11 +1382,13 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 // ── Pure utility (no deps) ───────────────────────────────────────────────────
 
 function calculateItemTotalFn(item: CartItem) {
+  const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
   const subtotal = item.sellByAmount !== undefined ? item.sellByAmount : (item.price * item.quantity)
+  
   if (item.discountType === "PERCENTAGE") {
-    return subtotal * (1 - item.discountAmount / 100)
+    return round2(subtotal * (1 - item.discountAmount / 100))
   } else if (item.discountType === "FIXED") {
-    return subtotal - item.discountAmount
+    return round2(subtotal - item.discountAmount)
   }
-  return subtotal
+  return round2(subtotal)
 }

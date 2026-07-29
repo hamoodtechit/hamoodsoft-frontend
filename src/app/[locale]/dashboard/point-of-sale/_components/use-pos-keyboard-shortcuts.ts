@@ -13,6 +13,7 @@ export function usePOSKeyboardShortcuts() {
     handleCheckout, handleSaveDraft, clearCart,
     searchInputRef, barcodeInputRef,
     setProductViewMode, setShowShortcutsHelp,
+    isCheckoutOpen, setIsCheckoutOpen,
   } = usePOS()
 
   useEffect(() => {
@@ -74,9 +75,16 @@ export function usePOSKeyboardShortcuts() {
           el.click()
         }
       }
+      // Enter: Review Payment (if cart has items and not in an input)
+      if (e.key === "Enter" && !isInput) {
+        if (!isCheckoutOpen && cart.length > 0) {
+          e.preventDefault()
+          setIsCheckoutOpen(true)
+        }
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [cart, selectedContactId, isProcessing, saleType, handleCheckout, handleSaveDraft, clearCart, searchInputRef, barcodeInputRef, setProductViewMode, setShowShortcutsHelp])
+  }, [cart, selectedContactId, isProcessing, saleType, handleCheckout, handleSaveDraft, clearCart, searchInputRef, barcodeInputRef, setProductViewMode, setShowShortcutsHelp, isCheckoutOpen, setIsCheckoutOpen])
 }

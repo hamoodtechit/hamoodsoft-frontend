@@ -81,19 +81,7 @@ export function CheckoutDrawer() {
     }
   }, [isCheckoutOpen, paymentMethod, saleType]);
 
-  const handlePaidAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      // Only proceed if valid
-      if (
-        cart.length > 0 &&
-        !isProcessing &&
-        (!selectedContact || Math.max(0, cartTotals.total - paidAmountInput) <= ((selectedContact.balance || 0) + (selectedContact.creditLimit || 0)))
-      ) {
-        handleCheckout();
-      }
-    }
-  };
+
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
 
@@ -113,6 +101,23 @@ export function CheckoutDrawer() {
   const isCreditExceeded =
     unpaidAmount > 0 && selectedContact && unpaidAmount > availableCredit;
 
+  const handleDrawerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "TEXTAREA") return;
+      
+      // Stop the Enter key from submitting random buttons if focused on them
+      if (target.tagName !== "BUTTON") {
+        e.preventDefault();
+      }
+      
+      // Only proceed if valid
+      if (cart.length > 0 && !isProcessing && !isCreditExceeded) {
+        handleCheckout();
+      }
+    }
+  };
+
   return (
     <Sheet open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
       <SheetTrigger asChild>
@@ -128,6 +133,7 @@ export function CheckoutDrawer() {
       <SheetContent
         side="right"
         className="w-full sm:max-w-md flex flex-col p-0 gap-0"
+        onKeyDown={handleDrawerKeyDown}
       >
         <SheetHeader className="p-4 border-b bg-secondary/10 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
@@ -316,7 +322,6 @@ export function CheckoutDrawer() {
                       : paidAmountInput
                   }
                   onValueChange={setPaidAmountInput}
-                  onKeyDown={handlePaidAmountKeyDown}
                   disabled={
                     paymentMethod === "CREDIT" ||
                     paymentMethod === "MIXED" ||
