@@ -17,8 +17,8 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/">
-            <h1 className="text-lg font-semibold">Hamood Tech</h1>
+          <Link href="/" className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold">Patwary Pump</h1>
           </Link>
         </div>
         <div className="flex items-center gap-2">

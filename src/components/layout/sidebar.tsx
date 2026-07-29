@@ -168,14 +168,14 @@ export function Sidebar() {
             !sidebarOpen && "hidden"
           )}
         >
-          Hamood ERP
+          Patwary Pump
         </span>
       </div>
 
       <nav className="flex flex-col gap-1 w-full pl-4 mt-4 flex-1 overflow-y-auto no-scrollbar" id="sidebar-nav">
         {visibleNavItems.map((item) => {
           const Icon = item.icon
-          
+
           let isActuallyActive = false
 
           if (!isDashboardRoot) {
