@@ -8,9 +8,10 @@ import type { Dispenser } from "@/types"
 
 interface DispenserCardProps {
   dispenser: Dispenser
+  shortcutNumber?: number
 }
 
-export function DispenserCard({ dispenser }: DispenserCardProps) {
+export function DispenserCard({ dispenser, shortcutNumber }: DispenserCardProps) {
   const { handleDispenserClick, cart } = usePOS()
 
   const tanker = dispenser.tanker
@@ -21,6 +22,7 @@ export function DispenserCard({ dispenser }: DispenserCardProps) {
   return (
     <button
       onClick={() => handleDispenserClick(dispenser)}
+      data-shortcut={shortcutNumber}
       className={cn(
         "w-full flex items-center justify-between gap-3 sm:gap-4 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg border transition-all text-left group overflow-hidden relative",
         "hover:shadow-sm hover:brightness-95 dark:hover:brightness-110",
@@ -38,6 +40,11 @@ export function DispenserCard({ dispenser }: DispenserCardProps) {
           <Droplets className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: fuelType?.color || 'currentColor' }} />
         </div>
         <div className="min-w-0 flex-1 flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2">
+          {shortcutNumber && (
+            <span className="text-[10px] font-black text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded shadow-xs shrink-0">
+              [{shortcutNumber}]
+            </span>
+          )}
           <span className="font-bold text-xs sm:text-base truncate text-foreground">
             {dispenser.name}
           </span>

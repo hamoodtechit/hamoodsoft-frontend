@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useRef } from "react"
+
 import { usePOS, type CartItem } from "./pos-provider"
 import { Button } from "@/components/ui/button"
 import { NumericInput } from "@/components/ui/numeric-input"
@@ -20,8 +22,31 @@ interface CartItemRowProps {
 export function CartItemRow({ item, index }: CartItemRowProps) {
   const {
     products, updateQuantity, setQuantity, setFuelByAmount, businessConfig,
-    removeFromCart, calculateItemTotal, cart, setCart,
+    removeFromCart, calculateItemTotal, cart, setCart, setIsCheckoutOpen,
   } = usePOS()
+
+  const primaryInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Auto-focus the primary input when the item is added (mounted)
+    const timer = setTimeout(() => {
+      primaryInputRef.current?.focus()
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "+") {
+      e.preventDefault()
+      updateQuantity(index, isFuel ? 0.5 : 1)
+    } else if (e.key === "-") {
+      e.preventDefault()
+      updateQuantity(index, isFuel ? -0.5 : -1)
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      setIsCheckoutOpen(true)
+    }
+  }
 
   const product = products.find((p) => p.id === item.productId)
   const variant = product?.productVariants?.find((v) => v.id === item.variantId) ||
@@ -66,6 +91,7 @@ export function CartItemRow({ item, index }: CartItemRowProps) {
                 <NumericInput
                   value={Number(item.quantity.toFixed(3))}
                   onValueChange={(val) => setQuantity(index, val)}
+                  onKeyDown={handleKeyDown}
                   className="h-6 w-full text-center text-[11px] p-0 font-black bg-background border-none focus-visible:ring-1 focus-visible:ring-primary"
                   placeholder="Liters"
                 />
@@ -83,8 +109,10 @@ export function CartItemRow({ item, index }: CartItemRowProps) {
               <div className="flex items-center gap-1 bg-secondary/30 rounded-md p-0.5 border" title="Sell by Amount (Taka)">
                 <span className="text-[10px] font-bold text-muted-foreground pl-1.5">৳</span>
                 <NumericInput
+                  ref={primaryInputRef}
                   value={item.sellByAmount !== undefined ? item.sellByAmount : Number((item.price * item.quantity).toFixed(2))}
                   onValueChange={(val) => setFuelByAmount(index, val)}
+                  onKeyDown={handleKeyDown}
                   className="h-6 w-full text-center text-[11px] p-0 font-black bg-background border-none focus-visible:ring-1 focus-visible:ring-primary"
                   placeholder="Amount"
                 />
@@ -175,8 +203,10 @@ export function CartItemRow({ item, index }: CartItemRowProps) {
                   <Minus className="h-3 w-3" />
                 </Button>
                 <NumericInput
+                  ref={primaryInputRef}
                   value={item.quantity}
                   onValueChange={(val) => setQuantity(index, val)}
+                  onKeyDown={handleKeyDown}
                   className="h-6 w-10 text-center text-[11px] p-0 font-black bg-background border-none focus-visible:ring-1 focus-visible:ring-primary"
                 />
                 <Button

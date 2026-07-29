@@ -12,9 +12,10 @@ interface ProductCardProps {
   product: Product
   isPinned?: boolean
   onTogglePin?: (e: React.MouseEvent) => void
+  shortcutNumber?: number
 }
 
-export function ProductCard({ product, isPinned, onTogglePin }: ProductCardProps) {
+export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: ProductCardProps) {
   const {
     getProductVariants, handleProductClick,
     cartProductIdSet, lastSelectedProductId, productViewMode,
@@ -109,6 +110,7 @@ export function ProductCard({ product, isPinned, onTogglePin }: ProductCardProps
     <button
       onClick={() => !isOutOfStock && handleProductClick(product)}
       disabled={isOutOfStock}
+      data-shortcut={shortcutNumber}
       className={cn(
         "group relative border-2 rounded-xl overflow-hidden",
         "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
@@ -139,6 +141,15 @@ export function ProductCard({ product, isPinned, onTogglePin }: ProductCardProps
         >
           <Star className={cn("h-4 w-4", isPinned ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
         </button>
+      )}
+
+      {/* Shortcut Badge */}
+      {shortcutNumber && (
+        <div className="absolute right-2 top-2 z-10 rounded-md bg-background/90 backdrop-blur-md shadow-sm border px-1.5 py-0.5 pointer-events-none">
+          <span className="text-[10px] font-black text-foreground">
+            [{shortcutNumber}]
+          </span>
+        </div>
       )}
 
       {/* Product Image */}

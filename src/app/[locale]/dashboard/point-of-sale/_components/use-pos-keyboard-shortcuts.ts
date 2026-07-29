@@ -65,6 +65,15 @@ export function usePOSKeyboardShortcuts() {
         e.preventDefault()
         setShowShortcutsHelp(true)
       }
+
+      // 1-9: Instant Add Item
+      if (e.key >= "1" && e.key <= "9" && !isInput) {
+        e.preventDefault()
+        const el = document.querySelector(`[data-shortcut="${e.key}"]`) as HTMLElement
+        if (el) {
+          el.click()
+        }
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)

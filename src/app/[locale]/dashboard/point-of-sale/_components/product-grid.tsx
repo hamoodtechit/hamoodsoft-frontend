@@ -185,12 +185,13 @@ export function ProductGrid() {
                   )}>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProductDragEnd}>
                       <SortableContext items={pinnedProducts.map(p => p.id)}>
-                        {pinnedProducts.map((product) => (
+                        {pinnedProducts.map((product, index) => (
                           <SortableProductWrapper key={product.id} id={product.id}>
                             <ProductCard 
                               product={product} 
                               isPinned={true} 
                               onTogglePin={() => togglePinnedProduct(product.id)} 
+                              shortcutNumber={index < 9 ? index + 1 : undefined}
                             />
                           </SortableProductWrapper>
                         ))}
@@ -247,8 +248,10 @@ export function ProductGrid() {
             <div className="space-y-6 py-1 w-full">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={sortedGroupedDispensers.map(g => g.key)} strategy={verticalListSortingStrategy}>
-                  {sortedGroupedDispensers.map((group) => (
-                    <SortableFuelGroup key={group.key} id={group.key}>
+                  {(() => {
+                    let shortcutCounter = 1;
+                    return sortedGroupedDispensers.map((group) => (
+                      <SortableFuelGroup key={group.key} id={group.key}>
                       {/* Fuel Type Group Header */}
                       <div 
                         className="flex flex-wrap items-center justify-between gap-3 px-10 py-2.5 border-b border-border/60"
@@ -273,12 +276,13 @@ export function ProductGrid() {
 
                       {/* Full Width List of Dispensers in this Fuel Group */}
                       <div className="p-2.5 sm:p-3 space-y-2 w-full">
-                        {group.items.map((dispenser) => (
-                          <DispenserCard key={dispenser.id} dispenser={dispenser} />
-                        ))}
+                        {group.items.map((dispenser) => {
+                          const sc = shortcutCounter <= 9 ? shortcutCounter++ : undefined;
+                          return <DispenserCard key={dispenser.id} dispenser={dispenser} shortcutNumber={sc} />;
+                        })}
                       </div>
                     </SortableFuelGroup>
-                  ))}
+                  ))})()}
                 </SortableContext>
               </DndContext>
 

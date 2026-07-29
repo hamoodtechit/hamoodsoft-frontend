@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { usePOS, type PaymentMethod, type SaleType } from "./pos-provider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -65,6 +67,33 @@ export function CheckoutDrawer() {
     isProcessing,
     handleCheckout,
   } = usePOS();
+
+  const paidAmountRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isCheckoutOpen) {
+      const timer = setTimeout(() => {
+        if (paymentMethod !== "CREDIT" && paymentMethod !== "MIXED" && saleType !== "DRAFT") {
+          paidAmountRef.current?.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCheckoutOpen, paymentMethod, saleType]);
+
+  const handlePaidAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Only proceed if valid
+      if (
+        cart.length > 0 &&
+        !isProcessing &&
+        (!selectedContact || Math.max(0, cartTotals.total - paidAmountInput) <= ((selectedContact.balance || 0) + (selectedContact.creditLimit || 0)))
+      ) {
+        handleCheckout();
+      }
+    }
+  };
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
 
@@ -280,12 +309,14 @@ export function CheckoutDrawer() {
                   Amount Paid
                 </Label>
                 <NumericInput
+                  ref={paidAmountRef}
                   value={
                     paymentMethod === "CREDIT" || saleType === "DRAFT"
                       ? 0
                       : paidAmountInput
                   }
                   onValueChange={setPaidAmountInput}
+                  onKeyDown={handlePaidAmountKeyDown}
                   disabled={
                     paymentMethod === "CREDIT" ||
                     paymentMethod === "MIXED" ||
