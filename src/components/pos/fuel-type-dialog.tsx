@@ -31,6 +31,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   price: z.preprocess((val) => Number(val), z.number().min(0, "Price must be positive")),
   costPrice: z.preprocess((val) => Number(val), z.number().min(0, "Cost price must be positive")),
+  color: z.string().optional(),
 })
 
 interface FuelTypeDialogProps {
@@ -50,6 +51,7 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
       name: "",
       price: 0,
       costPrice: 0,
+      color: "#000000",
     },
   })
 
@@ -59,12 +61,14 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
         name: fuelType.name,
         price: fuelType.price,
         costPrice: fuelType.costPrice ?? 0,
+        color: fuelType.color ?? "#000000",
       })
     } else {
       form.reset({
         name: "",
         price: 0,
         costPrice: 0,
+        color: "#000000",
       })
     }
   }, [fuelType, form, open])
@@ -132,6 +136,31 @@ export function FuelTypeDialog({ fuelType, open, onOpenChange }: FuelTypeDialogP
                   <FormLabel>Cost/Purchase Price per Liter</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Color</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        className="w-12 h-10 p-1 cursor-pointer"
+                        {...field}
+                      />
+                      <Input
+                        type="text"
+                        placeholder="#000000"
+                        className="flex-1"
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1222,6 +1222,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         totalPrice: cartTotals.total,
         discountType,
         discountAmount: discountAmount,
+        taxRate,
+        taxAmount: cartTotals.tax,
         ...(payments.length > 0 && { payments }),
       }
 
@@ -1310,6 +1312,8 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         totalPrice: cartTotals.total,
         discountType,
         discountAmount: discountAmount,
+        taxRate,
+        taxAmount: cartTotals.tax,
       }
 
       await createSaleMutation.mutateAsync(saleData)

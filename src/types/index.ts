@@ -553,6 +553,7 @@ export interface FuelType {
   name: string
   price: number
   costPrice?: number
+  color?: string
   createdAt: string
   updatedAt: string
 }
@@ -578,12 +579,14 @@ export interface CreateFuelTypeInput {
   name: string
   price: number
   costPrice?: number
+  color?: string
 }
 
 export interface UpdateFuelTypeInput {
   name?: string
   price?: number
   costPrice?: number
+  color?: string
 }
 
 export interface CreateTankerInput {

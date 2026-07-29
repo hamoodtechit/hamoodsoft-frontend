@@ -39,6 +39,8 @@ export const createSaleSchema = z.object({
   totalPrice: z.number().min(0, "Total price must be greater than or equal to 0"),
   discountType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).optional().default("NONE"),
   discountAmount: z.number().min(0, "Discount amount must be greater than or equal to 0").optional().default(0),
+  taxRate: z.number().min(0).optional(),
+  taxAmount: z.number().min(0).optional(),
   payments: z.array(paymentSchema).optional(),
 })
 
@@ -48,6 +50,8 @@ export const updateSaleSchema = z.object({
   status: z.enum(["DRAFT", "SOLD", "PENDING"]).optional(),
   paymentStatus: z.enum(["PAID", "DUE", "PARTIAL"]).optional(),
   paidAmount: z.number().min(0, "Paid amount must be greater than or equal to 0").optional(),
+  taxRate: z.number().min(0).optional(),
+  taxAmount: z.number().min(0).optional(),
 })
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>

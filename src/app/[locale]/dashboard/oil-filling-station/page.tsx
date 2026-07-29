@@ -94,6 +94,20 @@ export default function OilFillingStationPage() {
       sortable: true,
     },
     {
+      id: "color",
+      header: "Color",
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-6 h-6 rounded border" 
+            style={{ backgroundColor: row.color || '#000000' }} 
+            title={row.color || '#000000'}
+          />
+          <span className="text-sm text-muted-foreground uppercase">{row.color || '#000000'}</span>
+        </div>
+      ),
+    },
+    {
       id: "price",
       header: "Selling Price/Liter",
       cell: (row) => `${row.price.toFixed(2)}`,
