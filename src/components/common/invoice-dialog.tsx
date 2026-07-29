@@ -212,6 +212,7 @@ export function InvoiceDialog({
         iframe.contentWindow?.print();
         setTimeout(() => {
           document.body.removeChild(iframe);
+          onOpenChange(false);
         }, 1000);
       }, 250);
     }

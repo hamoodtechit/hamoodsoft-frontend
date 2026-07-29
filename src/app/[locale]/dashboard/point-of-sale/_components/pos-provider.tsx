@@ -1248,6 +1248,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
       toast.success("Sale completed successfully!")
       clearCart()
+      setIsCheckoutOpen(false)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Checkout error:", error)
