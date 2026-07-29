@@ -321,7 +321,8 @@ export function CheckoutDrawer() {
                       ? 0
                       : paidAmountInput
                   }
-                  onValueChange={setPaidAmountInput}
+                  // onValueChange={setPaidAmountInput}
+                  onValueChange={(val) => setPaidAmountInput(Math.min(val, cartTotals.total))}
                   disabled={
                     paymentMethod === "CREDIT" ||
                     paymentMethod === "MIXED" ||
