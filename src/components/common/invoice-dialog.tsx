@@ -161,9 +161,17 @@ export function InvoiceDialog({
     // Extract all CSS from the current page (includes Tailwind + CSS variables)
     const pageStyles = extractPageStyles();
 
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(`
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(`
         <!DOCTYPE html>
         <html>
           <head>
@@ -197,10 +205,14 @@ export function InvoiceDialog({
           </body>
         </html>
       `);
-      printWindow.document.close();
+      doc.close();
       // Small delay to let styles apply before triggering print
       setTimeout(() => {
-        printWindow.print();
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
       }, 250);
     }
   };
@@ -250,6 +262,10 @@ export function InvoiceDialog({
         >
           {/* Action Buttons — hidden in print */}
           <div className="flex items-center justify-end gap-2 mb-4 print:hidden">
+            <Button autoFocus variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
             {onOpenRecentTransactions && (
               <Button
                 variant="outline"
@@ -260,10 +276,6 @@ export function InvoiceDialog({
                 Recent
               </Button>
             )}
-            <Button autoFocus variant="outline" size="sm" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" />
               Download

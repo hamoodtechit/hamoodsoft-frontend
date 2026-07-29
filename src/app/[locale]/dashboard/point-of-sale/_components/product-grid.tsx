@@ -171,51 +171,65 @@ export function ProductGrid() {
           ) : posMode === "standard" ? (
             /* Standard Products View */
             <div className="space-y-6">
-              {pinnedProducts.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    Quick Picks
-                  </div>
-                  <div className={cn(
-                    "py-1",
-                    productViewMode === "grid"
-                      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
-                      : "space-y-2 sm:space-y-2.5"
-                  )}>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProductDragEnd}>
-                      <SortableContext items={pinnedProducts.map(p => p.id)}>
-                        {pinnedProducts.map((product, index) => (
-                          <SortableProductWrapper key={product.id} id={product.id}>
-                            <ProductCard 
-                              product={product} 
-                              isPinned={true} 
-                              onTogglePin={() => togglePinnedProduct(product.id)} 
-                              shortcutNumber={index < 9 ? index + 1 : undefined}
-                            />
-                          </SortableProductWrapper>
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  </div>
-                </div>
-              )}
+              {(() => {
+                let shortcutCounter = 1;
+                return (
+                  <>
+                    {pinnedProducts.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1 text-sm font-semibold text-muted-foreground">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          Quick Picks
+                        </div>
+                        <div className={cn(
+                          "py-1",
+                          productViewMode === "grid"
+                            ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
+                            : "space-y-2 sm:space-y-2.5"
+                        )}>
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProductDragEnd}>
+                            <SortableContext items={pinnedProducts.map(p => p.id)}>
+                              {pinnedProducts.map((product) => {
+                                const sc = shortcutCounter <= 9 ? shortcutCounter++ : undefined;
+                                return (
+                                  <SortableProductWrapper key={product.id} id={product.id}>
+                                    <ProductCard 
+                                      product={product} 
+                                      isPinned={true} 
+                                      onTogglePin={() => togglePinnedProduct(product.id)} 
+                                      shortcutNumber={sc}
+                                    />
+                                  </SortableProductWrapper>
+                                )
+                              })}
+                            </SortableContext>
+                          </DndContext>
+                        </div>
+                      </div>
+                    )}
 
-              <div className={cn(
-                "py-1",
-                productViewMode === "grid"
-                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
-                  : "space-y-2 sm:space-y-2.5"
-              )}>
-                {unpinnedProducts.map((product) => (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product} 
-                    isPinned={false}
-                    onTogglePin={() => togglePinnedProduct(product.id)} 
-                  />
-                ))}
-              </div>
+                    <div className={cn(
+                      "py-1",
+                      productViewMode === "grid"
+                        ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
+                        : "space-y-2 sm:space-y-2.5"
+                    )}>
+                      {unpinnedProducts.map((product) => {
+                        const sc = shortcutCounter <= 9 ? shortcutCounter++ : undefined;
+                        return (
+                          <ProductCard 
+                            key={product.id} 
+                            product={product} 
+                            isPinned={false}
+                            onTogglePin={() => togglePinnedProduct(product.id)} 
+                            shortcutNumber={sc}
+                          />
+                        )
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
               {/* Load More Button - Products */}
               {hasMoreProducts && (
                 <div className={cn(

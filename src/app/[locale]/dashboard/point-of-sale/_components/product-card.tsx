@@ -44,6 +44,7 @@ export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: 
       <button
         onClick={() => !isOutOfStock && handleProductClick(product)}
         disabled={isOutOfStock}
+        data-shortcut={shortcutNumber}
         className={cn(
           "w-full flex items-center justify-between gap-3 px-3.5 py-2 border rounded-xl transition-all group",
           "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
@@ -53,6 +54,11 @@ export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: 
         )}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
+          {shortcutNumber && (
+            <span className="text-[10px] font-black text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded shadow-xs shrink-0">
+              [{shortcutNumber}]
+            </span>
+          )}
           <div className={cn(
             "w-9 h-9 rounded-lg flex-shrink-0 overflow-hidden border bg-gradient-to-br flex items-center justify-center",
             getRandomGradient(product.id, 'vibrant')
