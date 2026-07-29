@@ -252,12 +252,17 @@ export function ProductGrid() {
                       {/* Fuel Type Group Header */}
                       <div 
                         className="flex flex-wrap items-center justify-between gap-3 px-10 py-2.5 border-b border-border/60"
-                        style={group.color ? { backgroundColor: `${group.color}25`, borderBottomColor: `${group.color}50` } : { backgroundColor: 'var(--muted)' }}
+                        style={group.color ? { backgroundColor: `${group.color}66`, borderBottomColor: `${group.color}80` } : { backgroundColor: 'var(--muted)' }}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Droplets className="h-4 w-4" style={{ color: group.color || 'var(--primary)' }} />
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-7 h-7 rounded flex items-center justify-center shadow-xs"
+                            style={group.color ? { backgroundColor: `${group.color}80` } : { backgroundColor: 'var(--primary)' }}
+                          >
+                            <Droplets className="h-4 w-4" style={{ color: group.color || 'var(--primary-foreground)' }} />
+                          </div>
                           <span className="font-bold text-base text-foreground">{group.fuelTypeName}</span>
-                          <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5">
+                          <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5 ml-1">
                             {group.items.length} {group.items.length === 1 ? "dispenser" : "dispensers"}
                           </Badge>
                         </div>
