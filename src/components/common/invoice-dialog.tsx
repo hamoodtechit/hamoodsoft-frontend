@@ -291,7 +291,7 @@ export function InvoiceDialog({
                 <img
                   src={generalSettings.secondaryLogoUrl}
                   alt="Secondary Logo"
-                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-10" : "h-16"} w-auto object-contain`}
+                  className={`${invoiceLayout === "pos-a4" ? "h-24" : isPosNarrow ? "h-14" : "h-20"} w-auto object-contain rounded-sm`}
                 />
               )}
             </div>
@@ -321,7 +321,7 @@ export function InvoiceDialog({
                 <img
                   src={generalSettings.logoUrl}
                   alt="Logo"
-                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-10" : "h-16"} w-auto object-contain`}
+                  className={`${invoiceLayout === "pos-a4" ? "h-24" : isPosNarrow ? "h-14" : "h-20"} w-auto object-contain rounded-sm`}
                 />
               )}
             </div>
