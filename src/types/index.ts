@@ -341,6 +341,7 @@ export interface Sale {
   payments?: Payment[] // Payments associated with this sale
   invoiceNumber?: string
   invoiceSequence?: number
+  vehicleNo?: string
   branch?: Branch
   contact?: Contact
   createdAt?: string

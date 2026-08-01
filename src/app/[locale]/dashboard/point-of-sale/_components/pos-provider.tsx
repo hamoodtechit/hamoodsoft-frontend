@@ -73,6 +73,8 @@ interface POSContextValue {
   setPosMode: (v: "standard" | "petrol") => void
   selectedContactId: string
   setSelectedContactId: (v: string) => void
+  vehicleNo: string
+  setVehicleNo: (v: string) => void
   isContactDialogOpen: boolean
   setIsContactDialogOpen: (v: boolean) => void
   isProcessing: boolean
@@ -236,6 +238,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [barcodeInput, setBarcodeInput] = useState("")
   const [posMode, setPosMode] = useState<"standard" | "petrol">("petrol")
   const [selectedContactId, setSelectedContactId] = useState<string>("")
+  const [vehicleNo, setVehicleNo] = useState<string>("")
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -1033,8 +1036,9 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   }, [cart, playSound])
 
   const clearCart = useCallback(() => {
-    setCart([])
+    setPaymentMethod("CASH")
     setSelectedContactId("")
+    setVehicleNo("")
     setDiscountType("NONE")
     setDiscountAmount(0)
     setTaxRate(0)
@@ -1218,6 +1222,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       const saleData = {
         branchId: selectedBranchId!,
         contactId: selectedContactId || "temp-contact",
+        vehicleNo: vehicleNo || undefined,
         items,
         status,
         paymentStatus,
@@ -1309,6 +1314,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       const saleData = {
         branchId: selectedBranchId!,
         contactId: selectedContactId || "temp-contact",
+        vehicleNo: vehicleNo || undefined,
         items,
         status: "DRAFT" as const,
         paymentStatus: "DUE" as const,
@@ -1341,7 +1347,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     locale, router, currentBusiness, selectedBranchId, switchBranch,
     searchQuery, setSearchQuery, selectedCategoryId, setSelectedCategoryId,
     selectedBrandId, setSelectedBrandId, barcodeInput, setBarcodeInput,
-    posMode, setPosMode, selectedContactId, setSelectedContactId,
+    posMode, setPosMode, selectedContactId, setSelectedContactId, vehicleNo, setVehicleNo,
     isContactDialogOpen, setIsContactDialogOpen, isProcessing,
     selectedProductForSku, setSelectedProductForSku, isSkuDialogOpen, setIsSkuDialogOpen,
     saleType, setSaleType, paymentMethod, setPaymentMethod,

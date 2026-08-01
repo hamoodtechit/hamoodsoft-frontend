@@ -59,7 +59,7 @@ export default function BusinessSettingsPage() {
   const createMutation = useCreateSetting()
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isMediaDialogOpen, setIsMediaDialogOpen] = useState(false)
+  const [activeMediaField, setActiveMediaField] = useState<"configs.logoUrl" | "configs.secondaryLogoUrl" | null>(null)
 
   // Business config state (for Fuel Point Reducing)
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(DEFAULT_CONFIG)
@@ -409,7 +409,7 @@ export default function BusinessSettingsPage() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => setIsMediaDialogOpen(true)}
+                                onClick={() => setActiveMediaField("configs.logoUrl")}
                                 className="w-full"
                               >
                                 <ImageIcon className="h-4 w-4 mr-2" />
@@ -421,6 +421,121 @@ export default function BusinessSettingsPage() {
                         </FormItem>
                       )
                     }}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="configs.companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company/Business Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your business name" value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="configs.secondaryLogoUrl"
+                    render={({ field }) => {
+                      const logoUrl = field.value || ""
+                      return (
+                        <FormItem>
+                          <FormLabel>Secondary Logo (Right side on Receipt)</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              {logoUrl ? (
+                                <div className="relative inline-block">
+                                  <img
+                                    src={logoUrl}
+                                    alt="Secondary Logo"
+                                    className="h-24 w-24 object-contain border rounded-lg p-2"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                    onClick={() => field.onChange("")}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center">
+                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setActiveMediaField("configs.secondaryLogoUrl")}
+                                className="w-full"
+                              >
+                                <ImageIcon className="h-4 w-4 mr-2" />
+                                {logoUrl ? "Change Secondary Logo" : "Select Secondary Logo"}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="configs.businessAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Address</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Enter your business address" value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="configs.officePhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Office Phone (অফিস)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. ০১৮০৫৪৫৬২১৭" value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="configs.counterPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Counter Phone (কাউন্টার)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. ০১৮০৫৪৫৬২১৯" value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="configs.binNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>BIN Number (for Mushak 6.3)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your VAT Registration/BIN number" value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
@@ -931,15 +1046,17 @@ export default function BusinessSettingsPage() {
 
       {/* Media Dialog for Logo Selection */}
       <MediaDialog
-        open={isMediaDialogOpen}
-        onOpenChange={setIsMediaDialogOpen}
+        open={activeMediaField !== null}
+        onOpenChange={(open) => !open && setActiveMediaField(null)}
         type="image"
         multiple={false}
         onSelect={(media) => {
           const selectedMedia = Array.isArray(media) ? media[0] : media
           const logoUrl = selectedMedia.secureUrl || selectedMedia.url
-          form.setValue("configs.logoUrl", logoUrl)
-          setIsMediaDialogOpen(false)
+          if (activeMediaField) {
+            form.setValue(activeMediaField, logoUrl)
+          }
+          setActiveMediaField(null)
         }}
       />
     </PageLayout>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { usePOS, type PaymentMethod, type SaleType } from "./pos-provider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
@@ -40,6 +41,8 @@ export function CheckoutDrawer() {
     contacts,
     selectedContactId,
     setSelectedContactId,
+    vehicleNo,
+    setVehicleNo,
     setIsContactDialogOpen,
     saleType,
     setSaleType,
@@ -206,6 +209,18 @@ export function CheckoutDrawer() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                Vehicle No. (Optional)
+              </Label>
+              <Input
+                placeholder="e.g. DHK-12-3456"
+                value={vehicleNo}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVehicleNo(e.target.value)}
+                className="h-10"
+              />
             </div>
 
             <div className="space-y-2">

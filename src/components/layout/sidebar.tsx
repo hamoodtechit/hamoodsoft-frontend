@@ -2,6 +2,7 @@
 
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { usePermissions } from "@/lib/providers/permissions-provider"
+import { useAppSettings } from "@/lib/providers/settings-provider"
 import { useUIStore, useAuthStore } from "@/store"
 import { cn } from "@/lib/utils"
 import {
@@ -31,6 +32,7 @@ export function Sidebar() {
   const t = useTranslations()
   const currentBusiness = useCurrentBusiness()
   const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
+  const { generalSettings } = useAppSettings()
 
   const isOwner = currentBusiness?.ownerId === user?.id
 
@@ -159,16 +161,21 @@ export function Sidebar() {
 
       {/* Logo */}
       <div className="mb-8 px-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shrink-0">
-          <Layers className="text-white w-5 h-5 shrink-0" />
-        </div>
+        {generalSettings?.logoUrl ? (
+          <img src={generalSettings.logoUrl} alt="Logo" className="w-8 h-8 rounded-full object-cover shrink-0 shadow-lg" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shrink-0">
+            <Layers className="text-white w-5 h-5 shrink-0" />
+          </div>
+        )}
         <span
           className={cn(
-            "text-slate-900 dark:text-white font-bold text-xl tracking-wide whitespace-nowrap overflow-hidden transition-all duration-100",
+            "text-slate-900 dark:text-white font-bold text-base leading-tight tracking-wide line-clamp-2 transition-all duration-100",
             !sidebarOpen && "hidden"
           )}
+          title={generalSettings?.companyName || currentBusiness?.name || "Patwary Pump"}
         >
-          Patwary Pump
+          {generalSettings?.companyName || currentBusiness?.name || "Patwary Pump"}
         </span>
       </div>
 

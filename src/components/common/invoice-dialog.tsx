@@ -283,75 +283,78 @@ export function InvoiceDialog({
             </Button>
           </div>
 
-          {/* Invoice Header */}
-          <div
-            className={`${isPosNarrow ? "flex flex-col gap-2" : "flex items-start justify-between"} ${invoiceLayout === "pos-a4" ? "mb-6 print:mb-8" : "mb-4 print:mb-6"}`}
-          >
-            <div className="min-w-0 flex-1">
-              {/* Logo */}
+          {/* Invoice Header - Responsive Layout */}
+          <div className={`${isPosNarrow ? "flex flex-col space-y-4 items-center text-center" : "flex justify-between items-center"} mb-6 print:mb-8 border-b pb-4`}>
+            {/* Column 1: Primary Logo */}
+            <div className={`${isPosNarrow ? "w-full flex justify-center" : "w-1/4 flex justify-start"}`}>
               {generalSettings?.logoUrl && (
-                <div className={invoiceLayout === "pos-a4" ? "mb-4" : "mb-2"}>
-                  <img
-                    src={generalSettings.logoUrl}
-                    alt="Logo"
-                    className={`${invoiceLayout === "pos-a4" ? "h-16" : invoiceLayout === "pos-80mm" ? "h-12" : "h-10"} w-auto object-contain`}
-                  />
-                </div>
-              )}
-              <h1
-                className={`${invoiceLayout === "pos-a4" ? "text-3xl" : invoiceLayout === "pos-80mm" ? "text-2xl" : "text-xl"} font-bold ${invoiceLayout === "pos-a4" ? "mb-2" : "mb-1"}`}
-              >
-                {isPurchase ? "PURCHASE RECEIPT" : "INVOICE"}
-              </h1>
-              {isPurchase ? (
-                <>
-                  {purchase?.poNumber && (
-                    <p className="text-muted-foreground">
-                      PO#: {purchase.poNumber}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  {sale?.invoiceNumber && (
-                    <p className="text-muted-foreground">
-                      {invoiceSettings?.prefix || "INV"}#: {sale.invoiceNumber}
-                    </p>
-                  )}
-                </>
-              )}
-
-              {/* Receipt-style customer/supplier info */}
-              {transaction.contact && (
-                <div className="mt-2 text-sm">
-                  <p className="font-medium text-xs text-muted-foreground">
-                    {isPurchase ? "SUPPLIER:" : "CUSTOMER:"}
-                  </p>
-                  <p className="font-medium">{transaction.contact.name}</p>
-                  <div className="text-muted-foreground">
-                    {transaction.contact.phone || transaction.contact.email ? (
-                      <span>
-                        {transaction.contact.phone || ""}
-                        {transaction.contact.phone && transaction.contact.email
-                          ? " • "
-                          : ""}
-                        {transaction.contact.email || ""}
-                      </span>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </div>
-                </div>
+                <img
+                  src={generalSettings.logoUrl}
+                  alt="Logo"
+                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-12" : "h-16"} w-auto object-contain`}
+                />
               )}
             </div>
-            <div className={isPosNarrow ? "" : "text-right flex-shrink-0"}>
+
+            {/* Column 2: Center Info (Company Info) */}
+            <div className={`${isPosNarrow ? "w-full" : "w-1/2"} flex flex-col items-center text-center space-y-1`}>
+              <h1 className={`${invoiceLayout === "pos-a4" ? "text-2xl" : isPosNarrow ? "text-lg" : "text-xl"} font-bold text-red-600`}>
+                {generalSettings?.companyName || "Company Name"}
+              </h1>
+              {generalSettings?.businessAddress && (
+                <p className="text-xs max-w-[250px] leading-tight">{generalSettings.businessAddress}</p>
+              )}
+              {generalSettings?.officePhone && (
+                <p className="text-xs">অফিস : {generalSettings.officePhone}</p>
+              )}
+              {generalSettings?.counterPhone && (
+                <p className="text-xs">কাউন্টার: {generalSettings.counterPhone}</p>
+              )}
+              {generalSettings?.binNumber && (
+                <p className="text-xs font-semibold">BIN : {generalSettings.binNumber}</p>
+              )}
+            </div>
+
+            {/* Column 3: Secondary Logo (Hidden on narrow receipts) */}
+            {!isPosNarrow && (
+              <div className="w-1/4 flex justify-end">
+                {generalSettings?.secondaryLogoUrl && (
+                  <img
+                    src={generalSettings.secondaryLogoUrl}
+                    alt="Secondary Logo"
+                    className={`${invoiceLayout === "pos-a4" ? "h-20" : "h-16"} w-auto object-contain`}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-end mb-4 text-xs">
+            <div>
+              <p className="font-semibold">
+                {isPurchase ? "SUPPLIER:" : "CUSTOMER:"} {transaction.contact?.name || "Walk-in"}
+              </p>
+              {transaction.contact?.phone && <p>{transaction.contact.phone}</p>}
+              {!isPurchase && (transaction as Sale).vehicleNo && (
+                <p>Vehicle No: {(transaction as Sale).vehicleNo}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <p>
+                <span className="font-semibold">{isPurchase ? "PO#:" : "INV#:"}</span>{" "}
+                {isPurchase ? (transaction as Purchase).poNumber : (transaction as Sale).invoiceNumber}
+              </p>
+              <p>
+                <span className="font-semibold">Date:</span>{" "}
+                {new Date(transaction.createdAt || "").toLocaleDateString()}
+              </p>
               <Badge
                 variant={
                   transaction.paymentStatus === "PAID"
                     ? "default"
                     : "destructive"
                 }
-                className="text-sm"
+                className="mt-1"
               >
                 {transaction.paymentStatus === "PAID"
                   ? t("paymentStatusPaid")

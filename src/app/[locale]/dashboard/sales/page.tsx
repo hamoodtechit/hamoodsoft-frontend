@@ -234,6 +234,12 @@ export default function SalesPage() {
         sortable: false,
       },
       {
+        id: "vehicleNo",
+        header: "Vehicle No.",
+        cell: (row) => row.vehicleNo || "-",
+        sortable: false,
+      },
+      {
         id: "status",
         header: t("status"),
         cell: (row) => {
@@ -896,6 +902,14 @@ export default function SalesPage() {
                           {t("phone")}
                         </p>
                         <p className="font-medium">{viewSale.contact.phone}</p>
+                      </div>
+                    )}
+                    {viewSale.vehicleNo && (
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          Vehicle No.
+                        </p>
+                        <p className="font-medium">{viewSale.vehicleNo}</p>
                       </div>
                     )}
                     {viewSale.contact.address && (

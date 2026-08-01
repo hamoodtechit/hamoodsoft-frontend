@@ -15,6 +15,12 @@ interface SettingsContextValue {
   // Specific setting getters
   generalSettings: {
     logoUrl?: string
+    secondaryLogoUrl?: string
+    companyName?: string
+    businessAddress?: string
+    officePhone?: string
+    counterPhone?: string
+    binNumber?: string
     currency?: { code: string; name: string; symbol: string }
     timeZone?: string
     currencySymbolPlacement?: "before-amount" | "after-amount"
@@ -66,6 +72,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const generalSettings = generalConfig
       ? {
         logoUrl: generalConfig.logoUrl || undefined,
+        secondaryLogoUrl: generalConfig.secondaryLogoUrl || undefined,
+        companyName: generalConfig.companyName || undefined,
+        businessAddress: generalConfig.businessAddress || undefined,
+        officePhone: generalConfig.officePhone || undefined,
+        counterPhone: generalConfig.counterPhone || undefined,
+        binNumber: generalConfig.binNumber || undefined,
         currency: generalConfig.currency || undefined,
         timeZone: generalConfig.timeZone || undefined,
         currencySymbolPlacement: generalConfig.currencySymbolPlacement || "before-amount",
