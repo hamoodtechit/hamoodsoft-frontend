@@ -3,6 +3,7 @@ import { CreateProductInput, UpdateProductInput } from "@/lib/validations/produc
 import { Product } from "@/types"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useProducts(params?: ProductsListParams) {
   // Create a stable query key that includes all relevant params
@@ -66,12 +67,8 @@ export function useCreateProduct() {
       queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
       toast.success("Product created successfully!")
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create product. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create product. Please try again."))
     },
   })
 }
@@ -88,12 +85,8 @@ export function useUpdateProduct() {
       queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.id] })
       toast.success("Product updated successfully!")
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update product. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update product. Please try again."))
     },
   })
 }
@@ -108,12 +101,8 @@ export function useDeleteProduct() {
       queryClient.invalidateQueries({ queryKey: ["products-infinite"] })
       toast.success("Product deleted successfully!")
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete product. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete product. Please try again."))
     },
   })
 }

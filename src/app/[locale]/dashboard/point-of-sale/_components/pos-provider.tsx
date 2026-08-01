@@ -4,6 +4,7 @@ import { createContext, useContext, useCallback, useEffect, useMemo, useRef, use
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+import { extractError } from "@/lib/utils/error"
 import { salesApi } from "@/lib/api/sales"
 import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
@@ -1261,7 +1262,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error("Checkout error:", error)
       playSound("error")
-      toast.error(error?.message || "Failed to process sale")
+      toast.error(extractError(error, "Failed to process sale"))
     } finally {
       setIsProcessing(false)
     }
@@ -1331,7 +1332,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Save draft error:", error)
-      toast.error(error?.message || "Failed to save draft")
+      toast.error(extractError(error, "Failed to save draft"))
     } finally {
       setIsProcessing(false)
     }

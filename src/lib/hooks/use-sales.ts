@@ -5,6 +5,7 @@ import { CreateSaleInput, UpdateSaleInput } from "@/lib/validations/sales"
 import { Sale } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { extractError } from "@/lib/utils/error"
 
 export function useSales(params?: SalesListParams) {
   // Create a stable query key that includes all relevant params
@@ -45,12 +46,8 @@ export function useCreateSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to create sale. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to create sale. Please try again."))
     },
   })
 }
@@ -65,12 +62,8 @@ export function useUpdateSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
       queryClient.invalidateQueries({ queryKey: ["sale", updatedSale.id] })
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update sale. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to update sale. Please try again."))
     },
   })
 }
@@ -84,12 +77,8 @@ export function useDeleteSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] })
       toast.success("Sale deleted successfully!")
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete sale. Please try again."
-      toast.error(message)
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to delete sale. Please try again."))
     },
   })
 }
