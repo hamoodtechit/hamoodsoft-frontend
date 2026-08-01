@@ -283,50 +283,48 @@ export function InvoiceDialog({
             </Button>
           </div>
 
-          {/* Invoice Header - Responsive Layout */}
-          <div className={`${isPosNarrow ? "flex flex-col space-y-4 items-center text-center" : "flex justify-between items-center"} mb-6 print:mb-8 border-b pb-4`}>
-            {/* Column 1: Primary Logo */}
-            <div className={`${isPosNarrow ? "w-full flex justify-center" : "w-1/4 flex justify-start"}`}>
-              {generalSettings?.logoUrl && (
+          {/* Invoice Header - 3 Column Responsive Layout */}
+          <div className="flex justify-between items-center mb-6 print:mb-8 border-b pb-4 gap-2">
+            {/* Column 1: Secondary Logo (Left Side) */}
+            <div className="w-1/4 flex justify-start items-center">
+              {generalSettings?.secondaryLogoUrl && (
                 <img
-                  src={generalSettings.logoUrl}
-                  alt="Logo"
-                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-12" : "h-16"} w-auto object-contain`}
+                  src={generalSettings.secondaryLogoUrl}
+                  alt="Secondary Logo"
+                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-10" : "h-16"} w-auto object-contain`}
                 />
               )}
             </div>
 
             {/* Column 2: Center Info (Company Info) */}
-            <div className={`${isPosNarrow ? "w-full" : "w-1/2"} flex flex-col items-center text-center space-y-1`}>
-              <h1 className={`${invoiceLayout === "pos-a4" ? "text-2xl" : isPosNarrow ? "text-lg" : "text-xl"} font-bold text-red-600`}>
+            <div className="w-1/2 flex flex-col items-center text-center space-y-0.5">
+              <h1 className={`${invoiceLayout === "pos-a4" ? "text-2xl" : isPosNarrow ? "text-[15px]" : "text-xl"} font-bold text-red-600 leading-tight`}>
                 {generalSettings?.companyName || "Company Name"}
               </h1>
               {generalSettings?.businessAddress && (
-                <p className="text-xs max-w-[250px] leading-tight">{generalSettings.businessAddress}</p>
+                <p className={`${isPosNarrow ? "text-[10px]" : "text-xs"} leading-tight max-w-[200px]`}>{generalSettings.businessAddress}</p>
               )}
               {generalSettings?.officePhone && (
-                <p className="text-xs">অফিস : {generalSettings.officePhone}</p>
+                <p className={`${isPosNarrow ? "text-[10px]" : "text-xs"} leading-tight`}>অফিস : {generalSettings.officePhone}</p>
               )}
               {generalSettings?.counterPhone && (
-                <p className="text-xs">কাউন্টার: {generalSettings.counterPhone}</p>
+                <p className={`${isPosNarrow ? "text-[10px]" : "text-xs"} leading-tight`}>কাউন্টার: {generalSettings.counterPhone}</p>
               )}
               {generalSettings?.binNumber && (
-                <p className="text-xs font-semibold">BIN : {generalSettings.binNumber}</p>
+                <p className={`${isPosNarrow ? "text-[10px]" : "text-xs"} font-semibold leading-tight mt-0.5`}>BIN : {generalSettings.binNumber}</p>
               )}
             </div>
 
-            {/* Column 3: Secondary Logo (Hidden on narrow receipts) */}
-            {!isPosNarrow && (
-              <div className="w-1/4 flex justify-end">
-                {generalSettings?.secondaryLogoUrl && (
-                  <img
-                    src={generalSettings.secondaryLogoUrl}
-                    alt="Secondary Logo"
-                    className={`${invoiceLayout === "pos-a4" ? "h-20" : "h-16"} w-auto object-contain`}
-                  />
-                )}
-              </div>
-            )}
+            {/* Column 3: Primary Logo (Right Side) */}
+            <div className="w-1/4 flex justify-end items-center">
+              {generalSettings?.logoUrl && (
+                <img
+                  src={generalSettings.logoUrl}
+                  alt="Logo"
+                  className={`${invoiceLayout === "pos-a4" ? "h-20" : isPosNarrow ? "h-10" : "h-16"} w-auto object-contain`}
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between items-end mb-4 text-xs">
