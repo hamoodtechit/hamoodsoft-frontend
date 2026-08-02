@@ -22,24 +22,32 @@ type ContactsResponseShape = {
   }
 }
 
-function normalizeContactsList(data: PaginatedResult<Contact> | ContactsResponseShape | Contact[]): PaginatedResult<Contact> {
-  // If backend already returns { items, meta }
-  if (!Array.isArray(data) && "items" in data) {
-    const meta = data.meta || {}
+function normalizeContactsList(data: PaginatedResult<Contact> | ContactsResponseShape | Contact[] | null | undefined): PaginatedResult<Contact> {
+  if (!data) {
     return {
-      items: data.items || [],
+      items: [],
       meta: {
-        page: meta.page ?? 1,
-        limit: meta.limit ?? (data.items?.length || 10),
-        total: meta.total ?? data.items?.length ?? 0,
-        totalPages: meta.totalPages ?? undefined,
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 1,
       },
     }
   }
 
-  // If backend returns full PaginatedResult with meta nested
-  if (!Array.isArray(data) && "meta" in data && "items" in data) {
-    return data as PaginatedResult<Contact>
+  // If backend already returns { items, meta }
+  if (!Array.isArray(data) && typeof data === "object" && "items" in data) {
+    const items = Array.isArray(data.items) ? data.items : []
+    const meta = data.meta || {}
+    return {
+      items,
+      meta: {
+        page: meta.page ?? 1,
+        limit: meta.limit ?? (items.length || 10),
+        total: meta.total ?? items.length ?? 0,
+        totalPages: meta.totalPages ?? undefined,
+      },
+    }
   }
 
   // Fallback: plain array

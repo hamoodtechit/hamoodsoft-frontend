@@ -46,9 +46,11 @@ import {
   Search,
   Trash2,
   User,
+  Building2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ContactsPage() {
   const t = useTranslations("contacts");
@@ -56,9 +58,8 @@ export default function ContactsPage() {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [typeFilter, setTypeFilter] = useState<"CUSTOMER" | "SUPPLIER" | "">(
-    "",
-  );
+  const [typeFilter, setTypeFilter] = useState<"CUSTOMER" | "SUPPLIER" | "">("");
+  const [activeTab, setActiveTab] = useState<"contacts" | "companies">("contacts");
   const limit = 10;
 
   // View mode with localStorage persistence
@@ -86,8 +87,10 @@ export default function ContactsPage() {
       params.type = typeFilter;
     }
 
+    params.isIndividual = activeTab === "contacts";
+
     return params;
-  }, [page, limit, search, typeFilter]);
+  }, [page, limit, search, typeFilter, activeTab]);
 
   const { data, isLoading } = useContacts(queryParams);
 
@@ -191,21 +194,6 @@ export default function ContactsPage() {
         format: (value) => (value ? "Yes" : "No"),
       },
       {
-        key: "companyName",
-        header: "Company Name",
-        format: (value) => value || "-",
-      },
-      {
-        key: "companyAddress",
-        header: "Company Address",
-        format: (value) => value || "-",
-      },
-      {
-        key: "companyPhone",
-        header: "Company Phone",
-        format: (value) => value || "-",
-      },
-      {
         key: "balance",
         header: "Balance",
         format: (value) => (value ? Number(value).toFixed(2) : "0.00"),
@@ -231,6 +219,7 @@ export default function ContactsPage() {
 
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [defaultIsIndividual, setDefaultIsIndividual] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [viewContact, setViewContact] = useState<Contact | null>(null);
@@ -239,11 +228,13 @@ export default function ContactsPage() {
 
   const handleCreate = () => {
     setSelectedContact(null);
+    setDefaultIsIndividual(activeTab === "contacts");
     setIsDialogOpen(true);
   };
 
   const handleEdit = (contact: Contact) => {
     setSelectedContact(contact);
+    setDefaultIsIndividual(contact.isIndividual ?? true);
     setIsDialogOpen(true);
   };
 
@@ -280,20 +271,34 @@ export default function ContactsPage() {
 
   return (
     <PageLayout
-      title={t("title")}
-      description={t("description")}
+      title={activeTab === "contacts" ? t("title") : "Companies"}
+      description={activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}
       maxWidth="full"
     >
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "contacts" | "companies")}>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="contacts" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Contacts
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Companies
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <User className="h-6 w-6" />
+                {activeTab === "contacts" ? <User className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
               </div>
               <div>
-                <CardTitle>{t("title")}</CardTitle>
-                <CardDescription>{t("description")}</CardDescription>
+                <CardTitle>{activeTab === "contacts" ? t("title") : "Companies"}</CardTitle>
+                <CardDescription>{activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}</CardDescription>
               </div>
             </div>
 
@@ -333,14 +338,14 @@ export default function ContactsPage() {
           ) : contacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <User className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{t("noContacts")}</h3>
+              <h3 className="text-lg font-semibold mb-2">{activeTab === "contacts" ? t("noContacts") : "No Companies"}</h3>
               <p className="text-muted-foreground mb-4">
                 {t("noContactsDescription")}
               </p>
               {canCreate && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {t("createContact")}
+                  {activeTab === "contacts" ? t("createContact") : "Create Company"}
                 </Button>
               )}
             </div>
@@ -396,9 +401,9 @@ export default function ContactsPage() {
                               ? t("typeCustomer")
                               : t("typeSupplier")}
                           </Badge>
-                          {!contact.isIndividual && contact.companyName && (
+                          {!contact.isIndividual && (
                             <span className="text-sm text-muted-foreground">
-                              ({contact.companyName})
+                              (Company)
                             </span>
                           )}
                         </div>
@@ -445,6 +450,16 @@ export default function ContactsPage() {
                             </span>
                           </span>
                         </div>
+                        {contact.vehicles && contact.vehicles.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                            <span className="text-muted-foreground font-medium">Vehicles:</span>
+                            {contact.vehicles.map((v) => (
+                              <Badge key={v.id} variant="outline" className="text-[11px] font-mono">
+                                {v.vehicleNo}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <DropdownMenu>
@@ -514,6 +529,7 @@ export default function ContactsPage() {
         contact={selectedContact}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        defaultIsIndividual={defaultIsIndividual}
       />
 
       <DeleteConfirmationDialog
@@ -578,41 +594,7 @@ export default function ContactsPage() {
                 )}
               </div>
 
-              {!viewContact.isIndividual && (
-                <div className="space-y-3 border-t pt-4">
-                  <h4 className="font-medium">{t("companyInformation")}</h4>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {viewContact.companyName && (
-                      <div className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">
-                          {t("companyName")}
-                        </p>
-                        <p className="font-medium">{viewContact.companyName}</p>
-                      </div>
-                    )}
-                    {viewContact.companyPhone && (
-                      <div className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">
-                          {t("companyPhone")}
-                        </p>
-                        <p className="font-medium">
-                          {viewContact.companyPhone}
-                        </p>
-                      </div>
-                    )}
-                    {viewContact.companyAddress && (
-                      <div className="rounded-lg border p-3 sm:col-span-2">
-                        <p className="text-xs text-muted-foreground">
-                          {t("companyAddress")}
-                        </p>
-                        <p className="font-medium">
-                          {viewContact.companyAddress}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+
 
               <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
                 <div className="rounded-lg border p-3">
@@ -634,6 +616,19 @@ export default function ContactsPage() {
                   </p>
                 </div>
               </div>
+
+              {viewContact.vehicles && viewContact.vehicles.length > 0 && (
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground mb-2">Registered Vehicles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {viewContact.vehicles.map((v) => (
+                      <Badge key={v.id} variant="secondary" className="font-mono text-sm px-2.5 py-1">
+                        {v.vehicleNo}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground border-t pt-4">
                 <div>
@@ -661,6 +656,7 @@ export default function ContactsPage() {
           ) : null}
         </SheetContent>
       </Sheet>
+      </Tabs>
     </PageLayout>
   );
 }

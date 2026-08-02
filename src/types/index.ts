@@ -397,6 +397,16 @@ export interface Contact {
   companyPhone?: string
   balance: number
   creditLimit: number
+  vehicles?: Vehicle[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Vehicle {
+  id: string
+  contactId: string
+  vehicleNo: string
+  contact?: Contact
   createdAt?: string
   updatedAt?: string
 }

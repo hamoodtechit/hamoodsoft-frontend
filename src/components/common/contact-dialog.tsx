@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -27,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateContact, useUpdateContact } from "@/lib/hooks/use-contacts";
+import { useContacts, useCreateContact, useUpdateContact } from "@/lib/hooks/use-contacts";
 import {
   createContactSchema,
   updateContactSchema,
@@ -36,16 +37,17 @@ import {
 } from "@/lib/validations/contacts";
 import { Contact } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "lucide-react";
+import { Building2, Plus, Trash2, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, useFieldArray } from "react-hook-form";
 
 interface ContactDialogProps {
   contact: Contact | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (contact: Contact) => void;
+  defaultIsIndividual?: boolean;
 }
 
 export function ContactDialog({
@@ -53,9 +55,12 @@ export function ContactDialog({
   open,
   onOpenChange,
   onSuccess,
+  defaultIsIndividual = true,
 }: ContactDialogProps) {
   const t = useTranslations("contacts");
   const tCommon = useTranslations("common");
+  const { data: companiesData } = useContacts({ limit: 1000, isIndividual: false });
+  const companies = companiesData?.items || [];
   const createMutation = useCreateContact();
   const updateMutation = useUpdateContact();
 
@@ -72,12 +77,11 @@ export function ContactDialog({
         email: "",
         phone: "",
         address: "",
-        isIndividual: true,
-        companyName: "",
-        companyAddress: "",
-        companyPhone: "",
+        isIndividual: defaultIsIndividual,
+        companyId: "",
         balance: 0,
         creditLimit: 0,
+        vehicles: [],
       };
     }
     return {
@@ -86,25 +90,34 @@ export function ContactDialog({
       email: contact.email || "",
       phone: contact.phone || "",
       address: contact.address || "",
-      isIndividual: contact.isIndividual ?? true,
-      companyName: contact.companyName || "",
-      companyAddress: contact.companyAddress || "",
-      companyPhone: contact.companyPhone || "",
+      isIndividual: contact.isIndividual ?? defaultIsIndividual,
+      companyId: "",
       balance: contact.balance || 0,
       creditLimit: contact.creditLimit || 0,
+      vehicles: contact.vehicles?.map(v => ({ id: v.id, vehicleNo: v.vehicleNo })) || [],
     };
-  }, [contact]);
+  }, [contact, defaultIsIndividual]);
 
   const form = useForm<CreateContactInput | UpdateContactInput>({
     resolver: zodResolver(schema),
     defaultValues,
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "vehicles",
+  });
+
   // Watch isIndividual to conditionally show/hide company fields
   const isIndividual = useWatch({
     control: form.control,
     name: "isIndividual",
-    defaultValue: defaultValues.isIndividual,
+    defaultValue: defaultIsIndividual,
+  });
+
+  const selectedCompanyId = useWatch({
+    control: form.control,
+    name: "companyId",
   });
 
   useEffect(() => {
@@ -113,19 +126,19 @@ export function ContactDialog({
     }
   }, [open, defaultValues, form]);
 
-  // Clear company fields when isIndividual is true
+  // Clear vehicleNo when switching? Not needed.
   useEffect(() => {
-    if (isIndividual) {
-      form.setValue("companyName", "");
-      form.setValue("companyAddress", "");
-      form.setValue("companyPhone", "");
-    }
   }, [isIndividual, form]);
 
   const onSubmit = (data: CreateContactInput | UpdateContactInput) => {
+    const payload = { ...data };
+    if (payload.companyId === "new") {
+      delete payload.companyId;
+    }
+
     if (isEdit && contact) {
       updateMutation.mutate(
-        { id: contact.id, data: data as UpdateContactInput },
+        { id: contact.id, data: payload as UpdateContactInput },
         {
           onSuccess: (updatedContact) => {
             onOpenChange(false);
@@ -136,7 +149,7 @@ export function ContactDialog({
       return;
     }
 
-    createMutation.mutate(data as CreateContactInput, {
+    createMutation.mutate(payload as CreateContactInput, {
       onSuccess: (newContact) => {
         onOpenChange(false);
         form.reset(defaultValues);
@@ -150,11 +163,27 @@ export function ContactDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            {isEdit ? t("editContact") : t("createContact")}
+            {isIndividual ? (
+              <User className="h-5 w-5" />
+            ) : (
+              <Building2 className="h-5 w-5" />
+            )}
+            {isIndividual
+              ? isEdit
+                ? t("editContact")
+                : t("createContact")
+              : isEdit
+                ? "Edit Company"
+                : "Create Company"}
           </DialogTitle>
           <DialogDescription>
-            {isEdit ? t("editDescription") : t("createDescription")}
+            {isIndividual
+              ? isEdit
+                ? t("editDescription")
+                : t("createDescription")
+              : isEdit
+                ? "Edit company details."
+                : "Add a new company or select an existing company."}
           </DialogDescription>
         </DialogHeader>
 
@@ -165,13 +194,38 @@ export function ContactDialog({
           >
             <ScrollArea className="h-[calc(90vh-220px)]">
               <div className="px-6 pb-6 space-y-4">
+                {!isEdit && (
+                  <FormField
+                    control={form.control}
+                    name="isIndividual"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 mb-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>{t("isIndividual")}</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            {t("isIndividualDescription")}
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("type")}</FormLabel>
+                        <FormLabel>
+                          {t("type")} <span className="text-destructive">*</span>
+                        </FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -195,22 +249,115 @@ export function ContactDialog({
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("name")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("namePlaceholder")}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {!isIndividual && !isEdit ? (
+                    <FormField
+                      control={form.control}
+                      name="companyId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company</FormLabel>
+                          <Select
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              if (val !== "new") {
+                                const selectedComp = companies.find((c: any) => c.id === val);
+                                if (selectedComp) {
+                                  form.setValue("name", selectedComp.name);
+                                }
+                              }
+                            }}
+                            value={field.value || "new"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a company" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="new">-- Create New Company --</SelectItem>
+                              {companies.filter((c: any) => Boolean(c && c.id)).map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)}>{c.name || "Unnamed Company"}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+
+                  {(!selectedCompanyId || selectedCompanyId === "new" || isIndividual) ? (
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {isIndividual ? t("name") : t("companyName")}{" "}
+                            <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={isIndividual ? t("namePlaceholder") : t("companyNamePlaceholder")}
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <div />
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Vehicles</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => append({ vehicleNo: "" })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Vehicle
+                    </Button>
+                  </div>
+                  {fields.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">No vehicles added.</p>
+                  )}
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-start gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`vehicles.${index}.vehicleNo`}
+                        render={({ field: inputField }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input
+                                placeholder="e.g. ABC-1234"
+                                {...inputField}
+                                value={inputField.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -267,89 +414,7 @@ export function ContactDialog({
                   )}
                 />
 
-                {!isEdit && (
-                  <FormField
-                    control={form.control}
-                    name="isIndividual"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>{t("isIndividual")}</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            {t("isIndividualDescription")}
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                )}
 
-                {!isIndividual && (
-                  <>
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium mb-4">
-                        {t("companyInformation")}
-                      </h4>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="companyName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("companyName")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("companyNamePlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="companyAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("companyAddress")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("companyAddressPlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="companyPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("companyPhone")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("companyPhonePlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

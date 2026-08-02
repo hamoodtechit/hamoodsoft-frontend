@@ -43,6 +43,8 @@ export function CheckoutDrawer() {
     setSelectedContactId,
     vehicleNo,
     setVehicleNo,
+    vehicleId,
+    setVehicleId,
     setIsContactDialogOpen,
     saleType,
     setSaleType,
@@ -211,17 +213,61 @@ export function CheckoutDrawer() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                Vehicle No. (Optional)
-              </Label>
-              <Input
-                placeholder="e.g. DHK-12-3456"
-                value={vehicleNo}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVehicleNo(e.target.value)}
-                className="h-10"
-              />
-            </div>
+            {selectedContact && selectedContact.vehicles && selectedContact.vehicles.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Vehicle No.
+                </Label>
+                <Select
+                  value={vehicleId}
+                  onValueChange={(val) => {
+                    setVehicleId(val);
+                    const v = selectedContact.vehicles?.find(x => x.id === val);
+                    if (v) setVehicleNo(v.vehicleNo);
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-sm">
+                    <SelectValue placeholder="Select a vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None / Manual Entry</SelectItem>
+                    {selectedContact.vehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.vehicleNo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(!vehicleId || vehicleId === "none") && (
+                  <Input
+                    placeholder="Or type e.g. DHK-12-3456"
+                    value={vehicleNo}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setVehicleNo(e.target.value);
+                      if (vehicleId !== "none" && vehicleId !== "") {
+                        setVehicleId("none");
+                      }
+                    }}
+                    className="h-10 mt-2"
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Vehicle No. (Optional)
+                </Label>
+                <Input
+                  placeholder="e.g. DHK-12-3456"
+                  value={vehicleNo}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setVehicleNo(e.target.value);
+                    setVehicleId("");
+                  }}
+                  className="h-10"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
