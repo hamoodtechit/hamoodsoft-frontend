@@ -489,6 +489,28 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [contacts, selectedContactId])
 
+  // Auto-select vehicle if the selected contact has only 1 vehicle
+  useEffect(() => {
+    if (!selectedContactId || contacts.length === 0) return
+    const contact = contacts.find((c) => c.id === selectedContactId)
+    if (!contact) return
+
+    const vList = contact.vehicles || []
+    if (vList.length === 1) {
+      setVehicleId(vList[0].id)
+      setVehicleNo(vList[0].vehicleNo)
+    } else if (vList.length === 0) {
+      setVehicleId("")
+      setVehicleNo("")
+    } else {
+      // Multiple vehicles: if current vehicleId is not in vList, reset
+      const exists = vList.some((v) => v.id === vehicleId)
+      if (!exists && vehicleId !== "none") {
+        setVehicleId("none")
+      }
+    }
+  }, [selectedContactId, contacts, vehicleId])
+
   // Check access
   useEffect(() => {
     if (currentBusiness && !currentBusiness.modules?.includes("point-of-sale")) {

@@ -1,12 +1,23 @@
-"use client";
-
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { usePOS, type PaymentMethod, type SaleType } from "./pos-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Select,
   SelectContent,
@@ -23,6 +34,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
+  Check,
+  ChevronsUpDown,
   CreditCard,
   Plus,
   Receipt,
@@ -74,6 +87,8 @@ export function CheckoutDrawer() {
   } = usePOS();
 
   const paidAmountRef = useRef<HTMLInputElement>(null);
+  const [openContactPopover, setOpenContactPopover] = useState(false);
+  const [openVehiclePopover, setOpenVehiclePopover] = useState(false);
 
   useEffect(() => {
     if (isCheckoutOpen) {
@@ -89,6 +104,10 @@ export function CheckoutDrawer() {
 
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+  const isWalkIn =
+    !selectedContact ||
+    selectedContact.name.toLowerCase().includes("walk-in") ||
+    selectedContact.name.toLowerCase().includes("walk in");
 
   let cashPaid = 0;
   if (paymentMethod === "CREDIT") {
@@ -164,21 +183,56 @@ export function CheckoutDrawer() {
                   <UserPlus className="h-3 w-3" />
                 </Button>
               </div>
-              <Select
-                value={selectedContactId}
-                onValueChange={setSelectedContactId}
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue placeholder="Walk-in Customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openContactPopover} onOpenChange={setOpenContactPopover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openContactPopover}
+                    className="w-full justify-between h-10 text-sm font-normal px-3"
+                  >
+                    <span className="truncate font-medium">
+                      {selectedContact ? selectedContact.name : "Walk-in Customer"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[340px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search customer by name or phone..." />
+                    <CommandList>
+                      <CommandEmpty>No customer found.</CommandEmpty>
+                      <CommandGroup className="max-h-[240px] overflow-y-auto">
+                        {contacts.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={`${c.name} ${c.phone || ""} ${c.companyName || ""}`}
+                            onSelect={() => {
+                              setSelectedContactId(c.id);
+                              setOpenContactPopover(false);
+                            }}
+                            className="flex items-center justify-between py-2 text-xs cursor-pointer"
+                          >
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold truncate">{c.name}</span>
+                              {c.phone && (
+                                <span className="text-[10px] text-muted-foreground">{c.phone}</span>
+                              )}
+                            </div>
+                            <Check
+                              className={cn(
+                                "ml-2 h-4 w-4 shrink-0 text-primary",
+                                selectedContactId === c.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
               {selectedContact && (
                 <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
                   <div className="flex justify-between text-muted-foreground mb-1">
@@ -213,60 +267,114 @@ export function CheckoutDrawer() {
               )}
             </div>
 
-            {selectedContact && selectedContact.vehicles && selectedContact.vehicles.length > 0 ? (
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Vehicle No.
-                </Label>
-                <Select
-                  value={vehicleId}
-                  onValueChange={(val) => {
-                    setVehicleId(val);
-                    const v = selectedContact.vehicles?.find(x => x.id === val);
-                    if (v) setVehicleNo(v.vehicleNo);
-                  }}
-                >
-                  <SelectTrigger className="h-10 text-sm">
-                    <SelectValue placeholder="Select a vehicle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None / Manual Entry</SelectItem>
-                    {selectedContact.vehicles.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.vehicleNo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(!vehicleId || vehicleId === "none") && (
+            {!isWalkIn && (
+              selectedContact && selectedContact.vehicles && selectedContact.vehicles.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      Vehicle No.
+                    </Label>
+                    {selectedContact.vehicles.length === 1 && (
+                      <span className="text-[10px] text-emerald-500 font-semibold">
+                        (Auto-selected)
+                      </span>
+                    )}
+                  </div>
+
+                  <Popover open={openVehiclePopover} onOpenChange={setOpenVehiclePopover}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openVehiclePopover}
+                        className="w-full justify-between h-10 text-sm font-normal px-3"
+                      >
+                        <span className="truncate font-mono">
+                          {vehicleId && vehicleId !== "none"
+                            ? (selectedContact.vehicles?.find((v) => v.id === vehicleId)?.vehicleNo || vehicleNo || "Select a vehicle")
+                            : vehicleNo ? `Manual: ${vehicleNo}` : "None / Manual Entry"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[340px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search vehicle number..." />
+                        <CommandList>
+                          <CommandEmpty>No vehicle found.</CommandEmpty>
+                          <CommandGroup className="max-h-[200px] overflow-y-auto">
+                            <CommandItem
+                              value="none manual entry"
+                              onSelect={() => {
+                                setVehicleId("none");
+                                setOpenVehiclePopover(false);
+                              }}
+                              className="text-xs cursor-pointer"
+                            >
+                              <span>None / Manual Entry</span>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4 text-primary",
+                                  vehicleId === "none" || !vehicleId ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                            {selectedContact.vehicles.map((v) => (
+                              <CommandItem
+                                key={v.id}
+                                value={v.vehicleNo}
+                                onSelect={() => {
+                                  setVehicleId(v.id);
+                                  setVehicleNo(v.vehicleNo);
+                                  setOpenVehiclePopover(false);
+                                }}
+                                className="flex items-center justify-between py-2 text-xs font-mono cursor-pointer"
+                              >
+                                <span>{v.vehicleNo}</span>
+                                <Check
+                                  className={cn(
+                                    "h-4 w-4 text-primary",
+                                    vehicleId === v.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {(!vehicleId || vehicleId === "none") && (
+                    <Input
+                      placeholder="Or type e.g. DHK-12-3456"
+                      value={vehicleNo}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setVehicleNo(e.target.value);
+                        if (vehicleId !== "none" && vehicleId !== "") {
+                          setVehicleId("none");
+                        }
+                      }}
+                      className="h-10 mt-2 font-mono"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Vehicle No. (Optional)
+                  </Label>
                   <Input
-                    placeholder="Or type e.g. DHK-12-3456"
+                    placeholder="e.g. DHK-12-3456"
                     value={vehicleNo}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       setVehicleNo(e.target.value);
-                      if (vehicleId !== "none" && vehicleId !== "") {
-                        setVehicleId("none");
-                      }
+                      setVehicleId("");
                     }}
-                    className="h-10 mt-2"
+                    className="h-10 font-mono"
                   />
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Vehicle No. (Optional)
-                </Label>
-                <Input
-                  placeholder="e.g. DHK-12-3456"
-                  value={vehicleNo}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setVehicleNo(e.target.value);
-                    setVehicleId("");
-                  }}
-                  className="h-10"
-                />
-              </div>
+                </div>
+              )
             )}
 
             <div className="space-y-2">
