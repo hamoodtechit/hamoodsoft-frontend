@@ -26,6 +26,12 @@ interface DataTableProps<T> {
   selectable?: boolean
   enableRowSelection?: boolean
   /**
+   * Density mode for row height & padding
+   * - compact: smaller vertical padding (py-1.5) and text size (text-xs)
+   * - normal: standard padding (py-3) and text size (text-sm)
+   */
+  density?: "compact" | "normal"
+  /**
    * Legacy compatibility: some pages pass getRowId (TanStack style).
    * Our table uses row.id internally; we accept this prop to avoid TS errors.
    */
@@ -44,6 +50,7 @@ export function DataTable<T extends { id: string }>({
   actions,
   selectable = false,
   enableRowSelection,
+  density = "normal",
   getRowId,
   onSelectionChange,
   emptyMessage = "No data available",
@@ -144,15 +151,19 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
+  const isCompact = density === "compact"
+  const thPadding = isCompact ? "px-3.5 py-2 text-xs font-semibold" : "px-4 py-3 text-sm font-medium"
+  const tdPadding = isCompact ? "px-3.5 py-2 text-sm" : "px-4 py-3 text-sm"
+
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b bg-muted/50">
             {isSelectable && (
-              <th className="w-12 px-4 py-3 text-left">
+              <th className={`w-12 text-left ${thPadding}`}>
                 <Checkbox
-                  checked={allSelected}
+                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all"
                 />
@@ -161,23 +172,23 @@ export function DataTable<T extends { id: string }>({
             {columns.map((column) => (
               <th
                 key={column.id}
-                className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                className={`text-left font-medium text-muted-foreground ${thPadding}`}
                 style={{ width: column.width }}
               >
                 {column.sortable !== false ? (
                   <button
                     onClick={() => handleSort(column.id)}
-                    className="flex items-center gap-2 hover:text-foreground transition-colors"
+                    className="flex items-center gap-1.5 hover:text-foreground transition-colors"
                   >
                     {column.header}
                     {sortColumn === column.id ? (
                       sortDirection === "asc" ? (
-                        <ArrowUp className="h-4 w-4" />
+                        <ArrowUp className="h-3.5 w-3.5" />
                       ) : (
-                        <ArrowDown className="h-4 w-4" />
+                        <ArrowDown className="h-3.5 w-3.5" />
                       )
                     ) : (
-                      <ArrowUpDown className="h-4 w-4 opacity-50" />
+                      <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
                     )}
                   </button>
                 ) : (
@@ -185,7 +196,7 @@ export function DataTable<T extends { id: string }>({
                 )}
               </th>
             ))}
-            {actions && <th className="w-12 px-4 py-3"></th>}
+            {actions && <th className={`w-12 ${thPadding}`}></th>}
           </tr>
         </thead>
         <tbody>
@@ -198,7 +209,7 @@ export function DataTable<T extends { id: string }>({
               onClick={() => onRowClick?.(row)}
             >
               {isSelectable && (
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                <td className={tdPadding} onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedRows.has(row.id)}
                     onCheckedChange={(checked) =>
@@ -209,7 +220,7 @@ export function DataTable<T extends { id: string }>({
                 </td>
               )}
               {columns.map((column) => (
-                <td key={column.id} className="px-4 py-3 text-sm">
+                <td key={column.id} className={tdPadding}>
                   {column.cell
                     ? column.cell(row)
                     : column.accessorKey
@@ -218,7 +229,7 @@ export function DataTable<T extends { id: string }>({
                 </td>
               ))}
               {actions && (
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                <td className={tdPadding} onClick={(e) => e.stopPropagation()}>
                   {actions(row)}
                 </td>
               )}

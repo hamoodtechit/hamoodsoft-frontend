@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ContactsPage() {
   const t = useTranslations("contacts");
@@ -58,7 +58,7 @@ export default function ContactsPage() {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [typeFilter, setTypeFilter] = useState<"CUSTOMER" | "SUPPLIER" | "">("");
+  const typeFilter = "";
   const [activeTab, setActiveTab] = useState<"contacts" | "companies">("contacts");
   const limit = 10;
 
@@ -114,6 +114,16 @@ export default function ContactsPage() {
         id: "name",
         header: t("name"),
         accessorKey: "name",
+        cell: (row) => (
+          <div className="flex flex-col">
+            <span className="font-semibold text-sm text-foreground">{row.name}</span>
+            {row.address && (
+              <span className="text-xs text-muted-foreground truncate max-w-[220px]">
+                {row.address}
+              </span>
+            )}
+          </div>
+        ),
         sortable: true,
       },
       {
@@ -129,7 +139,7 @@ export default function ContactsPage() {
             SUPPLIER: t("typeSupplier"),
           };
           return (
-            <Badge className={typeColors[row.type] || ""}>
+            <Badge className={`text-xs px-2 py-0.5 font-medium ${typeColors[row.type] || ""}`}>
               {typeLabels[row.type] || row.type}
             </Badge>
           );
@@ -140,21 +150,31 @@ export default function ContactsPage() {
         id: "email",
         header: t("email"),
         accessorKey: "email",
-        cell: (row) => row.email || "-",
+        cell: (row) => <span className="text-sm text-muted-foreground">{row.email || "-"}</span>,
         sortable: false,
       },
       {
         id: "phone",
         header: t("phone"),
         accessorKey: "phone",
-        cell: (row) => row.phone || "-",
+        cell: (row) => <span className="text-sm text-muted-foreground">{row.phone || "-"}</span>,
         sortable: false,
       },
       {
-        id: "isIndividual",
-        header: t("isIndividual"),
-        cell: (row) => (row.isIndividual ? tCommon("yes") : tCommon("no")),
-        sortable: true,
+        id: "vehicles",
+        header: "Vehicles",
+        cell: (row) => {
+          if (!row.vehicles || row.vehicles.length === 0) return <span className="text-sm text-muted-foreground">-</span>;
+          return (
+            <div className="flex flex-wrap items-center gap-1">
+              {row.vehicles.map((v) => (
+                <Badge key={v.id || v.vehicleNo} variant="outline" className="text-xs font-mono px-1.5 py-0.5">
+                  {v.vehicleNo}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
       },
       {
         id: "balance",
@@ -166,8 +186,8 @@ export default function ContactsPage() {
             <span
               className={
                 bal < 0
-                  ? "text-destructive font-medium"
-                  : "text-emerald-500 font-medium"
+                  ? "text-destructive font-semibold text-sm"
+                  : "text-emerald-500 font-semibold text-sm"
               }
             >
               {bal.toFixed(2)}
@@ -177,7 +197,7 @@ export default function ContactsPage() {
         sortable: true,
       },
     ],
-    [t, tCommon],
+    [t],
   );
 
   // Export columns configuration
@@ -290,20 +310,20 @@ export default function ContactsPage() {
         </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                {activeTab === "contacts" ? <User className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+        <CardHeader className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                {activeTab === "contacts" ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
               </div>
               <div>
-                <CardTitle>{activeTab === "contacts" ? t("title") : "Companies"}</CardTitle>
-                <CardDescription>{activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{activeTab === "contacts" ? t("title") : "Companies"}</CardTitle>
+                <CardDescription className="text-xs">{activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}</CardDescription>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-              <div className="relative w-full sm:w-[280px]">
+              <div className="relative w-full sm:w-[260px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
@@ -312,7 +332,7 @@ export default function ContactsPage() {
                     setPage(1);
                   }}
                   placeholder={t("searchPlaceholder")}
-                  className="pl-9"
+                  className="pl-9 h-9 text-sm"
                 />
               </div>
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
@@ -323,8 +343,8 @@ export default function ContactsPage() {
                 disabled={isLoading || contacts.length === 0}
               />
               {canCreate && (
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button size="sm" className="h-9 text-sm px-3" onClick={handleCreate}>
+                  <Plus className="mr-1.5 h-4 w-4" />
                   {t("createContact")}
                 </Button>
               )}
@@ -332,7 +352,7 @@ export default function ContactsPage() {
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 pt-0">
           {isLoading ? (
             <SkeletonList count={6} />
           ) : contacts.length === 0 ? (
@@ -354,10 +374,11 @@ export default function ContactsPage() {
               <DataTable
                 data={contacts}
                 columns={tableColumns}
+                density="compact"
                 actions={(row) => (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -388,78 +409,77 @@ export default function ContactsPage() {
               />
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {contacts.map((contact) => (
-                <Card key={contact.id} className="relative">
-                  <CardContent className="py-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold">{contact.name}</h4>
-                          <Badge className={getTypeColor(contact.type)}>
+                <Card key={contact.id} className="relative shadow-none border hover:border-border transition-colors">
+                  <CardContent className="p-3 px-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                        {/* Title & Badge */}
+                        <div className="flex items-center gap-2 min-w-[200px]">
+                          <h4 className="font-semibold text-sm text-foreground truncate">{contact.name}</h4>
+                          <Badge className={`text-xs px-2 py-0.5 font-medium ${getTypeColor(contact.type)}`}>
                             {contact.type === "CUSTOMER"
                               ? t("typeCustomer")
                               : t("typeSupplier")}
                           </Badge>
                           {!contact.isIndividual && (
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-medium">
                               (Company)
                             </span>
                           )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                          {contact.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                {contact.email}
-                              </span>
+
+                        {/* Phone & Email */}
+                        <div className="flex items-center gap-3 text-muted-foreground text-xs sm:text-sm">
+                          {contact.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{contact.phone}</span>
                             </div>
                           )}
-                          {contact.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                {contact.phone}
-                              </span>
+                          {contact.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5" />
+                              <span>{contact.email}</span>
                             </div>
                           )}
                         </div>
-                        {contact.address && (
-                          <div className="mt-2 text-sm text-muted-foreground">
-                            {contact.address}
+
+                        {/* Vehicles */}
+                        {contact.vehicles && contact.vehicles.length > 0 && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="text-muted-foreground">Vehicles:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {contact.vehicles.map((v) => (
+                                <Badge key={v.id || v.vehicleNo} variant="outline" className="text-xs font-mono px-1.5 py-0.5">
+                                  {v.vehicleNo}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         )}
-                        <div className="mt-2 flex items-center gap-4 text-sm">
-                          <span className="text-muted-foreground">
-                            {t("balance")}:{" "}
+
+                        {/* Balance & Address */}
+                        <div className="ml-auto flex items-center gap-3 text-sm">
+                          {contact.address && (
+                            <span className="text-muted-foreground text-xs truncate max-w-[180px] hidden lg:inline">
+                              {contact.address}
+                            </span>
+                          )}
+                          <div className="text-right whitespace-nowrap">
+                            <span className="text-muted-foreground text-xs">{t("balance")}: </span>
                             <span
                               className={
                                 contact.balance !== null && contact.balance < 0
-                                  ? "text-destructive font-medium"
-                                  : "text-emerald-500 font-medium"
+                                  ? "text-destructive font-semibold"
+                                  : "text-emerald-500 font-semibold"
                               }
                             >
                               {contact.balance?.toFixed(2) || "0.00"}
                             </span>
-                          </span>
-                          <span className="text-muted-foreground">
-                            {t("creditLimit")}:{" "}
-                            <span className="font-medium">
-                              {contact.creditLimit?.toFixed(2) || "0.00"}
-                            </span>
-                          </span>
-                        </div>
-                        {contact.vehicles && contact.vehicles.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
-                            <span className="text-muted-foreground font-medium">Vehicles:</span>
-                            {contact.vehicles.map((v) => (
-                              <Badge key={v.id} variant="outline" className="text-[11px] font-mono">
-                                {v.vehicleNo}
-                              </Badge>
-                            ))}
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       <DropdownMenu>
@@ -467,9 +487,9 @@ export default function ContactsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7 shrink-0"
                           >
-                            <MoreVertical className="h-4 w-4" />
+                            <MoreVertical className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -500,12 +520,14 @@ export default function ContactsPage() {
               ))}
 
               <div className="flex items-center justify-between pt-2">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {t("pagination", { page: currentPage, totalPages })}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
                   >
@@ -513,6 +535,8 @@ export default function ContactsPage() {
                   </Button>
                   <Button
                     variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
                   >
