@@ -255,6 +255,30 @@ export function InvoiceDialog({
     return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
   };
 
+  /** Format date for MUSHAK 6.3: DD-Mon-YYYY */
+  const formatDateMushak = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = d.toLocaleString("en-US", { month: "short" });
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  /** Format time for MUSHAK 6.3: hh:mm AM/PM */
+  const formatTimeMushak = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    let hours = d.getHours();
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${String(hours).padStart(2, "0")}:${mins} ${ampm}`;
+  };
+
   // ── Invoice Data ──
 
   const invoiceNo = isPurchase
@@ -262,6 +286,11 @@ export function InvoiceDialog({
     : (transaction as Sale)?.invoiceNumber || transaction?.id;
 
   const vehicleNo = !isPurchase ? (transaction as Sale)?.vehicleNo : undefined;
+
+  // Tax rate from transaction (sale-level)
+  const txRate = isPurchase
+    ? (transaction as Purchase)?.taxRate || 0
+    : (transaction as Sale)?.taxRate || 0;
 
   const phoneNumbers = [
     generalSettings?.officePhone,
@@ -302,6 +331,7 @@ export function InvoiceDialog({
               ? item.discountAmount || 0
               : 0;
         const itemTotal = item.totalPrice || itemSubtotal - itemDiscount;
+        const itemTaxAmount = txRate > 0 ? (itemTotal * txRate) / 100 : 0;
         const displayName = cleanItemName(item.itemName);
 
         if (isPOS) {
@@ -309,6 +339,8 @@ export function InvoiceDialog({
             <td style="padding:1mm 0.5mm;text-align:left;border-bottom:0.3mm solid #ddd;">${displayName}</td>
             <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${item.price.toFixed(2)}</td>
             <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity}</td>
+            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? `${txRate}%` : "0"}</td>
+            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
             <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${itemTotal.toFixed(2)}</td>
           </tr>`;
         } else {
@@ -320,6 +352,8 @@ export function InvoiceDialog({
             <td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${item.price.toFixed(2)}</td>
             <td style="padding:1.5mm 2mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity}</td>
             ${totals.discount > 0 ? `<td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${itemDiscount > 0 ? `-${itemDiscount.toFixed(2)}` : "-"}</td>` : ""}
+            <td style="padding:1.5mm 2mm;text-align:center;border-bottom:0.3mm solid #ddd;">${txRate > 0 ? `${txRate}%` : "0"}</td>
+            <td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
             <td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;font-weight:500;">${itemTotal.toFixed(2)}</td>
           </tr>`;
         }
@@ -332,6 +366,8 @@ export function InvoiceDialog({
             <th style="padding:1mm 0.5mm;text-align:left;font-weight:bold;">Product Name</th>
             <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">MRP</th>
             <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Liter</th>
+            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Tax %</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Tax Amt</th>
             <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Price</th>
           </tr>`
       : `<tr style="border-top:0.5mm solid #000;border-bottom:0.5mm solid #000;">
@@ -339,6 +375,8 @@ export function InvoiceDialog({
             <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">MRP</th>
             <th style="padding:1.5mm 2mm;text-align:center;font-weight:bold;">Qty</th>
             ${totals.discount > 0 ? `<th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Disc.</th>` : ""}
+            <th style="padding:1.5mm 2mm;text-align:center;font-weight:bold;">Tax %</th>
+            <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Tax Amt</th>
             <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Price</th>
           </tr>`;
 
@@ -354,23 +392,25 @@ export function InvoiceDialog({
     const billInfoHtml = isPOS
       ? `<div style="margin-bottom:2mm;padding-bottom:1.5mm;border-bottom:0.3mm dashed #000;font-size:${f.fontSizePt}pt;">
             <div style="display:flex;justify-content:space-between;font-weight:500;">
-              <span>Bill No: <strong>${invoiceNo}</strong></span>
-              <span>Date: <strong>${formatDateHeader(transaction.createdAt)}</strong></span>
+              <span>INV: <strong>${invoiceNo}</strong></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:500;margin-top:0.5mm;">
+              <span>Date: <strong>${formatDateMushak(transaction.createdAt)}</strong></span>
+              <span>Time: <strong>${formatTimeMushak(transaction.createdAt)}</strong></span>
             </div>
             ${vehicleNo ? `<div style="margin-top:0.5mm;"><span>G No: <strong>${vehicleNo}</strong></span></div>` : ""}
             ${transaction.contact?.name ? `<div style="margin-top:0.5mm;color:#444;">Name: ${transaction.contact.name}</div>` : ""}
+            ${transaction.contact?.binNumber ? `<div style="margin-top:0.5mm;font-weight:500;">Customer BIN: ${transaction.contact.binNumber}</div>` : ""}
           </div>`
       : `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3mm;padding-bottom:2mm;border-bottom:0.3mm solid #000;font-size:${f.fontSizePt}pt;">
             <div>
               <div style="font-weight:600;">Name: ${transaction.contact?.name || "Walk-in"}</div>
               ${vehicleNo ? `<div>Vehicle No: ${vehicleNo}</div>` : ""}
+              ${transaction.contact?.binNumber ? `<div style="font-weight:500;">Customer BIN: ${transaction.contact.binNumber}</div>` : ""}
             </div>
             <div style="text-align:right;">
-              <div><strong>${isPurchase ? "PO#:" : "INV#:"}</strong> ${invoiceNo}</div>
-              <div><strong>Date:</strong> ${new Date(transaction.createdAt || "").toLocaleDateString()}</div>
-              <div style="margin-top:1mm;padding:0.5mm 2mm;background:${transaction.paymentStatus === "PAID" ? "#16a34a" : "#dc2626"};color:white;display:inline-block;border-radius:1mm;font-size:${f.smallFontSizePt}pt;font-weight:600;">
-                ${transaction.paymentStatus === "PAID" ? "PAID" : transaction.paymentStatus === "DUE" ? "DUE" : "PARTIAL"}
-              </div>
+              <div><strong>${isPurchase ? "PO:" : "INV:"}</strong> ${invoiceNo}</div>
+              <div><strong>Date:</strong> ${formatDateMushak(transaction.createdAt)}  <strong>Time:</strong> ${formatTimeMushak(transaction.createdAt)}</div>
             </div>
           </div>`;
 
@@ -403,17 +443,19 @@ export function InvoiceDialog({
       </div>`;
 
     // Footer
-    const footerHtml = `
-      <div style="margin-top:5mm;padding-top:2mm;border-top:0.3mm solid #ccc;display:flex;justify-content:space-between;align-items:flex-end;font-size:${f.smallFontSizePt}pt;color:#333;">
-        <div>
-          <div style="font-weight:bold;border-bottom:0.3mm solid #000;padding-bottom:0.5mm;margin-bottom:0.5mm;width:20mm;">Signature</div>
-          <div>${(transaction as any)?.createdBy?.name || ""}</div>
-        </div>
-        <div style="text-align:right;">
-          <div>${formatTimestamp(transaction.createdAt)}</div>
-        </div>
+    const footerHtml = isPOS
+      ? `
+      <div style="margin-top:3mm;padding-top:2mm;border-top:0.3mm solid #ccc;text-align:center;font-size:${f.smallFontSizePt}pt;color:#555;font-style:italic;">
+        This is a system-generated invoice
       </div>
-      ${invoiceSettings?.footer ? `<div style="margin-top:3mm;text-align:center;font-size:${f.smallFontSizePt}pt;color:#000;">${invoiceSettings.footer}</div>` : ""}`;
+      <div style="margin-top:2mm;text-align:center;font-size:${f.smallFontSizePt}pt;color:#888;">
+        Powered by HamoodTech
+      </div>`
+      : `
+      <div style="margin-top:5mm;padding-top:3mm;border-top:0.3mm solid #ccc;display:flex;justify-content:space-between;align-items:center;font-size:${f.smallFontSizePt}pt;">
+        <div style="color:#555;font-style:italic;">This is a system-generated invoice</div>
+        <div style="color:#888;">Powered by HamoodTech</div>
+      </div>`;
 
     // Full HTML document
     return `<!DOCTYPE html>
@@ -464,6 +506,8 @@ export function InvoiceDialog({
       ${generalSettings?.businessAddress ? `<div style="font-size:${f.smallFontSizePt}pt;color:#333;margin-top:0.5mm;line-height:1.2;">${generalSettings.businessAddress}</div>` : ""}
       ${phoneNumbers ? `<div style="font-size:${f.smallFontSizePt}pt;font-weight:500;margin-top:0.3mm;">${phoneNumbers}</div>` : ""}
       ${generalSettings?.binNumber ? `<div style="font-size:${f.smallFontSizePt}pt;font-weight:600;margin-top:0.3mm;">BIN : ${generalSettings.binNumber}</div>` : ""}
+      <div style="font-weight:bold;margin-top:1mm;font-size:${f.fontSizePt}pt;">MUSHAK 6.3 / মূসক-৬.৩</div>
+      <div style="font-weight:600;font-size:${f.fontSizePt}pt;">Tax Invoice / কর চালানপত্র</div>
     </div>
     <div style="flex:0 0 auto;">${logoRight}</div>
   </div>
@@ -475,7 +519,7 @@ export function InvoiceDialog({
   <table>
     <thead>${tableHeader}</thead>
     <tbody>
-      ${items.length === 0 ? `<tr><td colspan="${isPOS ? 4 : 5}" style="text-align:center;padding:3mm;">No items found.</td></tr>` : itemRows}
+      ${items.length === 0 ? `<tr><td colspan="${isPOS ? 6 : (totals.discount > 0 ? 8 : 7)}" style="text-align:center;padding:3mm;">No items found.</td></tr>` : itemRows}
     </tbody>
   </table>
 
@@ -679,6 +723,18 @@ export function InvoiceDialog({
                     BIN : {generalSettings.binNumber}
                   </p>
                 )}
+                <p
+                  className="font-bold mt-1"
+                  style={{ fontSize: `${cfg.fontSizePt * 1.33}px` }}
+                >
+                  MUSHAK 6.3 / মূসক-৬.৩
+                </p>
+                <p
+                  className="font-semibold"
+                  style={{ fontSize: `${cfg.fontSizePt * 1.33}px` }}
+                >
+                  Tax Invoice / কর চালানপত্র
+                </p>
               </div>
 
               {/* Right Logo */}
@@ -702,12 +758,20 @@ export function InvoiceDialog({
               <div className="mb-2 border-b border-dashed pb-1.5 space-y-0.5">
                 <div className="flex justify-between items-center font-medium">
                   <span>
-                    Bill No: <span className="font-bold">{invoiceNo}</span>
+                    INV: <span className="font-bold">{invoiceNo}</span>
                   </span>
+                </div>
+                <div className="flex justify-between items-center font-medium">
                   <span>
                     Date:{" "}
                     <span className="font-bold">
-                      {formatDateHeader(transaction.createdAt)}
+                      {formatDateMushak(transaction.createdAt)}
+                    </span>
+                  </span>
+                  <span>
+                    Time:{" "}
+                    <span className="font-bold">
+                      {formatTimeMushak(transaction.createdAt)}
                     </span>
                   </span>
                 </div>
@@ -726,6 +790,13 @@ export function InvoiceDialog({
                     </span>
                   </div>
                 )}
+                {transaction.contact?.binNumber && (
+                  <div className="text-gray-700 font-medium">
+                    <span>
+                      Customer BIN: {transaction.contact.binNumber}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex justify-between items-end mb-3 border-b pb-2">
@@ -736,34 +807,23 @@ export function InvoiceDialog({
                   </p>
 
                   {vehicleNo && <p>Vehicle No: {vehicleNo}</p>}
+                  {transaction.contact?.binNumber && (
+                    <p className="font-medium">Customer BIN: {transaction.contact.binNumber}</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p>
                     <span className="font-semibold">
-                      {isPurchase ? "PO#:" : "INV#:"}
+                      {isPurchase ? "PO:" : "INV:"}
                     </span>{" "}
                     {invoiceNo}
                   </p>
                   <p>
                     <span className="font-semibold">Date:</span>{" "}
-                    {new Date(
-                      transaction.createdAt || ""
-                    ).toLocaleDateString()}
+                    {formatDateMushak(transaction.createdAt)}{" "}
+                    <span className="font-semibold ml-2">Time:</span>{" "}
+                    {formatTimeMushak(transaction.createdAt)}
                   </p>
-                  <Badge
-                    variant={
-                      transaction.paymentStatus === "PAID"
-                        ? "default"
-                        : "destructive"
-                    }
-                    className="mt-1"
-                  >
-                    {transaction.paymentStatus === "PAID"
-                      ? t("paymentStatusPaid")
-                      : transaction.paymentStatus === "DUE"
-                        ? t("paymentStatusDue")
-                        : t("paymentStatusPartial")}
-                  </Badge>
                 </div>
               </div>
             )}
@@ -795,6 +855,16 @@ export function InvoiceDialog({
                       </th>
                     )}
                     <th
+                      className={`text-center font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
+                    >
+                      Tax %
+                    </th>
+                    <th
+                      className={`text-right font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
+                    >
+                      Tax Amt
+                    </th>
+                    <th
                       className={`text-right font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
                     >
                       Price
@@ -808,10 +878,10 @@ export function InvoiceDialog({
                         className="text-center text-muted-foreground py-4"
                         colSpan={
                           cfg.isPosNarrow
-                            ? 4
+                            ? 6
                             : totals.discount > 0
-                              ? 5
-                              : 4
+                              ? 8
+                              : 7
                         }
                       >
                         No items found.
@@ -828,6 +898,7 @@ export function InvoiceDialog({
                             : 0;
                       const itemTotal =
                         item.totalPrice || itemSubtotal - itemDiscount;
+                      const itemTaxAmount = txRate > 0 ? (itemTotal * txRate) / 100 : 0;
                       const displayName = cleanItemName(item.itemName);
 
                       return (
@@ -866,6 +937,18 @@ export function InvoiceDialog({
                                 : "-"}
                             </td>
                           )}
+                          <td
+                            className={`text-center whitespace-nowrap ${cfg.isPosNarrow ? "py-1 px-0.5 align-top" : "py-1.5 px-2 align-top"}`}
+                            style={{ fontSize: cfg.isPosNarrow ? `${cfg.smallFontSizePt * 1.33}px` : "inherit" }}
+                          >
+                            {txRate > 0 ? `${txRate}%` : "0"}
+                          </td>
+                          <td
+                            className={`text-right whitespace-nowrap ${cfg.isPosNarrow ? "py-1 px-0.5 align-top" : "py-1.5 px-2 align-top"}`}
+                            style={{ fontSize: cfg.isPosNarrow ? `${cfg.smallFontSizePt * 1.33}px` : "inherit" }}
+                          >
+                            {txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}
+                          </td>
                           <td
                             className={`text-right font-medium whitespace-nowrap ${cfg.isPosNarrow ? "py-1 px-0.5 align-top" : "py-1.5 px-2 align-top"}`}
                           >
@@ -923,27 +1006,23 @@ export function InvoiceDialog({
             </div>
 
             {/* Footer */}
-            <div className="mt-6 pt-3 border-t border-gray-300 flex justify-between items-end text-gray-800">
-              <div>
-                <p
-                  className="font-bold border-b border-black mb-0.5 pb-0.5"
-                  style={{ width: "20mm" }}
-                >
-                  Signature
-                </p>
-                <p>
-                  {(transaction as any)?.createdBy?.name || ""}
-                </p>
+            {cfg.isPosNarrow ? (
+              <div className="mt-4 pt-2 border-t border-gray-300">
+                <div className="text-center text-gray-500 italic mb-1.5" style={{ fontSize: `${cfg.smallFontSizePt * 1.33}px` }}>
+                  This is a system-generated invoice
+                </div>
+                <div className="text-center text-gray-400" style={{ fontSize: `${cfg.smallFontSizePt * 1.33}px` }}>
+                  Powered by HamoodTech
+                </div>
               </div>
-              <div className="text-right">
-                <p>{formatTimestamp(transaction.createdAt)}</p>
-              </div>
-            </div>
-
-            {/* Invoice footer text from settings */}
-            {invoiceSettings?.footer && (
-              <div className="mt-2 text-center text-black text-xs">
-                {invoiceSettings.footer}
+            ) : (
+              <div className="mt-6 pt-3 border-t border-gray-300 flex justify-between items-center">
+                <div className="text-gray-500 italic" style={{ fontSize: `${cfg.smallFontSizePt * 1.33}px` }}>
+                  This is a system-generated invoice
+                </div>
+                <div className="text-gray-400" style={{ fontSize: `${cfg.smallFontSizePt * 1.33}px` }}>
+                  Powered by HamoodTech
+                </div>
               </div>
             )}
           </div>

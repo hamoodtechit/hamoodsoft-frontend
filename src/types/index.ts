@@ -395,6 +395,7 @@ export interface Contact {
   companyName?: string
   companyAddress?: string
   companyPhone?: string
+  binNumber?: string
   balance: number
   creditLimit: number
   vehicles?: Vehicle[]
