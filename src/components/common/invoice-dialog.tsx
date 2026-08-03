@@ -413,7 +413,7 @@ export function InvoiceDialog({
           <div>${formatTimestamp(transaction.createdAt)}</div>
         </div>
       </div>
-      ${invoiceSettings?.footer ? `<div style="margin-top:3mm;text-align:center;font-size:${f.smallFontSizePt}pt;color:#666;">${invoiceSettings.footer}</div>` : ""}`;
+      ${invoiceSettings?.footer ? `<div style="margin-top:3mm;text-align:center;font-size:${f.smallFontSizePt}pt;color:#000;">${invoiceSettings.footer}</div>` : ""}`;
 
     // Full HTML document
     return `<!DOCTYPE html>
@@ -942,7 +942,7 @@ export function InvoiceDialog({
 
             {/* Invoice footer text from settings */}
             {invoiceSettings?.footer && (
-              <div className="mt-2 text-center text-muted-foreground text-xs">
+              <div className="mt-2 text-center text-black text-xs">
                 {invoiceSettings.footer}
               </div>
             )}
