@@ -309,7 +309,9 @@ export default function BusinessSettingsPage() {
                           </div>
                           <div>
                             <span className="text-muted-foreground">Layout: </span>
-                            <span className="font-medium">{invoiceSettings.layout}</span>
+                            <span className="font-medium">{
+                              { "pos-58mm": "POS 58mm", "pos-80mm": "POS 80mm", "pos-a4": "A4", "a4": "A4", "a5": "A5" }[invoiceSettings.layout || "pos-80mm"] || invoiceSettings.layout
+                            }</span>
                           </div>
                         </>
                       )}
@@ -706,9 +708,10 @@ export default function BusinessSettingsPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="pos-58mm">POS 58mm</SelectItem>
                             <SelectItem value="pos-80mm">POS 80mm</SelectItem>
                             <SelectItem value="pos-a4">A4</SelectItem>
-                            <SelectItem value="pos-58mm">58mm</SelectItem>
+                            <SelectItem value="a5">A5</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
