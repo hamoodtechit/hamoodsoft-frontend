@@ -502,8 +502,7 @@ export function CheckoutDrawer() {
               </div>
             </div>
 
-            {(paymentMethod === "CASH" || paymentMethod === "CARD") &&
-              accounts.length > 0 && (
+            {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                     Target Account
@@ -699,10 +698,12 @@ export function CheckoutDrawer() {
               isProcessing ||
               isCreditExceeded ||
               (paymentMethod === "MIXED" &&
-                Math.abs(
+                (Math.abs(
                   cartTotals.total -
                     paymentSplits.reduce((acc, s) => acc + s.amount, 0),
-                ) > 0.01)
+                ) > 0.01 || paymentSplits.some(s => !s.accountId))) ||
+              (paymentMethod === "CASH" && !cashAccountId) ||
+              (paymentMethod === "CARD" && !bankAccountId)
             }
             onClick={() => {
               handleCheckout();
