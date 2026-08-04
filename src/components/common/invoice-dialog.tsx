@@ -310,6 +310,23 @@ export function InvoiceDialog({
     return cleaned || name; // fallback to original if regex somehow clears everything
   };
 
+  /**
+   * Formats unit names into abbreviations. e.g. "Liter" -> "L", "Piece" -> "Pc"
+   */
+  const formatUnitAbbreviation = (item: any): string => {
+    if (item.itemType === "FUEL") return "L";
+    if (!item.unit) return "";
+    
+    const unitLower = item.unit.toLowerCase();
+    if (unitLower.includes("lit") || unitLower === "l") return "L";
+    if (unitLower.includes("piec") || unitLower === "pc" || unitLower === "pcs") return "Pc";
+    if (unitLower.includes("kilo") || unitLower === "kg") return "Kg";
+    if (unitLower.includes("gram") || unitLower === "g") return "g";
+    if (unitLower.includes("meter") || unitLower === "m") return "m";
+    
+    return item.unit;
+  };
+
   // ──────────────────────────────────────────────────────────
   // Generate self-contained print HTML (physical units only)
   // ──────────────────────────────────────────────────────────
@@ -338,7 +355,7 @@ export function InvoiceDialog({
           return `<tr>
             <td style="padding:1mm 0.5mm;text-align:left;border-bottom:0.3mm solid #ddd;">${displayName}</td>
             <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${item.price.toFixed(2)}</td>
-            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity}</td>
+            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity} ${formatUnitAbbreviation(item)}</td>
             <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? `${txRate}%` : "0"}</td>
             <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
             <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${itemTotal.toFixed(2)}</td>
@@ -350,7 +367,7 @@ export function InvoiceDialog({
               ${item.sku ? `<div style="font-size:${f.smallFontSizePt}pt;color:#666;">SKU: ${item.sku}</div>` : ""}
             </td>
             <td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${item.price.toFixed(2)}</td>
-            <td style="padding:1.5mm 2mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity}</td>
+            <td style="padding:1.5mm 2mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity} ${formatUnitAbbreviation(item)}</td>
             ${totals.discount > 0 ? `<td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${itemDiscount > 0 ? `-${itemDiscount.toFixed(2)}` : "-"}</td>` : ""}
             <td style="padding:1.5mm 2mm;text-align:center;border-bottom:0.3mm solid #ddd;">${txRate > 0 ? `${txRate}%` : "0"}</td>
             <td style="padding:1.5mm 2mm;text-align:right;border-bottom:0.3mm solid #ddd;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
@@ -364,20 +381,20 @@ export function InvoiceDialog({
     const tableHeader = isPOS
       ? `<tr style="border-top:0.5mm solid #000;border-bottom:0.5mm solid #000;">
             <th style="padding:1mm 0.5mm;text-align:left;font-weight:bold;">Product Name</th>
-            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">MRP</th>
-            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Liter</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Rate</th>
+            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Qty</th>
             <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Tax %</th>
             <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Tax Amt</th>
-            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Price</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Total</th>
           </tr>`
       : `<tr style="border-top:0.5mm solid #000;border-bottom:0.5mm solid #000;">
             <th style="padding:1.5mm 2mm;text-align:left;font-weight:bold;">Product Name</th>
-            <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">MRP</th>
+            <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Rate</th>
             <th style="padding:1.5mm 2mm;text-align:center;font-weight:bold;">Qty</th>
             ${totals.discount > 0 ? `<th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Disc.</th>` : ""}
             <th style="padding:1.5mm 2mm;text-align:center;font-weight:bold;">Tax %</th>
             <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Tax Amt</th>
-            <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Price</th>
+            <th style="padding:1.5mm 2mm;text-align:right;font-weight:bold;">Total</th>
           </tr>`;
 
     // Logos
@@ -391,15 +408,15 @@ export function InvoiceDialog({
     // Bill info section
     const billInfoHtml = isPOS
       ? `<div style="margin-bottom:2mm;padding-bottom:1.5mm;border-bottom:0.3mm dashed #000;font-size:${f.fontSizePt}pt;">
-            <div style="display:flex;justify-content:space-between;font-weight:500;">
-              <span>INV: <strong>${invoiceNo}</strong></span>
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:1mm;font-weight:500;">
+              <span style="flex:1 1 auto;min-width:50%;">Name: ${transaction.contact?.name || "Walk-in"}</span>
+              <span style="white-space:nowrap;">INV: <strong>${invoiceNo}</strong></span>
             </div>
-            <div style="display:flex;justify-content:space-between;font-weight:500;margin-top:0.5mm;">
+            <div style="margin-top:0.5mm;">
               <span>Date: <strong>${formatDateMushak(transaction.createdAt)}</strong></span>
-              <span>Time: <strong>${formatTimeMushak(transaction.createdAt)}</strong></span>
+              <span style="margin-left:2mm;">Time: <strong>${formatTimeMushak(transaction.createdAt)}</strong></span>
             </div>
             ${vehicleNo ? `<div style="margin-top:0.5mm;"><span>G No: <strong>${vehicleNo}</strong></span></div>` : ""}
-            ${transaction.contact?.name ? `<div style="margin-top:0.5mm;color:#444;">Name: ${transaction.contact.name}</div>` : ""}
             ${transaction.contact?.binNumber ? `<div style="margin-top:0.5mm;font-weight:500;">Customer BIN: ${transaction.contact.binNumber}</div>` : ""}
           </div>`
       : `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3mm;padding-bottom:2mm;border-bottom:0.3mm solid #000;font-size:${f.fontSizePt}pt;">
@@ -756,23 +773,20 @@ export function InvoiceDialog({
             {/* Bill Info */}
             {cfg.isPosNarrow ? (
               <div className="mb-2 border-b border-dashed pb-1.5 space-y-0.5">
-                <div className="flex justify-between items-center font-medium">
-                  <span>
+                <div className="flex flex-wrap justify-between items-start gap-x-2 font-medium">
+                  <span className="flex-1 min-w-[50%]">
+                    Name: {transaction.contact?.name || "Walk-in"}
+                  </span>
+                  <span className="whitespace-nowrap">
                     INV: <span className="font-bold">{invoiceNo}</span>
                   </span>
                 </div>
-                <div className="flex justify-between items-center font-medium">
+                <div>
                   <span>
-                    Date:{" "}
-                    <span className="font-bold">
-                      {formatDateMushak(transaction.createdAt)}
-                    </span>
+                    Date: <span className="font-bold">{formatDateMushak(transaction.createdAt)}</span>
                   </span>
-                  <span>
-                    Time:{" "}
-                    <span className="font-bold">
-                      {formatTimeMushak(transaction.createdAt)}
-                    </span>
+                  <span className="ml-3">
+                    Time: <span className="font-bold">{formatTimeMushak(transaction.createdAt)}</span>
                   </span>
                 </div>
                 {vehicleNo && (
@@ -782,16 +796,8 @@ export function InvoiceDialog({
                     </span>
                   </div>
                 )}
-                {transaction.contact?.name && (
-                  <div className="text-gray-700">
-                    <span>
-                      Name:{" "}
-                      {transaction.contact.name}
-                    </span>
-                  </div>
-                )}
                 {transaction.contact?.binNumber && (
-                  <div className="text-gray-700 font-medium">
+                  <div className="font-medium">
                     <span>
                       Customer BIN: {transaction.contact.binNumber}
                     </span>
@@ -842,12 +848,12 @@ export function InvoiceDialog({
                     <th
                       className={`text-right font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
                     >
-                      MRP
+                      Rate
                     </th>
                     <th
                       className={`text-center font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
                     >
-                      {cfg.isPosNarrow ? "Liter" : "Qty"}
+                      Qty
                     </th>
                     {!cfg.isPosNarrow && totals.discount > 0 && (
                       <th className="text-right py-1.5 px-2 font-bold">
@@ -867,7 +873,7 @@ export function InvoiceDialog({
                     <th
                       className={`text-right font-bold ${cfg.isPosNarrow ? "py-0.5 px-0.5" : "py-1.5 px-2"}`}
                     >
-                      Price
+                      Total
                     </th>
                   </tr>
                 </thead>
@@ -928,7 +934,7 @@ export function InvoiceDialog({
                           <td
                             className={`text-center whitespace-nowrap ${cfg.isPosNarrow ? "py-1 px-0.5 align-top" : "py-1.5 px-2 align-top"}`}
                           >
-                            {item.quantity}
+                            {item.quantity} {formatUnitAbbreviation(item)}
                           </td>
                           {!cfg.isPosNarrow && totals.discount > 0 && (
                             <td className="text-right py-1.5 px-2 align-top whitespace-nowrap">
