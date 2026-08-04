@@ -7,12 +7,14 @@ const baseContactSchema = z.object({
   isIndividual: z.boolean().default(true),
   phone: z.string().optional(),
   address: z.string().optional(),
+  binNumber: z.string().optional(),
   companyId: z.string().optional(),
   balance: z.coerce.number().default(0),
   creditLimit: z.number().min(0, "Credit limit must be greater than or equal to 0").default(0),
   vehicles: z.array(z.object({
     id: z.string().optional(),
-    vehicleNo: z.string().min(1, "Vehicle number is required")
+    vehicleNo: z.string().min(1, "Vehicle number is required"),
+    driverName: z.string().optional()
   })).optional(),
 })
 

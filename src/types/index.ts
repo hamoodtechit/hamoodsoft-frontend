@@ -407,6 +407,7 @@ export interface Vehicle {
   id: string
   contactId: string
   vehicleNo: string
+  driverName?: string
   contact?: Contact
   createdAt?: string
   updatedAt?: string

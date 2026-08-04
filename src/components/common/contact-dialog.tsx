@@ -77,6 +77,7 @@ export function ContactDialog({
         email: "",
         phone: "",
         address: "",
+        binNumber: "",
         isIndividual: defaultIsIndividual,
         companyId: "",
         balance: 0,
@@ -90,11 +91,12 @@ export function ContactDialog({
       email: contact.email || "",
       phone: contact.phone || "",
       address: contact.address || "",
+      binNumber: contact.binNumber || "",
       isIndividual: contact.isIndividual ?? defaultIsIndividual,
       companyId: "",
       balance: contact.balance || 0,
       creditLimit: contact.creditLimit || 0,
-      vehicles: contact.vehicles?.map(v => ({ id: v.id, vehicleNo: v.vehicleNo })) || [],
+      vehicles: contact.vehicles?.map(v => ({ id: v.id, vehicleNo: v.vehicleNo, driverName: v.driverName || "" })) || [],
     };
   }, [contact, defaultIsIndividual]);
 
@@ -320,7 +322,7 @@ export function ContactDialog({
                       variant="outline"
                       size="sm"
                       className="h-8"
-                      onClick={() => append({ vehicleNo: "" })}
+                      onClick={() => append({ vehicleNo: "", driverName: "" })}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Vehicle
@@ -330,15 +332,33 @@ export function ContactDialog({
                     <p className="text-sm text-muted-foreground italic">No vehicles added.</p>
                   )}
                   {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-start gap-2">
+                    <div key={field.id} className="flex items-start gap-2 bg-muted/30 p-2 rounded-md border">
                       <FormField
                         control={form.control}
                         name={`vehicles.${index}.vehicleNo`}
                         render={({ field: inputField }) => (
-                          <FormItem className="flex-1">
+                          <FormItem className="flex-1 space-y-1">
+                            <FormLabel className="text-xs">Vehicle No <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="e.g. ABC-1234"
+                                placeholder="e.g. DHAKA-METRO-1234"
+                                {...inputField}
+                                value={inputField.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`vehicles.${index}.driverName`}
+                        render={({ field: inputField }) => (
+                          <FormItem className="flex-1 space-y-1">
+                            <FormLabel className="text-xs">Driver Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="e.g. Anam"
                                 {...inputField}
                                 value={inputField.value || ""}
                               />
@@ -351,7 +371,7 @@ export function ContactDialog({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 mt-6"
                         onClick={() => remove(index)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -397,22 +417,42 @@ export function ContactDialog({
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("address")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("addressPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("address")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={t("addressPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="binNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>BIN Number (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. 123456789"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
 
 

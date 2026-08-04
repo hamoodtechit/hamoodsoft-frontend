@@ -279,6 +279,12 @@ export default function BusinessSettingsPage() {
                               <span className="font-medium">{generalSettings.timeZone}</span>
                             </div>
                           )}
+                          {generalSettings.binNumber && (
+                            <div>
+                              <span className="text-muted-foreground">BIN Number: </span>
+                              <span className="font-medium">{generalSettings.binNumber}</span>
+                            </div>
+                          )}
                         </>
                       )}
                       {setting.name === "taxRate" && taxSettings && (

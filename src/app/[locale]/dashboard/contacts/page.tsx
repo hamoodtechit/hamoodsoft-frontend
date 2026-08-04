@@ -117,6 +117,11 @@ export default function ContactsPage() {
         cell: (row) => (
           <div className="flex flex-col">
             <span className="font-semibold text-sm text-foreground">{row.name}</span>
+            {row.binNumber && (
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                BIN: {row.binNumber}
+              </span>
+            )}
             {row.address && (
               <span className="text-xs text-muted-foreground truncate max-w-[220px]">
                 {row.address}
@@ -170,6 +175,7 @@ export default function ContactsPage() {
               {row.vehicles.map((v) => (
                 <Badge key={v.id || v.vehicleNo} variant="outline" className="text-xs font-mono px-1.5 py-0.5">
                   {v.vehicleNo}
+                  {v.driverName ? ` (${v.driverName})` : ""}
                 </Badge>
               ))}
             </div>

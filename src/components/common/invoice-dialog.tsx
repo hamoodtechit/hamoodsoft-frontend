@@ -286,6 +286,10 @@ export function InvoiceDialog({
     : (transaction as Sale)?.invoiceNumber || transaction?.id;
 
   const vehicleNo = !isPurchase ? (transaction as Sale)?.vehicleNo : undefined;
+  const selectedVehicle = !isPurchase && vehicleNo
+    ? transaction?.contact?.vehicles?.find((v) => v.vehicleNo === vehicleNo)
+    : undefined;
+  const driverName = selectedVehicle?.driverName;
 
   // Tax rate from transaction (sale-level)
   const txRate = isPurchase
@@ -416,14 +420,18 @@ export function InvoiceDialog({
               <span>Date: <strong>${formatDateMushak(transaction.createdAt)}</strong></span>
               <span style="margin-left:2mm;">Time: <strong>${formatTimeMushak(transaction.createdAt)}</strong></span>
             </div>
-            ${vehicleNo ? `<div style="margin-top:0.5mm;"><span>G No: <strong>${vehicleNo}</strong></span></div>` : ""}
-            ${transaction.contact?.binNumber ? `<div style="margin-top:0.5mm;font-weight:500;">Customer BIN: ${transaction.contact.binNumber}</div>` : ""}
+            ${(vehicleNo || transaction.contact?.binNumber) ? `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:1mm;font-weight:500;margin-top:0.5mm;">
+              ${vehicleNo ? `<span style="flex:1 1 auto;min-width:50%;">G No: <strong>${vehicleNo}</strong>${driverName ? ` (Driver: <strong>${driverName}</strong>)` : ""}</span>` : `<span style="flex:1 1 auto;"></span>`}
+              ${transaction.contact?.binNumber ? `<span style="white-space:nowrap;">BIN: <strong>${transaction.contact.binNumber}</strong></span>` : ""}
+            </div>` : ""}
           </div>`
       : `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3mm;padding-bottom:2mm;border-bottom:0.3mm solid #000;font-size:${f.fontSizePt}pt;">
             <div>
               <div style="font-weight:600;">Name: ${transaction.contact?.name || "Walk-in"}</div>
-              ${vehicleNo ? `<div>Vehicle No: ${vehicleNo}</div>` : ""}
-              ${transaction.contact?.binNumber ? `<div style="font-weight:500;">Customer BIN: ${transaction.contact.binNumber}</div>` : ""}
+              <div style="display:flex;flex-wrap:wrap;gap:3mm;margin-top:0.5mm;">
+                ${vehicleNo ? `<div>Vehicle No: <strong>${vehicleNo}</strong>${driverName ? ` (Driver: <strong>${driverName}</strong>)` : ""}</div>` : ""}
+                ${transaction.contact?.binNumber ? `<div>Customer BIN: <strong>${transaction.contact.binNumber}</strong></div>` : ""}
+              </div>
             </div>
             <div style="text-align:right;">
               <div><strong>${isPurchase ? "PO:" : "INV:"}</strong> ${invoiceNo}</div>
@@ -789,18 +797,21 @@ export function InvoiceDialog({
                     Time: <span className="font-bold">{formatTimeMushak(transaction.createdAt)}</span>
                   </span>
                 </div>
-                {vehicleNo && (
-                  <div>
-                    <span>
-                      G No: <span className="font-bold">{vehicleNo}</span>
-                    </span>
-                  </div>
-                )}
-                {transaction.contact?.binNumber && (
-                  <div className="font-medium">
-                    <span>
-                      Customer BIN: {transaction.contact.binNumber}
-                    </span>
+                {(vehicleNo || transaction.contact?.binNumber) && (
+                  <div className="flex flex-wrap justify-between items-start gap-x-2 font-medium">
+                    {vehicleNo ? (
+                      <span className="flex-1 min-w-[50%]">
+                        G No: <span className="font-bold">{vehicleNo}</span>
+                        {driverName && <span> (Driver: <span className="font-bold">{driverName}</span>)</span>}
+                      </span>
+                    ) : (
+                      <span className="flex-1" />
+                    )}
+                    {transaction.contact?.binNumber && (
+                      <span className="whitespace-nowrap">
+                        BIN: <span className="font-bold">{transaction.contact.binNumber}</span>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -811,11 +822,17 @@ export function InvoiceDialog({
                     Name:{" "}
                     {transaction.contact?.name || "Walk-in"}
                   </p>
-
-                  {vehicleNo && <p>Vehicle No: {vehicleNo}</p>}
-                  {transaction.contact?.binNumber && (
-                    <p className="font-medium">Customer BIN: {transaction.contact.binNumber}</p>
-                  )}
+                  <div className="flex flex-wrap gap-x-3 text-sm">
+                    {vehicleNo && (
+                      <p>
+                        Vehicle No: <span className="font-medium">{vehicleNo}</span>
+                        {driverName && <span> (Driver: <span className="font-medium">{driverName}</span>)</span>}
+                      </p>
+                    )}
+                    {transaction.contact?.binNumber && (
+                      <p className="font-medium">Customer BIN: {transaction.contact.binNumber}</p>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <p>
