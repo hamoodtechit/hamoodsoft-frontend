@@ -18,6 +18,8 @@ export function useSales(params?: SalesListParams) {
     params?.contactId ?? null,
     params?.status ?? null,
     params?.paymentStatus ?? null,
+    params?.startDate ?? null,
+    params?.endDate ?? null,
     branchId ?? null, // Explicitly include branchId (null if undefined) so changes trigger refetch
   ] as const
 

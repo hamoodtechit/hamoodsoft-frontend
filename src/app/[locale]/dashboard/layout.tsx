@@ -153,19 +153,19 @@ export default function DashboardLayout({
     <PermissionsProvider>
       <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
         {/* Desktop sidebar — hidden on mobile, shown on md+ screens */}
-        <div className="hidden md:flex">
+        <div className="hidden md:flex print:hidden">
           <Sidebar />
         </div>
         <main className="flex-1 flex flex-col overflow-hidden relative min-w-0" id="layout-main-area">
-          {!isPOS && <DashboardHeader />}
+          {!isPOS && <div className="print:hidden"><DashboardHeader /></div>}
           <div 
              id="main-scroll" 
              className={cn(
-               "flex-1 overflow-auto scroll-smooth", 
+               "flex-1 overflow-auto scroll-smooth print:overflow-visible print:p-0", 
                !isPOS && "p-4 sm:p-6 md:p-8 lg:p-10"
              )}
           >
-            <div className={cn("w-full h-full", !isPOS && "max-w-[1600px] mx-auto")}>
+            <div className={cn("w-full h-full print:max-w-none print:mx-0", !isPOS && "max-w-[1600px] mx-auto")}>
               {children}
             </div>
           </div>

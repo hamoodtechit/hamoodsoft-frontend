@@ -126,6 +126,7 @@ export default function DashboardPage() {
     accounting: 999, // Show all accounting items (no "See More" button)
     business: 9,
     modules: 2,
+    reports: 4,
   }
 
   // Define all dashboard items with colors
@@ -241,6 +242,18 @@ export default function DashboardPage() {
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
       requiredPermissions: ["attributes:read"],
+    },
+    // Reports submenu items
+    {
+      id: "sales-report",
+      title: t("sidebar.reports") + " - Sales",
+      href: "/dashboard/reports/sales",
+      icon: BarChart3,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      enabled: enabledModules.includes("sales"),
+      category: "reports",
+      requiredPermissions: ["sales:read"],
     },
     // Accounting submenu items
     {
@@ -579,6 +592,11 @@ export default function DashboardPage() {
       {/* Accounting Grid */}
       {groupedItems.accounting && groupedItems.accounting.length > 0 &&
         renderCategoryGrid(groupedItems.accounting, "accounting", t("sidebar.accounting"))
+      }
+
+      {/* Reports Grid */}
+      {groupedItems.reports && groupedItems.reports.length > 0 &&
+        renderCategoryGrid(groupedItems.reports, "reports", t("sidebar.reports") || "Reports")
       }
 
       {/* Business Management Grid */}

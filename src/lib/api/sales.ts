@@ -11,6 +11,8 @@ export type SalesListParams = {
   contactId?: string
   status?: "DRAFT" | "SOLD" | "PENDING"
   paymentStatus?: "PAID" | "DUE" | "PARTIAL"
+  startDate?: string
+  endDate?: string
 }
 
 type SalesResponseShape = {
