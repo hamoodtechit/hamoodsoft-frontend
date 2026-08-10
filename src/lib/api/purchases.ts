@@ -11,6 +11,8 @@ export type PurchasesListParams = {
   contactId?: string
   status?: "PENDING" | "COMPLETED" | "CANCELLED"
   purchaseType?: "PRODUCT" | "FUEL"
+  startDate?: string
+  endDate?: string
 }
 
 type PurchasesResponseShape = {

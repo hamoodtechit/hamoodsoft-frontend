@@ -98,7 +98,7 @@ export function Sidebar() {
       icon: BarChart2,
       color: "text-purple-400",
       hash: "#reports-section",
-      activePrefixes: ["/reports"],
+      activePrefixes: ["/reports", "/dashboard/reports/sales", "/dashboard/reports/purchases", "/dashboard/reports/income", "/dashboard/reports/expense"],
       requiredPermissions: [] as string[],
     },
     {

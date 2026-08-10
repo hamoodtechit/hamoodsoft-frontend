@@ -18,6 +18,8 @@ export function usePurchases(params?: PurchasesListParams) {
     params?.status ?? null,
     params?.purchaseType ?? null,
     branchId ?? null,
+    params?.startDate ?? null,
+    params?.endDate ?? null,
   ] as const
 
   return useQuery({
