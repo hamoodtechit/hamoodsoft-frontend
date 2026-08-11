@@ -1,0 +1,15 @@
+# REQUIRED FIELDS:
+#   First Name, Gender, Date of Birth
+#
+# OPTIONAL FIELDS:
+#   - Basic Info:    Roll Number, Last Name, Phone Number, Email, Address, Blood Group, Nationality, Religion
+#   - Academic:      Category Name, Previous School, Subject Group Name, Subject Group ID
+#   - Parents Info:  Father Name, Father Phone, Father Email, Father Occupation, Mother Name, Mother Phone, Mother Email, Mother Occupation
+#   - Guardian Info: Guardian Name, Guardian Phone, Guardian Relation, Guardian Address
+
+Roll Number,First Name,Last Name,Gender,Date of Birth,Phone Number,Email,Address,Category Name,Blood Group,Nationality,Religion,Previous School,Subject Group Name,Subject Group ID,Father Name,Father Phone,Father Email,Father Occupation,Mother Name,Mother Phone,Mother Email,Mother Occupation,Guardian Name,Guardian Phone,Guardian Relation,Guardian Address
+101,Abdul,Rahman,Male,2010-03-15T00:00:00.000Z,01712345678,abdul.rahman@example.com,House 12 Road 5 Dhanmondi,,A+,Bangladeshi,Islam,Sunshine Primary School,Science,,Md. Rafiq Rahman,01711112222,,,Fatema Rahman,01711112223,,,,,,
+102,Fatima,Khatun,Female,2009-08-22T00:00:00.000Z,01723456789,fatima.k@example.com,45/A Gulshan Avenue,,O+,Bangladeshi,Islam,Greenland Academy,Science,,Md. Anwar Hossain,01722223333,,,Nasrin Hossain,01722223344,,,,,,
+103,Rabiul,Islam,Male,2011-01-10T00:00:00.000Z,01734567890,rabiul.i@example.com,Vill: Shimulia Post: Mirpur,,B+,Bangladeshi,Islam,,Science,,,Akbar Ali,01733334444,,,Sakina Begum,01733334455,,,,,,
+104,Tasnim,Ahmed,Female,2010-07-05T00:00:00.000Z,01745678901,tasnim.ahmed@example.com,Plot 23 Block C Bashundhara,,AB+,Bangladeshi,Islam,Oxford International,Science,,Md. Kabir Ahmed,01744445555,,,Shirin Ahmed,01744445566,,,,,,
+105,Ayesha,Siddiqua,Female,2011-04-14T00:00:00.000Z,01789012345,ayesha.s@example.com,Flat 2B Lake View Kalyanpur,,B+,Bangladeshi,Islam,Scholars Academy,Science,,Abdul Karim,01788889900,,,,,,,Mizanur Rahman,01788889911,,
