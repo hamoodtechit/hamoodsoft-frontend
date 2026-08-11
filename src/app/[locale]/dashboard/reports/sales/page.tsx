@@ -14,6 +14,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { ReportSummary } from "@/components/reports/ReportSummary"
 
 export default function SalesReportPage() {
   const t = useTranslations("sales")
@@ -106,63 +107,14 @@ export default function SalesReportPage() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards - Screen only */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summaries.totalRevenue, { generalSettings })}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Tax</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summaries.totalTax, { generalSettings })}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Amount Paid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-500">
-              {formatCurrency(summaries.paidAmount, { generalSettings })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaries.totalTransactions}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Print Summary - Print only */}
-      <div className="hidden print:flex print:flex-wrap print:gap-x-12 print:gap-y-2 print:mb-6 print:py-3 print:border-y print:border-slate-200">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Total Revenue:</span>
-          <span className="text-sm font-bold text-slate-900">{formatCurrency(summaries.totalRevenue, { generalSettings })}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Total Tax:</span>
-          <span className="text-sm font-bold text-slate-900">{formatCurrency(summaries.totalTax, { generalSettings })}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Amount Paid:</span>
-          <span className="text-sm font-bold text-slate-900">{formatCurrency(summaries.paidAmount, { generalSettings })}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Transactions:</span>
-          <span className="text-sm font-bold text-slate-900">{summaries.totalTransactions}</span>
-        </div>
-      </div>
+      <ReportSummary 
+        items={[
+          { label: "Total Revenue", value: formatCurrency(summaries.totalRevenue, { generalSettings }) },
+          { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
+          { label: "Amount Paid", value: formatCurrency(summaries.paidAmount, { generalSettings }), valueClassName: "text-green-600 dark:text-green-500" },
+          { label: "Total Transactions", value: summaries.totalTransactions }
+        ]} 
+      />
 
       {/* Data Table */}
       <Card className="print:shadow-none print:border-0">

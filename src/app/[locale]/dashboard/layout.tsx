@@ -151,7 +151,7 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
+      <div className="flex h-screen bg-slate-50 dark:bg-slate-900 print:bg-white font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
         {/* Desktop sidebar — hidden on mobile, shown on md+ screens */}
         <div className="hidden md:flex print:hidden">
           <Sidebar />

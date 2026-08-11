@@ -42,17 +42,17 @@ export function PrintHeader({ title, subtitle, dateRange }: PrintHeaderProps) {
             
             <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-600">
               {officePhone && (
-                <span><strong>TEL:</strong> {officePhone}</span>
+                <span><strong>Phone:</strong> {officePhone}</span>
               )}
               {binNumber && (
-                <span><strong>VAT/BIN:</strong> {binNumber}</span>
+                <span><strong>BIN:</strong> {binNumber}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Right: Report Info */}
-        <div className="text-right flex flex-col items-end">
+        <div className="text-right flex flex-col items-end pr-4">
           <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider m-0">
             {title}
           </h2>

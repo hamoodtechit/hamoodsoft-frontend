@@ -13,6 +13,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { ReportSummary } from "@/components/reports/ReportSummary"
 
 export default function ExpenseReportPage() {
   const t = useTranslations("accounting")
@@ -96,39 +97,12 @@ export default function ExpenseReportPage() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards - Screen only */}
-      <div className="grid grid-cols-2 gap-4 print:hidden">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-500">
-              {formatCurrency(summaries.totalExpense, { generalSettings })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Total Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summaries.totalTransactions}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Print Summary - Print only */}
-      <div className="hidden print:flex print:flex-wrap print:gap-x-12 print:gap-y-2 print:mb-6 print:py-3 print:border-y print:border-slate-200">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Total Expenses:</span>
-          <span className="text-sm font-bold text-slate-900">{formatCurrency(summaries.totalExpense, { generalSettings })}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Transactions:</span>
-          <span className="text-sm font-bold text-slate-900">{summaries.totalTransactions}</span>
-        </div>
-      </div>
+      <ReportSummary 
+        items={[
+          { label: "Total Expenses", value: formatCurrency(summaries.totalExpense, { generalSettings }), valueClassName: "text-red-600 dark:text-red-500" },
+          { label: "Total Transactions", value: summaries.totalTransactions }
+        ]} 
+      />
 
       {/* Data Table */}
       <Card className="print:shadow-none print:border-0">
