@@ -96,9 +96,9 @@ export default function ExpenseReportPage() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards - Visible on both screen and print */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="print-break-inside-avoid print:shadow-none print:border-slate-200">
+      {/* Summary Cards - Screen only */}
+      <div className="grid grid-cols-2 gap-4 print:hidden">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">Total Expenses</CardTitle>
           </CardHeader>
@@ -108,7 +108,7 @@ export default function ExpenseReportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="print-break-inside-avoid print:shadow-none print:border-slate-200">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">Total Transactions</CardTitle>
           </CardHeader>
@@ -116,6 +116,18 @@ export default function ExpenseReportPage() {
             <div className="text-2xl font-bold">{summaries.totalTransactions}</div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Print Summary - Print only */}
+      <div className="hidden print:flex print:flex-wrap print:gap-x-12 print:gap-y-2 print:mb-6 print:py-3 print:border-y print:border-slate-200">
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Total Expenses:</span>
+          <span className="text-sm font-bold text-slate-900">{formatCurrency(summaries.totalExpense, { generalSettings })}</span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Transactions:</span>
+          <span className="text-sm font-bold text-slate-900">{summaries.totalTransactions}</span>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -132,7 +144,7 @@ export default function ExpenseReportPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print-exact border-y">
+                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Date</th>
                     <th className="px-4 py-3 font-semibold">Reference</th>
