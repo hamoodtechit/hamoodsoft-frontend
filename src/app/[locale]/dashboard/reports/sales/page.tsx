@@ -1,5 +1,6 @@
 "use client"
 
+import { BackButton } from "@/components/common/back-button"
 import { PrintHeader } from "@/components/common/PrintHeader"
 import { ReportActionButtons } from "@/components/common/ReportActionButtons"
 import { Badge } from "@/components/ui/badge"
@@ -64,17 +65,21 @@ export default function SalesReportPage() {
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
       <PrintHeader 
-        title="Sales Report" 
+        title="Sales Reports" 
         dateRange={{ 
           from: dateRange.from ? new Date(dateRange.from) : new Date(), 
           to: dateRange.to ? new Date(dateRange.to) : undefined 
         }} 
       />
 
+      <div className="print:hidden">
+        <BackButton href="/dashboard#reports-section" />
+      </div>
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Sales Report
+            Sales Reports
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
             View and print your sales transactions history.

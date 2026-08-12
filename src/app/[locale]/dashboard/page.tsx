@@ -246,7 +246,7 @@ export default function DashboardPage() {
     // Reports submenu items
     {
       id: "sales-report",
-      title: t("sidebar.reports") + " - Sales",
+      title: t("sidebar.salesReport") || "Sales Reports",
       href: "/dashboard/reports/sales",
       icon: BarChart3,
       color: "text-purple-600",
@@ -257,7 +257,7 @@ export default function DashboardPage() {
     },
     {
       id: "purchases-report",
-      title: t("sidebar.reports") + " - Purchases",
+      title: t("sidebar.purchasesReport") || "Purchase Reports",
       href: "/dashboard/reports/purchases",
       icon: Package,
       color: "text-orange-600",
@@ -268,7 +268,7 @@ export default function DashboardPage() {
     },
     {
       id: "income-report",
-      title: t("sidebar.reports") + " - Income",
+      title: t("sidebar.incomeReport") || "Income Reports",
       href: "/dashboard/reports/income",
       icon: TrendingUp,
       color: "text-green-600",
@@ -279,7 +279,7 @@ export default function DashboardPage() {
     },
     {
       id: "expense-report",
-      title: t("sidebar.reports") + " - Expense",
+      title: t("sidebar.expenseReport") || "Expense Reports",
       href: "/dashboard/reports/expense",
       icon: TrendingDown,
       color: "text-red-600",
