@@ -1,5 +1,6 @@
 "use client"
 
+import { DataTable, type Column } from "@/components/common/data-table"
 import { PageLayout } from "@/components/common/page-layout"
 import { TransactionDialog } from "@/components/common/transaction-dialog"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
@@ -7,6 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Sheet,
   SheetContent,
@@ -23,7 +30,7 @@ import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Transaction } from "@/types"
-import { Eye, Plus, TrendingDown } from "lucide-react"
+import { Eye, Plus, TrendingDown, MoreVertical } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -69,6 +76,73 @@ export default function ExpensePage() {
     if (!viewTransactionId) return null
     return allTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
   }, [viewTransactionId, allTransactions])
+
+  // Table columns configuration
+  const tableColumns: Column<Transaction>[] = useMemo(() => [
+    {
+      id: "date",
+      header: tCommon("date") || "Date",
+      cell: (row) => row.occurredAt ? new Date(row.occurredAt).toLocaleDateString() : "-",
+      sortable: true,
+      accessorKey: "occurredAt",
+    },
+    {
+      id: "type",
+      header: tCommon("type") || "Type",
+      cell: (row) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="destructive">Expense</Badge>
+          {(row as any).incomeExpenseCategory?.name && (
+            <Badge variant="outline" className="text-xs">
+              {(row as any).incomeExpenseCategory.name}
+            </Badge>
+          )}
+          {!((row as any).incomeExpenseCategory?.name) && (row as any).category && (
+            <Badge variant="outline" className="text-xs">
+              {(row as any).category}
+            </Badge>
+          )}
+        </div>
+      ),
+      sortable: false,
+    },
+    {
+      id: "account",
+      header: t("account") || "Account",
+      cell: (row) => row.account?.name || "-",
+      sortable: false,
+    },
+    {
+      id: "contact",
+      header: t("contact") || "Contact",
+      cell: (row) => row.contact?.name || "-",
+      sortable: false,
+    },
+    {
+      id: "branch",
+      header: t("branch") || "Branch",
+      cell: (row) => row.branch?.name || "-",
+      sortable: false,
+    },
+    {
+      id: "note",
+      header: t("note") || "Note",
+      accessorKey: "note",
+      sortable: false,
+      cell: (row) => row.note ? <span className="line-clamp-1 max-w-[200px]" title={row.note}>{row.note}</span> : "-",
+    },
+    {
+      id: "amount",
+      header: tCommon("amount") || "Amount",
+      accessorKey: "amount",
+      cell: (row) => (
+        <span className="font-semibold text-red-600">
+          -{formatCurrency(row.amount, { generalSettings })}
+        </span>
+      ),
+      sortable: true,
+    },
+  ], [t, tCommon, generalSettings])
 
   // Show loading while checking permissions
   if (isCheckingAccess) {
@@ -126,75 +200,34 @@ export default function ExpensePage() {
               No expense transactions found
             </div>
           ) : (
-            <div className="space-y-2">
-              {expenseTransactions.map((transaction: Transaction) => (
-                <div
-                  key={transaction.id}
-                  className="rounded-lg border p-3 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setViewTransactionId(transaction.id)
-                    setIsTransactionDetailsOpen(true)
-                  }}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="destructive">Expense</Badge>
-                      {(transaction as any).incomeExpenseCategory?.name && (
-                        <Badge variant="outline" className="text-xs">
-                          {(transaction as any).incomeExpenseCategory.name}
-                        </Badge>
-                      )}
-                      {!((transaction as any).incomeExpenseCategory?.name) && (transaction as any).category && (
-                        <Badge variant="outline" className="text-xs">
-                          {(transaction as any).category}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-1">
-                      {transaction.account?.name && (
-                        <p className="text-sm text-muted-foreground">
-                          Account: <span className="font-medium">{transaction.account.name}</span>
-                        </p>
-                      )}
-                      {transaction.contact?.name && (
-                        <p className="text-sm text-muted-foreground">
-                          Contact: <span className="font-medium">{transaction.contact.name}</span>
-                        </p>
-                      )}
-                      {transaction.branch?.name && (
-                        <p className="text-sm text-muted-foreground">
-                          Branch: <span className="font-medium">{transaction.branch.name}</span>
-                        </p>
-                      )}
-                      {transaction.note && (
-                        <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {transaction.occurredAt
-                        ? new Date(transaction.occurredAt).toLocaleString()
-                        : "-"}
-                    </p>
-                  </div>
-                  <div className="text-right flex items-center gap-3">
-                    <p className="font-semibold text-red-600">
-                      -{formatCurrency(transaction.amount, { generalSettings })}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setViewTransactionId(transaction.id)
+            <div className="rounded-md border">
+              <DataTable
+                data={expenseTransactions}
+                columns={tableColumns}
+                onRowClick={(row) => {
+                  setViewTransactionId(row.id)
+                  setIsTransactionDetailsOpen(true)
+                }}
+                actions={(row) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => {
+                        setViewTransactionId(row.id)
                         setIsTransactionDetailsOpen(true)
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      }}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {tCommon("viewDetails") || "View Details"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                emptyMessage={t("noTransactions") || "No expense transactions found"}
+              />
             </div>
           )}
         </CardContent>

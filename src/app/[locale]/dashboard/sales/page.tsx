@@ -64,9 +64,9 @@ export default function SalesPage() {
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("sales-view-mode") as ViewMode) || "cards"
+      return (localStorage.getItem("sales-view-mode") as ViewMode) || "table"
     }
-    return "cards"
+    return "table"
   })
 
   // Save view mode preference

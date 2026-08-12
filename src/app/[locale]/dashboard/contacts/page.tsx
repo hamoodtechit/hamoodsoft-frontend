@@ -65,11 +65,9 @@ export default function ContactsPage() {
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (
-        (localStorage.getItem("contacts-view-mode") as ViewMode) || "cards"
-      );
+      return (localStorage.getItem("contacts-view-mode") as ViewMode) || "table";
     }
-    return "cards";
+    return "table";
   });
 
   const queryParams = useMemo<ContactsListParams>(() => {
