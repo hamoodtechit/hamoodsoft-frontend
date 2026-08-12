@@ -104,7 +104,7 @@ export default function SalesReportPage() {
 
       <BackButton href="/dashboard#reports-section" />
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden !mt-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Sales Reports
