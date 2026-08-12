@@ -8,7 +8,6 @@ const baseContactSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   binNumber: z.string().optional(),
-  companyId: z.string().optional(),
   balance: z.coerce.number().default(0),
   creditLimit: z.number().min(0, "Credit limit must be greater than or equal to 0").default(0),
   vehicles: z.array(z.object({
@@ -20,7 +19,7 @@ const baseContactSchema = z.object({
 
 export const createContactSchema = baseContactSchema.extend({
   isIndividual: z.boolean(),
-}).refine(data => (data.name && data.name.trim().length > 0) || (data.companyId && data.companyId !== "new"), {
+}).refine(data => data.name && data.name.trim().length > 0, {
   message: "Name is required",
   path: ["name"]
 })

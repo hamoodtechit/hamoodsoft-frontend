@@ -59,8 +59,6 @@ export function ContactDialog({
 }: ContactDialogProps) {
   const t = useTranslations("contacts");
   const tCommon = useTranslations("common");
-  const { data: companiesData } = useContacts({ limit: 1000, isIndividual: false });
-  const companies = companiesData?.items || [];
   const createMutation = useCreateContact();
   const updateMutation = useUpdateContact();
 
@@ -79,7 +77,6 @@ export function ContactDialog({
         address: "",
         binNumber: "",
         isIndividual: defaultIsIndividual,
-        companyId: "",
         balance: 0,
         creditLimit: 0,
         vehicles: [],
@@ -93,7 +90,6 @@ export function ContactDialog({
       address: contact.address || "",
       binNumber: contact.binNumber || "",
       isIndividual: contact.isIndividual ?? defaultIsIndividual,
-      companyId: "",
       balance: contact.balance || 0,
       creditLimit: contact.creditLimit || 0,
       vehicles: contact.vehicles?.map(v => ({ id: v.id, vehicleNo: v.vehicleNo, driverName: v.driverName || "" })) || [],
@@ -117,11 +113,6 @@ export function ContactDialog({
     defaultValue: defaultIsIndividual,
   });
 
-  const selectedCompanyId = useWatch({
-    control: form.control,
-    name: "companyId",
-  });
-
   useEffect(() => {
     if (open) {
       form.reset(defaultValues);
@@ -134,9 +125,6 @@ export function ContactDialog({
 
   const onSubmit = (data: CreateContactInput | UpdateContactInput) => {
     const payload = { ...data };
-    if (payload.companyId === "new") {
-      delete payload.companyId;
-    }
 
     if (isEdit && contact) {
       updateMutation.mutate(
@@ -251,67 +239,26 @@ export function ContactDialog({
                     )}
                   />
 
-                  {!isIndividual && !isEdit ? (
-                    <FormField
-                      control={form.control}
-                      name="companyId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company</FormLabel>
-                          <Select
-                            onValueChange={(val) => {
-                              field.onChange(val);
-                              if (val !== "new") {
-                                const selectedComp = companies.find((c: any) => c.id === val);
-                                if (selectedComp) {
-                                  form.setValue("name", selectedComp.name);
-                                }
-                              }
-                            }}
-                            value={field.value || "new"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a company" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="new">-- Create New Company --</SelectItem>
-                              {companies.filter((c: any) => Boolean(c && c.id)).map((c: any) => (
-                                <SelectItem key={c.id} value={String(c.id)}>{c.name || "Unnamed Company"}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : null}
-
-                  {(!selectedCompanyId || selectedCompanyId === "new" || isIndividual) ? (
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {isIndividual ? t("name") : t("companyName")}{" "}
-                            <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={isIndividual ? t("namePlaceholder") : t("companyNamePlaceholder")}
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <div />
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {isIndividual ? t("name") : t("companyName")}{" "}
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={isIndividual ? t("namePlaceholder") : t("companyNamePlaceholder")}
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-4">
