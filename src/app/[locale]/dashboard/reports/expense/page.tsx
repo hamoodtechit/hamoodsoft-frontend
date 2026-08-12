@@ -54,17 +54,15 @@ export default function ExpenseReportPage() {
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
-      <PrintHeader 
-        title="Expense Reports" 
-        dateRange={{ 
-          from: dateRange.from ? new Date(dateRange.from) : new Date(), 
-          to: dateRange.to ? new Date(dateRange.to) : undefined 
-        }} 
+      <PrintHeader
+        title="Expense Reports"
+        dateRange={{
+          from: dateRange.from ? new Date(dateRange.from) : new Date(),
+          to: dateRange.to ? new Date(dateRange.to) : undefined
+        }}
       />
 
-      <div className="print:hidden">
-        <BackButton href="/dashboard#reports-section" />
-      </div>
+      <BackButton href="/dashboard#reports-section" />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
         <div>
@@ -83,18 +81,18 @@ export default function ExpenseReportPage() {
         <CardContent className="p-4 flex flex-wrap gap-4 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="date-from">From Date</Label>
-            <Input 
-              id="date-from" 
-              type="date" 
+            <Input
+              id="date-from"
+              type="date"
               value={dateRange.from}
               onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date-to">To Date</Label>
-            <Input 
-              id="date-to" 
-              type="date" 
+            <Input
+              id="date-to"
+              type="date"
               value={dateRange.to}
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
@@ -102,11 +100,11 @@ export default function ExpenseReportPage() {
         </CardContent>
       </Card>
 
-      <ReportSummary 
+      <ReportSummary
         items={[
           { label: "Total Expenses", value: formatCurrency(summaries.totalExpense, { generalSettings }), valueClassName: "text-red-600 dark:text-red-500" },
           { label: "Total Transactions", value: summaries.totalTransactions }
-        ]} 
+        ]}
       />
 
       {/* Data Table */}

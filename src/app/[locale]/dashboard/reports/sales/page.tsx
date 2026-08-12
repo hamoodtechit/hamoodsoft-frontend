@@ -94,17 +94,15 @@ export default function SalesReportPage() {
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
-      <PrintHeader 
-        title="Sales Reports" 
-        dateRange={{ 
-          from: dateRange.from ? new Date(dateRange.from) : new Date(), 
-          to: dateRange.to ? new Date(dateRange.to) : undefined 
-        }} 
+      <PrintHeader
+        title="Sales Reports"
+        dateRange={{
+          from: dateRange.from ? new Date(dateRange.from) : new Date(),
+          to: dateRange.to ? new Date(dateRange.to) : undefined
+        }}
       />
 
-      <div className="print:hidden">
-        <BackButton href="/dashboard#reports-section" />
-      </div>
+      <BackButton href="/dashboard#reports-section" />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
         <div>
@@ -123,9 +121,9 @@ export default function SalesReportPage() {
         <CardContent className="p-4 flex flex-wrap gap-4 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="date-from">From Date</Label>
-            <Input 
-              id="date-from" 
-              type="date" 
+            <Input
+              id="date-from"
+              type="date"
               value={dateRange.from}
               onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
             />
@@ -133,23 +131,23 @@ export default function SalesReportPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="date-to">To Date</Label>
-            <Input 
-              id="date-to" 
-              type="date" 
+            <Input
+              id="date-to"
+              type="date"
               value={dateRange.to}
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="status-filter">Payment Status</Label>
-            <select 
+            <Label htmlFor="status-filter">Status</Label>
+            <select
               id="status-filter"
               value={paymentStatusFilter}
               onChange={(e) => setPaymentStatusFilter(e.target.value)}
               className="flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <option value="ALL">All Statuses</option>
+              <option value="ALL">All Status</option>
               <option value="PAID">Paid</option>
               <option value="PARTIAL">Partial</option>
               <option value="DUE">Due</option>
@@ -160,7 +158,7 @@ export default function SalesReportPage() {
             <Label htmlFor="search-input">Search</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-              <Input 
+              <Input
                 id="search-input"
                 type="text"
                 placeholder="Search invoice or customer..."
@@ -174,7 +172,7 @@ export default function SalesReportPage() {
       </Card>
 
       {/* Report Summary Cards */}
-      <ReportSummary 
+      <ReportSummary
         items={[
           { label: "Total Sales", value: formatCurrency(summaries.totalRevenue, { generalSettings }) },
           { label: "Amount Paid", value: formatCurrency(summaries.paidAmount, { generalSettings }), valueClassName: "text-emerald-600 dark:text-emerald-400" },
@@ -182,7 +180,7 @@ export default function SalesReportPage() {
           { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
           { label: "Total Discount", value: formatCurrency(summaries.totalDiscount, { generalSettings }) },
           { label: "Total Sales Count", value: summaries.totalTransactions }
-        ]} 
+        ]}
       />
 
       {/* Data Table */}
@@ -242,7 +240,7 @@ export default function SalesReportPage() {
                           {itemCount}
                         </td>
                         <td className="px-4 py-3 print:px-1.5 print:py-1 text-center print:hidden">
-                          <Badge 
+                          <Badge
                             variant={sale.paymentStatus === "PAID" ? "default" : sale.paymentStatus === "PARTIAL" ? "outline" : "secondary"}
                             className={cn(
                               "print-exact",

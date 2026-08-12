@@ -55,17 +55,15 @@ export default function IncomeReportPage() {
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
-      <PrintHeader 
-        title="Income Reports" 
-        dateRange={{ 
-          from: dateRange.from ? new Date(dateRange.from) : new Date(), 
-          to: dateRange.to ? new Date(dateRange.to) : undefined 
-        }} 
+      <PrintHeader
+        title="Income Reports"
+        dateRange={{
+          from: dateRange.from ? new Date(dateRange.from) : new Date(),
+          to: dateRange.to ? new Date(dateRange.to) : undefined
+        }}
       />
 
-      <div className="print:hidden">
-        <BackButton href="/dashboard#reports-section" />
-      </div>
+      <BackButton href="/dashboard#reports-section" />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
         <div>
@@ -84,18 +82,18 @@ export default function IncomeReportPage() {
         <CardContent className="p-4 flex flex-wrap gap-4 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="date-from">From Date</Label>
-            <Input 
-              id="date-from" 
-              type="date" 
+            <Input
+              id="date-from"
+              type="date"
               value={dateRange.from}
               onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date-to">To Date</Label>
-            <Input 
-              id="date-to" 
-              type="date" 
+            <Input
+              id="date-to"
+              type="date"
               value={dateRange.to}
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
@@ -103,11 +101,11 @@ export default function IncomeReportPage() {
         </CardContent>
       </Card>
 
-      <ReportSummary 
+      <ReportSummary
         items={[
           { label: "Total Income", value: formatCurrency(summaries.totalIncome, { generalSettings }), valueClassName: "text-green-600 dark:text-green-500" },
           { label: "Total Transactions", value: summaries.totalTransactions }
-        ]} 
+        ]}
       />
 
       {/* Data Table */}

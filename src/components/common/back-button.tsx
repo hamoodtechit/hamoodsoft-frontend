@@ -32,7 +32,7 @@ export function BackButton({ href, onClick, className, label = "Back" }: BackBut
     <Button
       variant="ghost"
       onClick={handleClick}
-      className={cn("mb-2 -ml-2", className)}
+      className={cn("mb-2 -ml-2 print:hidden !mt-0", className)}
     >
       <ArrowLeft className="mr-2 h-4 w-4" />
       {label}

@@ -61,17 +61,15 @@ export default function PurchasesReportPage() {
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
-      <PrintHeader 
-        title="Purchase Reports" 
-        dateRange={{ 
-          from: dateRange.from ? new Date(dateRange.from) : new Date(), 
-          to: dateRange.to ? new Date(dateRange.to) : undefined 
-        }} 
+      <PrintHeader
+        title="Purchase Reports"
+        dateRange={{
+          from: dateRange.from ? new Date(dateRange.from) : new Date(),
+          to: dateRange.to ? new Date(dateRange.to) : undefined
+        }}
       />
 
-      <div className="print:hidden">
-        <BackButton href="/dashboard#reports-section" />
-      </div>
+      <BackButton href="/dashboard#reports-section" />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 print:hidden">
         <div>
@@ -90,18 +88,18 @@ export default function PurchasesReportPage() {
         <CardContent className="p-4 flex flex-wrap gap-4 items-end">
           <div className="space-y-1.5">
             <Label htmlFor="date-from">From Date</Label>
-            <Input 
-              id="date-from" 
-              type="date" 
+            <Input
+              id="date-from"
+              type="date"
               value={dateRange.from}
               onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date-to">To Date</Label>
-            <Input 
-              id="date-to" 
-              type="date" 
+            <Input
+              id="date-to"
+              type="date"
               value={dateRange.to}
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
@@ -109,13 +107,13 @@ export default function PurchasesReportPage() {
         </CardContent>
       </Card>
 
-      <ReportSummary 
+      <ReportSummary
         items={[
           { label: "Total Purchases", value: formatCurrency(summaries.totalPurchases, { generalSettings }) },
           { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
           { label: "Amount Paid", value: formatCurrency(summaries.paidAmount, { generalSettings }), valueClassName: "text-blue-600 dark:text-blue-500" },
           { label: "Total Transactions", value: summaries.totalTransactions }
-        ]} 
+        ]}
       />
 
       {/* Data Table */}
@@ -158,7 +156,7 @@ export default function PurchasesReportPage() {
                         {purchase.items?.length || 0}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge 
+                        <Badge
                           variant={purchase.status === "COMPLETED" ? "default" : "secondary"}
                           className="print-exact"
                         >
