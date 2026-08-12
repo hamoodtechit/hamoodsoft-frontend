@@ -4,7 +4,7 @@ import { BackButton } from "@/components/common/back-button"
 import { PrintHeader } from "@/components/common/PrintHeader"
 import { ReportActionButtons } from "@/components/common/ReportActionButtons"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
@@ -14,8 +14,9 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search } from "lucide-react"
 import { ReportSummary } from "@/components/reports/ReportSummary"
+import { cn } from "@/lib/utils"
 
 export default function SalesReportPage() {
   const t = useTranslations("sales")
@@ -27,15 +28,35 @@ export default function SalesReportPage() {
     from: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     to: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   })
+  const [searchQuery, setSearchQuery] = useState("")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("ALL")
 
   const { data: salesData, isLoading } = useSales({
     branchId: selectedBranchId || undefined,
     startDate: dateRange.from ? new Date(dateRange.from).toISOString() : undefined,
     endDate: dateRange.to ? new Date(dateRange.to).toISOString() : undefined,
-    limit: 1000, // Fetch a large number for reporting, ideally we'd handle pagination or have a dedicated report endpoint
+    limit: 1000,
   })
 
-  const sales = salesData?.items || []
+  const rawSales = salesData?.items || []
+
+  // Filter sales
+  const sales = useMemo(() => {
+    return rawSales.filter(sale => {
+      if (paymentStatusFilter !== "ALL" && sale.paymentStatus !== paymentStatusFilter) {
+        return false
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const inv = (sale.invoiceNumber || "").toLowerCase()
+        const cust = (sale.contact?.name || "").toLowerCase()
+        if (!inv.includes(q) && !cust.includes(q)) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [rawSales, paymentStatusFilter, searchQuery])
 
   // Calculate summaries
   const summaries = useMemo(() => {
@@ -43,12 +64,20 @@ export default function SalesReportPage() {
     let totalTax = 0
     let totalDiscount = 0
     let paidAmount = 0
+    let dueAmount = 0
+    let totalItemCount = 0
 
     sales.forEach(sale => {
-      totalRevenue += sale.totalPrice || 0
+      const total = sale.totalPrice ?? sale.totalAmount ?? 0
+      const paid = sale.paidAmount ?? 0
+      const due = Math.max(0, total - paid)
+
+      totalRevenue += total
       totalTax += sale.taxAmount || 0
       totalDiscount += sale.discountAmount || 0
-      paidAmount += sale.paidAmount || 0
+      paidAmount += paid
+      dueAmount += due
+      totalItemCount += sale.saleItems?.length || sale.items?.length || 0
     })
 
     return {
@@ -56,7 +85,8 @@ export default function SalesReportPage() {
       totalTax,
       totalDiscount,
       paidAmount,
-      dueAmount: totalRevenue - paidAmount,
+      dueAmount,
+      totalItemCount,
       totalTransactions: sales.length
     }
   }, [sales])
@@ -82,7 +112,7 @@ export default function SalesReportPage() {
             Sales Reports
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            View and print your sales transactions history.
+            View and print your sales transactions history, total payable, paid and due amounts.
           </p>
         </div>
         <ReportActionButtons />
@@ -100,6 +130,7 @@ export default function SalesReportPage() {
               onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
             />
           </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="date-to">To Date</Label>
             <Input 
@@ -109,15 +140,48 @@ export default function SalesReportPage() {
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="status-filter">Payment Status</Label>
+            <select 
+              id="status-filter"
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              className="flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PAID">Paid</option>
+              <option value="PARTIAL">Partial</option>
+              <option value="DUE">Due</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5 flex-1 min-w-[200px]">
+            <Label htmlFor="search-input">Search</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+              <Input 
+                id="search-input"
+                type="text"
+                placeholder="Search invoice or customer..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
+      {/* Report Summary Cards */}
       <ReportSummary 
         items={[
-          { label: "Total Revenue", value: formatCurrency(summaries.totalRevenue, { generalSettings }) },
+          { label: "Total Sales", value: formatCurrency(summaries.totalRevenue, { generalSettings }) },
+          { label: "Amount Paid", value: formatCurrency(summaries.paidAmount, { generalSettings }), valueClassName: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Amount Due", value: formatCurrency(summaries.dueAmount, { generalSettings }), valueClassName: summaries.dueAmount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400" },
           { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
-          { label: "Amount Paid", value: formatCurrency(summaries.paidAmount, { generalSettings }), valueClassName: "text-green-600 dark:text-green-500" },
-          { label: "Total Transactions", value: summaries.totalTransactions }
+          { label: "Total Discount", value: formatCurrency(summaries.totalDiscount, { generalSettings }) },
+          { label: "Total Sales Count", value: summaries.totalTransactions }
         ]} 
       />
 
@@ -130,50 +194,103 @@ export default function SalesReportPage() {
             </div>
           ) : sales.length === 0 ? (
             <div className="text-center py-10 text-slate-500">
-              No sales found for the selected period.
+              No sales found for the selected criteria.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300">
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-sm text-left border-collapse print:text-[11px] print:w-full">
+                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[10px]">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Invoice No</th>
-                    <th className="px-4 py-3 font-semibold">Customer</th>
-                    <th className="px-4 py-3 font-semibold text-right">Items</th>
-                    <th className="px-4 py-3 font-semibold text-center">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Total</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Date</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Invoice No</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Customer</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Items</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-center print:hidden">Status</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">
+                      <span className="print:hidden">Total Amount</span>
+                      <span className="hidden print:inline">Total</span>
+                    </th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">
+                      <span className="print:hidden">Paid Amount</span>
+                      <span className="hidden print:inline">Paid</span>
+                    </th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">
+                      <span className="print:hidden">Due Amount</span>
+                      <span className="hidden print:inline">Due</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {sales.map((sale) => (
-                    <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
-                      <td className="px-4 py-3">
-                        {sale.createdAt ? format(new Date(sale.createdAt), "MMM dd, yyyy HH:mm") : "-"}
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        {sale.invoiceNumber || "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {sale.contact?.name || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {sale.items?.length || 0}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge 
-                          variant={sale.paymentStatus === "PAID" ? "default" : "secondary"}
-                          className="print-exact"
-                        >
-                          {sale.paymentStatus}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {formatCurrency(sale.totalPrice || 0, { generalSettings })}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-200">
+                  {sales.map((sale) => {
+                    const total = sale.totalPrice ?? sale.totalAmount ?? 0
+                    const paid = sale.paidAmount ?? 0
+                    const due = Math.max(0, total - paid)
+                    const itemCount = sale.saleItems?.length || sale.items?.length || 0
+
+                    return (
+                      <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
+                          {sale.createdAt ? format(new Date(sale.createdAt), "MMM dd, yyyy") : "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                          {sale.invoiceNumber || "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1">
+                          {sale.contact?.name || "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">
+                          {itemCount}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-center print:hidden">
+                          <Badge 
+                            variant={sale.paymentStatus === "PAID" ? "default" : sale.paymentStatus === "PARTIAL" ? "outline" : "secondary"}
+                            className={cn(
+                              "print-exact",
+                              sale.paymentStatus === "PAID" && "bg-emerald-600 hover:bg-emerald-700 text-white",
+                              sale.paymentStatus === "PARTIAL" && "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300",
+                              sale.paymentStatus === "DUE" && "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300"
+                            )}
+                          >
+                            {sale.paymentStatus}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                          {formatCurrency(total, { generalSettings })}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                          {formatCurrency(paid, { generalSettings })}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium whitespace-nowrap">
+                          {due > 0 ? (
+                            <span className="text-rose-600 dark:text-rose-400">
+                              {formatCurrency(due, { generalSettings })}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
+                <tfoot className="bg-slate-100 dark:bg-slate-800/80 font-bold border-t-2 border-slate-300 dark:border-slate-700 print:bg-transparent print:border-slate-400">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 print:px-1.5 print:py-1 text-left">
+                      Total ({summaries.totalTransactions} transactions)
+                    </td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">{summaries.totalItemCount}</td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-center print:hidden">-</td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                      {formatCurrency(summaries.totalRevenue, { generalSettings })}
+                    </td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      {formatCurrency(summaries.paidAmount, { generalSettings })}
+                    </td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                      {formatCurrency(summaries.dueAmount, { generalSettings })}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
@@ -182,3 +299,4 @@ export default function SalesReportPage() {
     </div>
   )
 }
+

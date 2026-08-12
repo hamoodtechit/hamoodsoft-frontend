@@ -14,14 +14,16 @@ export function ReportSummary({ items }: ReportSummaryProps) {
   return (
     <>
       {/* Summary Cards - Screen only */}
-      <div className={`grid grid-cols-2 md:grid-cols-${Math.min(items.length, 4)} gap-4 print:hidden`}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 print:hidden">
         {items.map((item, index) => (
-          <Card key={index}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">{item.label}</CardTitle>
+          <Card key={index} className="shadow-sm">
+            <CardHeader className="p-3 pb-1">
+              <CardTitle className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate" title={typeof item.label === "string" ? item.label : undefined}>
+                {item.label}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${item.valueClassName || ""}`}>
+            <CardContent className="p-3 pt-0">
+              <div className={`text-base sm:text-lg font-bold tracking-tight ${item.valueClassName || ""}`}>
                 {item.value}
               </div>
             </CardContent>
@@ -30,13 +32,13 @@ export function ReportSummary({ items }: ReportSummaryProps) {
       </div>
 
       {/* Print Summary - Print only */}
-      <div className="hidden print:flex print:flex-wrap print:gap-x-12 print:gap-y-2 print:mb-6 print:py-3 print:border-y print:border-slate-200 print:bg-white">
+      <div className="hidden print:flex print:flex-wrap print:gap-x-6 print:gap-y-1 print:mb-4 print:py-2 print:border-y print:border-slate-300 print:bg-white">
         {items.map((item, index) => (
-          <div key={index} className="flex items-baseline gap-2">
-            <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
+          <div key={index} className="flex items-baseline gap-1.5">
+            <span className="text-[10px] font-semibold text-slate-600">
               {item.label}:
             </span>
-            <span className="text-sm font-bold text-slate-900">
+            <span className="text-xs font-bold text-slate-900">
               {item.value}
             </span>
           </div>
