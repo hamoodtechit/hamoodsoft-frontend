@@ -13,8 +13,10 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search } from "lucide-react"
 import { ReportSummary } from "@/components/reports/ReportSummary"
+import { useAccounts } from "@/lib/hooks/use-accounts"
+import { useIncomeExpenseCategories } from "@/lib/hooks/use-income-expense-categories"
 
 export default function ExpenseReportPage() {
   const t = useTranslations("accounting")
@@ -26,6 +28,15 @@ export default function ExpenseReportPage() {
     from: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     to: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   })
+  const [searchQuery, setSearchQuery] = useState("")
+  const [accountFilter, setAccountFilter] = useState("ALL")
+  const [categoryFilter, setCategoryFilter] = useState("ALL")
+
+  const { data: accountsData } = useAccounts({ limit: 100 })
+  const { data: categoriesData } = useIncomeExpenseCategories({ type: "EXPENSE", limit: 100 })
+  
+  const accounts = accountsData?.items || []
+  const categories = categoriesData?.items || []
 
   const { data: transactionsData, isLoading } = useTransactions({
     branchId: selectedBranchId || undefined,
@@ -35,7 +46,31 @@ export default function ExpenseReportPage() {
     limit: 1000, // Fetch a large number for reporting
   })
 
-  const expenses = transactionsData?.items || []
+  const rawExpenses = transactionsData?.items || []
+
+  // Filter expenses
+  const expenses = useMemo(() => {
+    return rawExpenses.filter(expense => {
+      if (accountFilter !== "ALL" && expense.accountId !== accountFilter) {
+        return false
+      }
+      if (categoryFilter !== "ALL" && expense.incomeExpenseCategoryId !== categoryFilter && expense.categoryId !== categoryFilter) {
+        return false
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const ref = (expense.referenceId || "").toLowerCase()
+        const note = (expense.note || "").toLowerCase()
+        const acc = (expense.account?.name || "").toLowerCase()
+        const cat = (expense.incomeExpenseCategory?.name || expense.category?.name || "").toLowerCase()
+        
+        if (!ref.includes(q) && !note.includes(q) && !acc.includes(q) && !cat.includes(q)) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [rawExpenses, accountFilter, categoryFilter, searchQuery])
 
   // Calculate summaries
   const summaries = useMemo(() => {
@@ -97,6 +132,51 @@ export default function ExpenseReportPage() {
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
           </div>
+
+          <div className="space-y-1.5 min-w-[140px]">
+            <Label htmlFor="account-filter">Account</Label>
+            <select
+              id="account-filter"
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="ALL">All Accounts</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5 min-w-[140px]">
+            <Label htmlFor="category-filter">Category</Label>
+            <select
+              id="category-filter"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="ALL">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5 flex-1 min-w-[200px]">
+            <Label htmlFor="search-input">Search</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+              <Input
+                id="search-input"
+                type="text"
+                placeholder="Search reference, note, account..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -121,36 +201,47 @@ export default function ExpenseReportPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300">
+                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[11px]">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Reference</th>
-                    <th className="px-4 py-3 font-semibold">Account</th>
-                    <th className="px-4 py-3 font-semibold">Category</th>
-                    <th className="px-4 py-3 font-semibold text-right">Amount</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Date</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Ref / Note</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Account</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Category</th>
+                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {expenses.map((expense) => (
-                    <tr key={expense.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
-                      <td className="px-4 py-3">
-                        {expense.createdAt ? format(new Date(expense.createdAt), "MMM dd, yyyy HH:mm") : "-"}
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        {expense.referenceId || "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {expense.account?.name || "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {expense.incomeExpenseCategory?.name || expense.category?.name || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-red-600 dark:text-red-500">
-                        {formatCurrency(expense.amount || 0, { generalSettings })}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:text-[11px]">
+                  {expenses.map((expense) => {
+                    const isUUID = expense.referenceId && expense.referenceId.length === 36 && expense.referenceId.includes('-');
+                    const referenceText = isUUID ? (expense.note || "-") : (expense.referenceId || expense.note || "-");
+
+                    return (
+                      <tr key={expense.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
+                          {expense.createdAt ? format(new Date(expense.createdAt), "MMM dd, yyyy") : "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium">
+                          {referenceText}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1">
+                          {expense.account?.name || "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1">
+                          {expense.incomeExpenseCategory?.name || expense.category?.name || "-"}
+                        </td>
+                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium text-red-600 dark:text-red-500">
+                          {formatCurrency(expense.amount || 0, { generalSettings })}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
+                <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t-2 border-slate-200 dark:border-slate-700 print:text-[11px] print:bg-transparent print:border-t-2 print:border-black">
+                  <tr>
+                    <td colSpan={4} className="px-4 py-3 print:px-1.5 print:py-1 text-right">Grand Total ({summaries.totalTransactions} transactions):</td>
+                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500">{formatCurrency(summaries.totalExpense, { generalSettings })}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
