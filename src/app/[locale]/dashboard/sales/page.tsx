@@ -1032,8 +1032,12 @@ export default function SalesPage() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <Badge variant="default">
-                              {payment.type === "SALE_PAYMENT" ? t("paymentTypeSale") || "Sale Payment" : t("paymentTypePurchase") || "Purchase Payment"}
+                            <Badge variant={payment.type === "EXPENSE" ? "destructive" : "default"}>
+                              {payment.type === "SALE_PAYMENT" 
+                                ? t("paymentTypeSale") || "Sale Payment" 
+                                : payment.type === "EXPENSE"
+                                ? t("paymentTypeRefund") || "Refund Payment"
+                                : t("paymentTypePurchase") || "Purchase Payment"}
                             </Badge>
                             {payment.accountId && (
                               <span className="text-sm text-muted-foreground">
@@ -1051,8 +1055,8 @@ export default function SalesPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-green-600">
-                            {formatCurrency(payment.amount, { generalSettings })}
+                          <p className={`font-semibold ${payment.type === "EXPENSE" ? "text-destructive" : "text-green-600"}`}>
+                            {payment.type === "EXPENSE" ? "-" : ""}{formatCurrency(payment.amount, { generalSettings })}
                           </p>
                         </div>
                       </div>

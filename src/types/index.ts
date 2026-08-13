@@ -489,7 +489,7 @@ export interface AccountLedgerResponse {
   closingBalance: number
 }
 
-export type PaymentType = "SALE_PAYMENT" | "PURCHASE_PAYMENT" | "DEPOSIT"
+export type PaymentType = "SALE_PAYMENT" | "PURCHASE_PAYMENT" | "DEPOSIT" | "INCOME" | "EXPENSE"
 
 export interface Payment {
   id: string

@@ -554,11 +554,19 @@ export default function AccountingPage() {
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <Badge
-                                variant={transaction.type === "INCOME" ? "default" : "destructive"}
-                              >
-                                {transaction.type === "INCOME" ? t("typeIncome") || "Income" : t("typeExpense") || "Expense"}
-                              </Badge>
+                              {(() => {
+                                const isIncomeType = transaction.type === "INCOME" || (transaction.type as string) === "IN";
+                                const isRefund = transaction.note?.toLowerCase().includes("refund");
+                                return (
+                                  <Badge variant={isIncomeType ? "default" : "destructive"}>
+                                    {isIncomeType
+                                      ? (t("typeIncome") || "Income")
+                                      : isRefund
+                                      ? (t("typeRefund") || "Refund")
+                                      : (t("typeExpense") || "Expense")}
+                                  </Badge>
+                                );
+                              })()}
                               {(transaction as any).incomeExpenseCategory?.name && (
                                 <span className="text-sm text-muted-foreground">
                                   {(transaction as any).incomeExpenseCategory.name}
@@ -571,7 +579,9 @@ export default function AccountingPage() {
                               )}
                             </div>
                             {transaction.note && (
-                              <p className="text-sm text-muted-foreground mt-1">{transaction.note}</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {transaction.note.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig, "").trim()}
+                              </p>
                             )}
                             <p className="text-xs text-muted-foreground mt-1">
                               {transaction.occurredAt
@@ -580,13 +590,15 @@ export default function AccountingPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p
-                              className={`font-semibold ${transaction.type === "INCOME" ? "text-green-600" : "text-red-600"
-                                }`}
-                            >
-                              {transaction.type === "INCOME" ? "+" : "-"}
-                              {formatCurrency(transaction.amount, { generalSettings })}
-                            </p>
+                            {(() => {
+                              const isIncomeType = transaction.type === "INCOME" || (transaction.type as string) === "IN";
+                              return (
+                                <p className={`font-semibold ${isIncomeType ? "text-green-600" : "text-red-600"}`}>
+                                  {isIncomeType ? "+" : "-"}
+                                  {formatCurrency(transaction.amount, { generalSettings })}
+                                </p>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}

@@ -34,7 +34,7 @@ function normalizeTransaction(transaction: Transaction): Transaction {
   let normalizedType: "INCOME" | "EXPENSE" = "INCOME"
   if (transaction.type === "IN" as string) {
     normalizedType = "INCOME"
-  } else if (transaction.type === "EX" as string) {
+  } else if (transaction.type === "EX" as string || transaction.type === "OUT" as string) {
     normalizedType = "EXPENSE"
   } else if (transaction.type === "INCOME") {
     normalizedType = "INCOME"

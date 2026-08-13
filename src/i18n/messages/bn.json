@@ -327,7 +327,10 @@
     "discount": "ডিসকাউন্ট",
     "dueAmount": "বকেয়া",
     "subtotal": "উপমোট",
-    "total": "মোট"
+    "total": "মোট",
+    "paymentTypeSale": "বিক্রয় পেমেন্ট",
+    "paymentTypePurchase": "ক্রয় পেমেন্ট",
+    "paymentTypeRefund": "রিফান্ড পেমেন্ট"
   },
   "purchases": {
     "title": "ক্রয়",
@@ -655,6 +658,7 @@
     "type": "ধরন",
     "typeIncome": "আয়",
     "typeExpense": "ব্যয়",
+    "typeRefund": "রিফান্ড",
     "noTransactions": "কোনো লেনদেন পাওয়া যায়নি",
     "transactionDetails": "লেনদেনের বিবরণ",
     "viewTransactionDetails": "লেনদেনের তথ্য দেখুন",
