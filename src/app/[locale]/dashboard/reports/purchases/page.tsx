@@ -78,6 +78,29 @@ export default function PurchasesReportPage() {
     }
   }, [purchases])
 
+  // Group purchases by date
+  const groupedPurchases = useMemo(() => {
+    const groups: Record<string, typeof purchases> = {}
+    purchases.forEach(purchase => {
+      const dateKey = purchase.createdAt ? format(new Date(purchase.createdAt), "dd MMM, yyyy") : "Unknown Date"
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(purchase)
+    })
+    
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a === "Unknown Date") return 1
+      if (b === "Unknown Date") return -1
+      return new Date(b).getTime() - new Date(a).getTime()
+    })
+    
+    return sortedKeys.map(key => ({
+      date: key,
+      purchases: groups[key]
+    }))
+  }, [purchases])
+
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
@@ -179,72 +202,84 @@ export default function PurchasesReportPage() {
               No purchases found for the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[11px]">
-                  <tr>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Date</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">PO Number</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Supplier</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Items</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-center print:hidden">Status</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Total</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Paid</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Due</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:text-[11px]">
-                  {purchases.map((purchase) => {
-                    const total = purchase.totalPrice ?? purchase.totalAmount ?? 0;
-                    const paid = purchase.paidAmount ?? 0;
-                    const due = Math.max(0, total - paid);
-                    
-                    return (
-                      <tr key={purchase.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
-                          {purchase.createdAt ? format(new Date(purchase.createdAt), "MMM dd, yyyy") : "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium whitespace-nowrap">
-                          {purchase.poNumber || "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1">
-                          {purchase.contact?.name || "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">
-                          {purchase.items?.length || purchase.purchaseItems?.length || 0}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-center print:hidden">
-                          <Badge
-                            variant={purchase.status === "COMPLETED" ? "default" : "secondary"}
-                            className="print-exact"
-                          >
-                            {purchase.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium">
-                          {formatCurrency(total, { generalSettings })}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-green-600 dark:text-green-500">
-                          {formatCurrency(paid, { generalSettings })}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500 font-medium">
-                          {formatCurrency(due, { generalSettings })}
-                        </td>
+            <div className="overflow-x-auto print:overflow-visible">
+              {groupedPurchases.map((group, groupIndex) => (
+                <div key={group.date} className="mb-4 print:mb-1.5">
+                  <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 print:text-[12px] print:mb-1 ml-4 print:ml-1">
+                    {group.date}
+                  </h3>
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[11px]">
+                      <tr>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Time</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">PO Number</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Supplier</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Items</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-center print:hidden">Status</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Total</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Paid</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Due</th>
                       </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t-2 border-slate-200 dark:border-slate-700 print:text-[11px] print:bg-transparent print:border-t-2 print:border-black">
-                  <tr>
-                    <td colSpan={3} className="px-4 py-3 print:px-1.5 print:py-1 text-right">Grand Total ({summaries.totalTransactions} POs):</td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">-</td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 print:hidden"></td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">{formatCurrency(summaries.totalPurchases, { generalSettings })}</td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-green-600 dark:text-green-500">{formatCurrency(summaries.paidAmount, { generalSettings })}</td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500">{formatCurrency(summaries.dueAmount, { generalSettings })}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:text-[11px]">
+                      {group.purchases.map((purchase) => {
+                        const total = purchase.totalPrice ?? purchase.totalAmount ?? 0;
+                        const paid = purchase.paidAmount ?? 0;
+                        const due = Math.max(0, total - paid);
+                        
+                        return (
+                          <tr key={purchase.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
+                              {purchase.createdAt ? format(new Date(purchase.createdAt), "hh:mm a") : "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium whitespace-nowrap">
+                              {purchase.poNumber || "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1">
+                              {purchase.contact?.name || "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">
+                              {purchase.items?.length || purchase.purchaseItems?.length || 0}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-center print:hidden">
+                              <Badge
+                                variant={purchase.status === "COMPLETED" ? "default" : "secondary"}
+                                className="print-exact"
+                              >
+                                {purchase.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium">
+                              {formatCurrency(total, { generalSettings })}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-green-600 dark:text-green-500">
+                              {formatCurrency(paid, { generalSettings })}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500 font-medium">
+                              {formatCurrency(due, { generalSettings })}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              <div className="mt-8 border-t-2 border-slate-300 dark:border-slate-700 print:border-slate-400 pt-2">
+                <table className="w-full text-sm text-left print:text-[11px]">
+                  <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold print:bg-transparent">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 print:px-1.5 print:py-1 text-right">Grand Total ({summaries.totalTransactions} POs):</td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">-</td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 print:hidden"></td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 text-right">{formatCurrency(summaries.totalPurchases, { generalSettings })}</td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-green-600 dark:text-green-500">{formatCurrency(summaries.paidAmount, { generalSettings })}</td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500">{formatCurrency(summaries.dueAmount, { generalSettings })}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>

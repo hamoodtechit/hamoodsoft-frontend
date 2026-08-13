@@ -31,19 +31,7 @@ export function ReportSummary({ items }: ReportSummaryProps) {
         ))}
       </div>
 
-      {/* Print Summary - Print only */}
-      <div className="hidden print:flex print:flex-wrap print:gap-x-6 print:gap-y-1 print:mb-4 print:py-2 print:border-y print:border-slate-300 print:bg-white">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-baseline gap-1.5">
-            <span className="text-[10px] font-semibold text-slate-600">
-              {item.label}:
-            </span>
-            <span className="text-xs font-bold text-slate-900">
-              {item.value}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Print Summary - Removed for print as requested */}
     </>
   )
 }

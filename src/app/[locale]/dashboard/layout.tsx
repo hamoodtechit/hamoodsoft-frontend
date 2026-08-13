@@ -151,12 +151,12 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-900 print:bg-white font-sans text-slate-800 dark:text-slate-100 overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
+      <div className="flex print:block h-screen print:h-auto bg-slate-50 dark:bg-slate-900 print:bg-white font-sans text-slate-800 dark:text-slate-100 overflow-hidden print:overflow-visible selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
         {/* Desktop sidebar — hidden on mobile, shown on md+ screens */}
         <div className="hidden md:flex print:hidden">
           <Sidebar />
         </div>
-        <main className="flex-1 flex flex-col overflow-hidden relative min-w-0" id="layout-main-area">
+        <main className="flex-1 flex print:block flex-col overflow-hidden print:overflow-visible relative min-w-0" id="layout-main-area">
           {!isPOS && <div className="print:hidden"><DashboardHeader /></div>}
           <div 
              id="main-scroll" 

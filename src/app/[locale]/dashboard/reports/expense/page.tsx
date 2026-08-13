@@ -86,6 +86,29 @@ export default function ExpenseReportPage() {
     }
   }, [expenses])
 
+  // Group expenses by date
+  const groupedExpenses = useMemo(() => {
+    const groups: Record<string, typeof expenses> = {}
+    expenses.forEach(expense => {
+      const dateKey = expense.createdAt ? format(new Date(expense.createdAt), "dd MMM, yyyy") : "Unknown Date"
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(expense)
+    })
+    
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a === "Unknown Date") return 1
+      if (b === "Unknown Date") return -1
+      return new Date(b).getTime() - new Date(a).getTime()
+    })
+    
+    return sortedKeys.map(key => ({
+      date: key,
+      expenses: groups[key]
+    }))
+  }, [expenses])
+
   return (
     <div className="space-y-6">
       {/* Hidden on screen, visible on print */}
@@ -199,50 +222,62 @@ export default function ExpenseReportPage() {
               No expense transactions found for the selected period.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[11px]">
-                  <tr>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Date</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Ref / Note</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Account</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Category</th>
-                    <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:text-[11px]">
-                  {expenses.map((expense) => {
-                    const isUUID = expense.referenceId && expense.referenceId.length === 36 && expense.referenceId.includes('-');
-                    const referenceText = isUUID ? (expense.note || "-") : (expense.referenceId || expense.note || "-");
-
-                    return (
-                      <tr key={expense.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
-                          {expense.createdAt ? format(new Date(expense.createdAt), "MMM dd, yyyy") : "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium">
-                          {referenceText}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1">
-                          {expense.account?.name || "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1">
-                          {expense.incomeExpenseCategory?.name || expense.category?.name || "-"}
-                        </td>
-                        <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium text-red-600 dark:text-red-500">
-                          {formatCurrency(expense.amount || 0, { generalSettings })}
-                        </td>
+            <div className="overflow-x-auto print:overflow-visible">
+              {groupedExpenses.map((group, groupIndex) => (
+                <div key={group.date} className="mb-4 print:mb-1.5">
+                  <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-2 print:text-[12px] print:mb-1 ml-4 print:ml-1">
+                    {group.date}
+                  </h3>
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800 dark:text-slate-300 print:bg-transparent border-y print:border-slate-300 print:text-[11px]">
+                      <tr>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Time</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Ref / Note</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Account</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold">Category</th>
+                        <th className="px-4 py-3 print:px-1.5 print:py-1 font-semibold text-right">Amount</th>
                       </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t-2 border-slate-200 dark:border-slate-700 print:text-[11px] print:bg-transparent print:border-t-2 print:border-black">
-                  <tr>
-                    <td colSpan={4} className="px-4 py-3 print:px-1.5 print:py-1 text-right">Grand Total ({summaries.totalTransactions} transactions):</td>
-                    <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500">{formatCurrency(summaries.totalExpense, { generalSettings })}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:text-[11px]">
+                      {group.expenses.map((expense) => {
+                        const isUUID = expense.referenceId && expense.referenceId.length === 36 && expense.referenceId.includes('-');
+                        const referenceText = isUUID ? (expense.note || "-") : (expense.referenceId || expense.note || "-");
+
+                        return (
+                          <tr key={expense.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 print-break-inside-avoid">
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 whitespace-nowrap">
+                              {expense.createdAt ? format(new Date(expense.createdAt), "hh:mm a") : "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 font-medium">
+                              {referenceText}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1">
+                              {expense.account?.name || "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1">
+                              {expense.incomeExpenseCategory?.name || expense.category?.name || "-"}
+                            </td>
+                            <td className="px-4 py-3 print:px-1.5 print:py-1 text-right font-medium text-red-600 dark:text-red-500">
+                              {formatCurrency(expense.amount || 0, { generalSettings })}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              <div className="mt-8 border-t-2 border-slate-300 dark:border-slate-700 print:border-slate-400 pt-2">
+                <table className="w-full text-sm text-left print:text-[11px]">
+                  <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold print:bg-transparent">
+                    <tr>
+                      <td colSpan={4} className="px-4 py-3 print:px-1.5 print:py-1 text-right">Grand Total ({summaries.totalTransactions} transactions):</td>
+                      <td className="px-4 py-3 print:px-1.5 print:py-1 text-right text-red-600 dark:text-red-500">{formatCurrency(summaries.totalExpense, { generalSettings })}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
