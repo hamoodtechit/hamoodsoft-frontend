@@ -84,3 +84,22 @@ export function useDeleteSale() {
     },
   })
 }
+
+export function useReturnSale() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      salesApi.returnSale(id, data),
+    onSuccess: (returnedSale) => {
+      queryClient.invalidateQueries({ queryKey: ["sales"] })
+      if (returnedSale?.saleId) {
+        queryClient.invalidateQueries({ queryKey: ["sale", returnedSale.saleId] })
+      }
+      toast.success("Sale returned successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to return sale. Please try again."))
+    },
+  })
+}

@@ -108,4 +108,9 @@ export const salesApi = {
   deleteSale: async (id: string): Promise<void> => {
     await apiClient.delete<ApiResponse<void>>(endpoints.sales.delete(id))
   },
+
+  returnSale: async (id: string, data: any): Promise<any> => {
+    const response = await apiClient.post<ApiResponse<any>>(endpoints.sales.return(id), data)
+    return response.data.data
+  },
 }

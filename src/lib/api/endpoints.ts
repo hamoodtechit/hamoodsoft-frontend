@@ -113,6 +113,7 @@ export const endpoints = {
     getById: (id: string) => `/sales/${id}`,
     update: (id: string) => `/sales/${id}`,
     delete: (id: string) => `/sales/${id}`,
+    return: (id: string) => `/sales/${id}/return`,
   },
   media: {
     upload: "/media/upload",

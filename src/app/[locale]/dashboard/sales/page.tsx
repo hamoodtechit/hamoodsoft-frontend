@@ -8,6 +8,7 @@ import { PageLayout } from "@/components/common/page-layout"
 import { PaymentDialog } from "@/components/common/payment-dialog"
 import { PermissionGuard } from "@/components/common/permission-guard"
 import { SaleDialog } from "@/components/common/sale-dialog"
+import { ReturnSaleDialog } from "@/components/common/return-sale-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
@@ -39,7 +40,7 @@ import { formatCurrency } from "@/lib/utils/currency"
 import { type ExportColumn } from "@/lib/utils/export"
 import { MODULES, PERMISSIONS } from "@/lib/utils/permissions"
 import { Payment, Product, Sale } from "@/types"
-import { CreditCard, Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User } from "lucide-react"
+import { CreditCard, Eye, FileText, Mail, MoreVertical, Pencil, Phone, Plus, Search, ShoppingCart, Trash2, User, RotateCcw } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -394,6 +395,8 @@ export default function SalesPage() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [paymentSale, setPaymentSale] = useState<Sale | null>(null)
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false)
+  const [saleToReturn, setSaleToReturn] = useState<Sale | null>(null)
 
   const { data: viewSale, isLoading: isViewSaleLoading } = useSale(viewSaleId || undefined)
 
@@ -481,6 +484,11 @@ export default function SalesPage() {
   const handleAddPayment = (sale: Sale) => {
     setPaymentSale(sale)
     setIsPaymentDialogOpen(true)
+  }
+
+  const handleReturn = (sale: Sale) => {
+    setSaleToReturn(sale)
+    setIsReturnDialogOpen(true)
   }
 
   const confirmDelete = () => {
@@ -633,13 +641,21 @@ export default function SalesPage() {
                         <Pencil className="mr-2 h-4 w-4" />
                         {tCommon("edit")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(row)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {tCommon("delete")}
-                      </DropdownMenuItem>
+                      {row.paidAmount === 0 && (
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(row)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {tCommon("delete")}
+                        </DropdownMenuItem>
+                      )}
+                      {row.paidAmount > 0 && (
+                        <DropdownMenuItem onClick={() => handleReturn(row)}>
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Return Sale
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -727,13 +743,21 @@ export default function SalesPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               {tCommon("edit")}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(s)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
+                            {s.paidAmount === 0 && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(s)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            )}
+                            {s.paidAmount > 0 && (
+                              <DropdownMenuItem onClick={() => handleReturn(s)}>
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Return Sale
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -781,6 +805,12 @@ export default function SalesPage() {
         title={t("deleteConfirmTitle")}
         description={t("deleteConfirmDescription")}
         isLoading={deleteMutation.isPending}
+      />
+
+      <ReturnSaleDialog
+        sale={saleToReturn}
+        open={isReturnDialogOpen}
+        onOpenChange={setIsReturnDialogOpen}
       />
 
       <Sheet open={isViewOpen} onOpenChange={setIsViewOpen}>
