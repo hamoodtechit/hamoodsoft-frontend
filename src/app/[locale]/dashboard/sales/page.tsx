@@ -641,7 +641,7 @@ export default function SalesPage() {
                         <Pencil className="mr-2 h-4 w-4" />
                         {tCommon("edit")}
                       </DropdownMenuItem>
-                      {row.paidAmount === 0 && (
+                      {row.status === "DRAFT" && (
                         <DropdownMenuItem
                           onClick={() => handleDelete(row)}
                           className="text-destructive"
@@ -650,7 +650,7 @@ export default function SalesPage() {
                           {tCommon("delete")}
                         </DropdownMenuItem>
                       )}
-                      {row.paidAmount > 0 && (
+                      {row.status !== "DRAFT" && (
                         <DropdownMenuItem onClick={() => handleReturn(row)}>
                           <RotateCcw className="mr-2 h-4 w-4" />
                           Return Sale
@@ -743,7 +743,7 @@ export default function SalesPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               {tCommon("edit")}
                             </DropdownMenuItem>
-                            {s.paidAmount === 0 && (
+                            {s.status === "DRAFT" && (
                               <DropdownMenuItem
                                 onClick={() => handleDelete(s)}
                                 className="text-destructive"
@@ -752,7 +752,7 @@ export default function SalesPage() {
                                 {tCommon("delete")}
                               </DropdownMenuItem>
                             )}
-                            {s.paidAmount > 0 && (
+                            {s.status !== "DRAFT" && (
                               <DropdownMenuItem onClick={() => handleReturn(s)}>
                                 <RotateCcw className="mr-2 h-4 w-4" />
                                 Return Sale
