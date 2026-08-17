@@ -397,6 +397,7 @@ export interface Contact {
   companyPhone?: string
   binNumber?: string
   balance: number
+  totalDue?: number
   creditLimit: number
   vehicles?: Vehicle[]
   createdAt?: string

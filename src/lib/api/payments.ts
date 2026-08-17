@@ -67,8 +67,8 @@ function normalizePaymentsList(data: PaginatedResult<Payment> | PaymentsResponse
 }
 
 export const paymentsApi = {
-  createPayment: async (data: CreatePaymentInput): Promise<Payment> => {
-    const response = await apiClient.post<ApiResponse<Payment>>(endpoints.payments.create, data)
+  createPayment: async (data: CreatePaymentInput): Promise<any> => {
+    const response = await apiClient.post<ApiResponse<any>>(endpoints.payments.create, data)
     return response.data.data
   },
 

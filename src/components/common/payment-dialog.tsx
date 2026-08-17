@@ -49,6 +49,7 @@ interface PaymentDialogProps {
   defaultContactId?: string
   defaultBranchId?: string
   defaultAmount?: number
+  onPaymentSuccess?: (data: any) => void
 }
 
 export function PaymentDialog({
@@ -61,6 +62,7 @@ export function PaymentDialog({
   defaultContactId,
   defaultBranchId,
   defaultAmount,
+  onPaymentSuccess,
 }: PaymentDialogProps) {
   const t = useTranslations("payments")
   const tCommon = useTranslations("common")
@@ -95,8 +97,17 @@ export function PaymentDialog({
   const { data: salesData } = useSales({
     limit: 100,
     status: "SOLD", // Only show completed sales
+    contactId: defaultContactId || undefined,
   })
   const sales = salesData?.items ?? []
+  
+  const unpaidSales = useMemo(() => {
+    return sales.filter(s => s.paymentStatus === "DUE" || s.paymentStatus === "PARTIAL")
+  }, [sales])
+
+  const totalDueAmount = useMemo(() => {
+    return unpaidSales.reduce((sum, s) => sum + (Number(s.totalAmount) - Number(s.paidAmount || 0)), 0)
+  }, [unpaidSales])
   // Fetch purchases - will be used when payment type is PURCHASE_PAYMENT
   const { data: purchasesData } = usePurchases({
     limit: 100,
@@ -119,7 +130,10 @@ export function PaymentDialog({
         ...data,
         occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
       }
-      await createMutation.mutateAsync(payload)
+      const res = await createMutation.mutateAsync(payload)
+      if (onPaymentSuccess) {
+        onPaymentSuccess(res)
+      }
       onOpenChange(false)
       form.reset()
     } catch (error) {
@@ -200,6 +214,19 @@ export function PaymentDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("amount")}</FormLabel>
+                  
+                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-md mb-2 text-sm">
+                      <p>This customer has <strong>{unpaidSales.length}</strong> unpaid sales.</p>
+                      <p>Total Outstanding Due: <strong>{formatCurrency(totalDueAmount, { generalSettings })}</strong></p>
+                    </div>
+                  )}
+                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length === 0 && (
+                    <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-md mb-2 text-sm">
+                      <p>This customer has no unpaid sales.</p>
+                    </div>
+                  )}
+
                   <FormControl>
                     <Input
                       type="number"
@@ -240,39 +267,7 @@ export function PaymentDialog({
               )}
             />
 
-            {paymentType === "SALE_PAYMENT" && !defaultSaleId && (
-              <FormField
-                control={form.control}
-                name="saleId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("saleId")}</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        // Clear selection if "none" is selected
-                        field.onChange(value === "none" ? undefined : value)
-                      }}
-                      value={field.value || undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("saleIdPlaceholder") || "Select a sale (Optional)"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">{tCommon("none")} ({tCommon("optional")})</SelectItem>
-                        {sales.map((sale) => (
-                          <SelectItem key={sale.id} value={sale.id}>
-                            {sale.invoiceNumber || sale.id} - {sale.contact?.name || "No Contact"} - {sale.totalAmount ? formatCurrency(sale.totalAmount, { generalSettings }) : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+
 
             {paymentType === "PURCHASE_PAYMENT" && !defaultPurchaseId && (
               <FormField

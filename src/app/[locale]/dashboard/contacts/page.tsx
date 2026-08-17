@@ -1,6 +1,8 @@
 "use client";
 
 import { ContactDialog } from "@/components/common/contact-dialog";
+import { PaymentDialog } from "@/components/common/payment-dialog";
+import { PaymentReceiptDialog, type PaymentReceiptData } from "@/components/common/payment-receipt-dialog";
 import { DataTable, type Column } from "@/components/common/data-table";
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog";
 import { ExportButton } from "@/components/common/export-button";
@@ -30,6 +32,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { type ContactsListParams } from "@/lib/api/contacts";
 import { useContacts, useDeleteContact } from "@/lib/hooks/use-contacts";
 import { useHasPermission } from "@/lib/hooks/use-permissions";
@@ -47,6 +56,7 @@ import {
   Trash2,
   User,
   Building2,
+  Banknote,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -58,8 +68,8 @@ export default function ContactsPage() {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const typeFilter = "";
-  const [activeTab, setActiveTab] = useState<"contacts" | "companies">("contacts");
+  const [activeTab, setActiveTab] = useState<"customer" | "supplier">("customer");
+  const [isIndividualFilter, setIsIndividualFilter] = useState<string>("all"); // "all", "true", "false"
   const limit = 10;
 
   // View mode with localStorage persistence
@@ -81,14 +91,17 @@ export default function ContactsPage() {
       params.search = trimmed;
     }
 
-    if (typeFilter) {
-      params.type = typeFilter;
+    if (activeTab === "customer") {
+      params.type = "CUSTOMER";
+      if (isIndividualFilter !== "all") {
+        params.isIndividual = isIndividualFilter === "true";
+      }
+    } else {
+      params.type = "SUPPLIER";
     }
 
-    params.isIndividual = activeTab === "contacts";
-
     return params;
-  }, [page, limit, search, typeFilter, activeTab]);
+  }, [page, limit, search, activeTab, isIndividualFilter]);
 
   const { data, isLoading } = useContacts(queryParams);
 
@@ -130,26 +143,6 @@ export default function ContactsPage() {
         sortable: true,
       },
       {
-        id: "type",
-        header: t("type"),
-        cell: (row) => {
-          const typeColors = {
-            CUSTOMER: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-            SUPPLIER: "bg-green-500/10 text-green-600 dark:text-green-400",
-          };
-          const typeLabels = {
-            CUSTOMER: t("typeCustomer"),
-            SUPPLIER: t("typeSupplier"),
-          };
-          return (
-            <Badge className={`text-xs px-2 py-0.5 font-medium ${typeColors[row.type] || ""}`}>
-              {typeLabels[row.type] || row.type}
-            </Badge>
-          );
-        },
-        sortable: true,
-      },
-      {
         id: "email",
         header: t("email"),
         accessorKey: "email",
@@ -182,23 +175,33 @@ export default function ContactsPage() {
       },
       {
         id: "balance",
-        header: t("balance"),
+        header: t("balance") || "Advance",
         accessorKey: "balance",
         cell: (row) => {
           const bal = row.balance || 0;
           return (
-            <span
-              className={
-                bal < 0
-                  ? "text-destructive font-semibold text-sm"
-                  : "text-emerald-500 font-semibold text-sm"
-              }
-            >
+            <span className="text-emerald-500 font-semibold text-sm">
               {bal.toFixed(2)}
             </span>
           );
         },
         sortable: true,
+      },
+      {
+        id: "credit",
+        header: "Credit (Limit / Due)",
+        cell: (row) => {
+          const limit = row.creditLimit || 0;
+          const due = row.totalDue || 0;
+          return (
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Limit: {limit.toFixed(2)}</span>
+              <span className={due > 0 ? "text-destructive font-semibold text-sm" : "text-sm"}>
+                Due: {due.toFixed(2)}
+              </span>
+            </div>
+          );
+        },
       },
     ],
     [t],
@@ -208,7 +211,6 @@ export default function ContactsPage() {
   const exportColumns: ExportColumn<Contact>[] = useMemo(
     () => [
       { key: "name", header: "Name", width: 25 },
-      { key: "type", header: "Type", width: 15 },
       { key: "email", header: "Email", width: 25 },
       { key: "phone", header: "Phone", width: 20 },
       { key: "address", header: "Address", width: 30 },
@@ -219,12 +221,17 @@ export default function ContactsPage() {
       },
       {
         key: "balance",
-        header: "Balance",
+        header: "Advance Balance",
         format: (value) => (value ? Number(value).toFixed(2) : "0.00"),
       },
       {
         key: "creditLimit",
         header: "Credit Limit",
+        format: (value) => (value ? Number(value).toFixed(2) : "0.00"),
+      },
+      {
+        key: "totalDue",
+        header: "Total Due",
         format: (value) => (value ? Number(value).toFixed(2) : "0.00"),
       },
       {
@@ -248,11 +255,33 @@ export default function ContactsPage() {
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [viewContact, setViewContact] = useState<Contact | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentContact, setPaymentContact] = useState<Contact | null>(null);
+  const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const deleteMutation = useDeleteContact();
+
+  const handlePaymentSuccess = (res: any) => {
+    if (res?.allocations || res?.remainingDeposit > 0) {
+      setReceiptData({
+        contactName: paymentContact?.name || "Customer",
+        totalPaid: res.totalPaid || 0,
+        remainingDeposit: res.remainingDeposit || 0,
+        allocations: res.allocations || [],
+        date: new Date().toISOString(),
+      });
+      setIsReceiptOpen(true);
+    }
+  };
+
+  const handleDeposit = (contact: Contact) => {
+    setPaymentContact(contact);
+    setIsPaymentOpen(true);
+  };
 
   const handleCreate = () => {
     setSelectedContact(null);
-    setDefaultIsIndividual(activeTab === "contacts");
+    setDefaultIsIndividual(activeTab === "customer");
     setIsDialogOpen(true);
   };
 
@@ -282,33 +311,26 @@ export default function ContactsPage() {
     });
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "CUSTOMER":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-      case "SUPPLIER":
-        return "bg-green-500/10 text-green-600 dark:text-green-400";
-      default:
-        return "";
-    }
-  };
 
   return (
     <PageLayout
-      title={activeTab === "contacts" ? t("title") : "Companies"}
-      description={activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}
+      title={activeTab === "customer" ? "Customers" : "Suppliers"}
+      description={activeTab === "customer" ? "Manage your customers" : "Manage your suppliers"}
       maxWidth="full"
     >
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "contacts" | "companies")}>
+      <Tabs value={activeTab} onValueChange={(val) => {
+        setActiveTab(val as "customer" | "supplier");
+        setPage(1);
+      }}>
         <div className="flex items-center justify-between mb-4">
           <TabsList>
-            <TabsTrigger value="contacts" className="flex items-center gap-2">
+            <TabsTrigger value="customer" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Contacts
+              Customers
             </TabsTrigger>
-            <TabsTrigger value="companies" className="flex items-center gap-2">
+            <TabsTrigger value="supplier" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              Companies
+              Suppliers
             </TabsTrigger>
           </TabsList>
         </div>
@@ -318,15 +340,27 @@ export default function ContactsPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {activeTab === "contacts" ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                {activeTab === "customer" ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
               </div>
               <div>
-                <CardTitle className="text-base sm:text-lg">{activeTab === "contacts" ? t("title") : "Companies"}</CardTitle>
-                <CardDescription className="text-xs">{activeTab === "contacts" ? t("description") : "Manage companies and their vehicles."}</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{activeTab === "customer" ? "Customers" : "Suppliers"}</CardTitle>
+                <CardDescription className="text-xs">{activeTab === "customer" ? "Manage your customers" : "Manage your suppliers"}</CardDescription>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              {activeTab === "customer" && (
+                <Select value={isIndividualFilter} onValueChange={(val) => { setIsIndividualFilter(val); setPage(1); }}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
+                    <SelectValue placeholder="All Customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="true">Individual</SelectItem>
+                    <SelectItem value="false">Company</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <div className="relative w-full sm:w-[260px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -362,14 +396,14 @@ export default function ContactsPage() {
           ) : contacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <User className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{activeTab === "contacts" ? t("noContacts") : "No Companies"}</h3>
+              <h3 className="text-lg font-semibold mb-2">{activeTab === "customer" ? t("noContacts") : "No Suppliers"}</h3>
               <p className="text-muted-foreground mb-4">
                 {t("noContactsDescription")}
               </p>
               {canCreate && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {activeTab === "contacts" ? t("createContact") : "Create Company"}
+                  {activeTab === "customer" ? t("createContact") : "Create Supplier"}
                 </Button>
               )}
             </div>
@@ -390,6 +424,10 @@ export default function ContactsPage() {
                       <DropdownMenuItem onClick={() => handleView(row)}>
                         <Eye className="mr-2 h-4 w-4" />
                         {t("viewDetails")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeposit(row)}>
+                        <Banknote className="mr-2 h-4 w-4" />
+                        Deposit / Make Payment
                       </DropdownMenuItem>
                       {canUpdate && (
                         <DropdownMenuItem onClick={() => handleEdit(row)}>
@@ -422,11 +460,6 @@ export default function ContactsPage() {
                         {/* Title & Badge */}
                         <div className="flex items-center gap-2 min-w-[200px]">
                           <h4 className="font-semibold text-sm text-foreground truncate">{contact.name}</h4>
-                          <Badge className={`text-xs px-2 py-0.5 font-medium ${getTypeColor(contact.type)}`}>
-                            {contact.type === "CUSTOMER"
-                              ? t("typeCustomer")
-                              : t("typeSupplier")}
-                          </Badge>
                           {!contact.isIndividual && (
                             <span className="text-xs text-muted-foreground font-medium">
                               (Company)
@@ -472,15 +505,22 @@ export default function ContactsPage() {
                             </span>
                           )}
                           <div className="text-right whitespace-nowrap">
-                            <span className="text-muted-foreground text-xs">{t("balance")}: </span>
-                            <span
-                              className={
-                                contact.balance !== null && contact.balance < 0
-                                  ? "text-destructive font-semibold"
-                                  : "text-emerald-500 font-semibold"
-                              }
-                            >
+                            <span className="text-muted-foreground text-xs">{t("balance")} (Adv): </span>
+                            <span className="text-emerald-500 font-semibold">
                               {contact.balance?.toFixed(2) || "0.00"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Credit Limit: </span>
+                            <span className="font-semibold">{contact.creditLimit?.toFixed(2) || "0.00"}</span>
+                          </div>
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Total Due: </span>
+                            <span className={contact.totalDue && contact.totalDue > 0 ? "text-destructive font-semibold" : "font-semibold"}>
+                              {contact.totalDue?.toFixed(2) || "0.00"}
                             </span>
                           </div>
                         </div>
@@ -500,6 +540,10 @@ export default function ContactsPage() {
                           <DropdownMenuItem onClick={() => handleView(contact)}>
                             <Eye className="mr-2 h-4 w-4" />
                             {t("viewDetails")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeposit(contact)}>
+                            <Banknote className="mr-2 h-4 w-4" />
+                            Deposit / Make Payment
                           </DropdownMenuItem>
                           {canUpdate && (
                             <DropdownMenuItem onClick={() => handleEdit(contact)}>
@@ -558,6 +602,20 @@ export default function ContactsPage() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         defaultIsIndividual={defaultIsIndividual}
+      />
+
+      <PaymentDialog
+        open={isPaymentOpen}
+        onOpenChange={setIsPaymentOpen}
+        defaultType="SALE_PAYMENT"
+        defaultContactId={paymentContact?.id}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      <PaymentReceiptDialog
+        open={isReceiptOpen}
+        onOpenChange={setIsReceiptOpen}
+        data={receiptData}
       />
 
       <DeleteConfirmationDialog

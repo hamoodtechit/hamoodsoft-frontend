@@ -74,8 +74,11 @@ export function CheckoutDrawer() {
     setCashAccountId,
     bankAccountId,
     setBankAccountId,
+    walletAccountId,
+    setWalletAccountId,
     cashAccounts,
     bankAccounts,
+    walletAccounts,
     accounts,
     paymentSplits,
     setPaymentSplits,
@@ -119,11 +122,26 @@ export function CheckoutDrawer() {
   }
 
   const unpaidAmount = Math.max(0, cartTotals.total - cashPaid);
+  const advanceBalance = selectedContact ? Math.max(0, selectedContact.balance || 0) : 0;
   const availableCredit = selectedContact
-    ? (selectedContact.balance || 0) + (selectedContact.creditLimit || 0)
+    ? (selectedContact.creditLimit || 0) - (selectedContact.totalDue || 0)
     : 0;
+  const remainingUnpaidAfterAdvance = Math.max(0, unpaidAmount - advanceBalance);
   const isCreditExceeded =
-    unpaidAmount > 0 && selectedContact && unpaidAmount > availableCredit;
+    remainingUnpaidAfterAdvance > 0 && selectedContact && remainingUnpaidAfterAdvance > availableCredit;
+
+  const isSubmitDisabled = 
+    cart.length === 0 ||
+    isProcessing ||
+    isCreditExceeded ||
+    (paymentMethod === "MIXED" &&
+      (Math.abs(
+        cartTotals.total -
+          paymentSplits.reduce((acc, s) => acc + s.amount, 0),
+      ) > 0.01 || paymentSplits.some(s => !s.accountId))) ||
+    (paymentMethod === "CASH" && !cashAccountId) ||
+    (paymentMethod === "CARD" && !bankAccountId) ||
+    (paymentMethod === "MOBILE" && !walletAccountId);
 
   const handleDrawerKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -136,7 +154,7 @@ export function CheckoutDrawer() {
       }
       
       // Only proceed if valid
-      if (cart.length > 0 && !isProcessing && !isCreditExceeded) {
+      if (!isSubmitDisabled) {
         handleCheckout();
       }
     }
@@ -183,7 +201,7 @@ export function CheckoutDrawer() {
                   <UserPlus className="h-3 w-3" />
                 </Button>
               </div>
-              <Popover open={openContactPopover} onOpenChange={setOpenContactPopover}>
+              <Popover open={openContactPopover} onOpenChange={setOpenContactPopover} modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -199,7 +217,7 @@ export function CheckoutDrawer() {
                 </PopoverTrigger>
                 <PopoverContent className="w-[340px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search customer by name or phone..." />
+                    <CommandInput placeholder="Search customer by name or phone..." autoFocus />
                     <CommandList>
                       <CommandEmpty>No customer found.</CommandEmpty>
                       <CommandGroup className="max-h-[240px] overflow-y-auto">
@@ -209,6 +227,13 @@ export function CheckoutDrawer() {
                             value={`${c.name} ${c.phone || ""} ${c.companyName || ""}`}
                             onSelect={() => {
                               setSelectedContactId(c.id);
+                              if (c.vehicles && c.vehicles.length > 0) {
+                                setVehicleId(c.vehicles[0].id);
+                                setVehicleNo(c.vehicles[0].vehicleNo);
+                              } else {
+                                setVehicleId("");
+                                setVehicleNo("");
+                              }
                               setOpenContactPopover(false);
                             }}
                             className="flex items-center justify-between py-2 text-xs cursor-pointer"
@@ -236,7 +261,7 @@ export function CheckoutDrawer() {
               {selectedContact && (
                 <div className="mt-2 text-xs p-2 rounded-md bg-muted/50 border">
                   <div className="flex justify-between text-muted-foreground mb-1">
-                    <span>Balance:</span>
+                    <span>Advance Balance:</span>
                     <span
                       className={
                         selectedContact.balance < 0
@@ -245,6 +270,18 @@ export function CheckoutDrawer() {
                       }
                     >
                       {selectedContact.balance.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground mb-1">
+                    <span>Total Due (Debt):</span>
+                    <span
+                      className={
+                        (selectedContact.totalDue || 0) > 0
+                          ? "text-rose-500 font-medium"
+                          : "text-emerald-500 font-medium"
+                      }
+                    >
+                      {(selectedContact.totalDue || 0).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground mb-1">
@@ -281,7 +318,7 @@ export function CheckoutDrawer() {
                     )}
                   </div>
 
-                  <Popover open={openVehiclePopover} onOpenChange={setOpenVehiclePopover}>
+                  <Popover open={openVehiclePopover} onOpenChange={setOpenVehiclePopover} modal={true}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -299,7 +336,7 @@ export function CheckoutDrawer() {
                     </PopoverTrigger>
                     <PopoverContent className="w-[340px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search vehicle number..." />
+                        <CommandInput placeholder="Search vehicle number..." autoFocus />
                         <CommandList>
                           <CommandEmpty>No vehicle found.</CommandEmpty>
                           <CommandGroup className="max-h-[200px] overflow-y-auto">
@@ -473,7 +510,8 @@ export function CheckoutDrawer() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="CARD">Card / Bank</SelectItem>
+                    <SelectItem value="MOBILE">Mobile Wallet</SelectItem>
                     <SelectItem value="CREDIT">Credit</SelectItem>
                     <SelectItem value="MIXED">Mixed</SelectItem>
                   </SelectContent>
@@ -502,19 +540,21 @@ export function CheckoutDrawer() {
               </div>
             </div>
 
-            {(paymentMethod === "CASH" || paymentMethod === "CARD") && (
+            {(paymentMethod === "CASH" || paymentMethod === "CARD" || paymentMethod === "MOBILE") && (
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    Target Account
+                    Target Account <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={
-                      paymentMethod === "CASH" ? cashAccountId : bankAccountId
+                      paymentMethod === "CASH" ? cashAccountId : paymentMethod === "CARD" ? bankAccountId : walletAccountId
                     }
                     onValueChange={
                       paymentMethod === "CASH"
                         ? setCashAccountId
-                        : setBankAccountId
+                        : paymentMethod === "CARD"
+                        ? setBankAccountId
+                        : setWalletAccountId
                     }
                   >
                     <SelectTrigger className="h-10 text-sm">
@@ -523,7 +563,9 @@ export function CheckoutDrawer() {
                     <SelectContent>
                       {(paymentMethod === "CASH"
                         ? cashAccounts
-                        : bankAccounts
+                        : paymentMethod === "CARD"
+                        ? bankAccounts
+                        : walletAccounts
                       ).map((acc) => (
                         <SelectItem key={acc.id} value={acc.id}>
                           {acc.name} ({acc.type})
@@ -539,7 +581,7 @@ export function CheckoutDrawer() {
               <div className="pt-2 border-t border-dashed space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-[10px] uppercase font-bold text-muted-foreground">
-                    Payment Splits
+                    Payment Splits <span className="text-destructive">*</span>
                   </Label>
                   <Button
                     variant="outline"
@@ -669,13 +711,26 @@ export function CheckoutDrawer() {
                   <span>Unpaid Amount</span>
                   <span>{unpaidAmount.toFixed(2)}</span>
                 </div>
+                {advanceBalance > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-400">
+                    <span>Will use Advance Balance</span>
+                    <span>-{Math.min(unpaidAmount, advanceBalance).toFixed(2)}</span>
+                  </div>
+                )}
+                {remainingUnpaidAfterAdvance > 0 && (
+                  <div className="flex justify-between text-xs opacity-70">
+                    <span>Added to Due (Debt)</span>
+                    <span>{remainingUnpaidAfterAdvance.toFixed(2)}</span>
+                  </div>
+                )}
+                
                 {isCreditExceeded ? (
-                  <div className="text-xs font-medium text-rose-500 bg-rose-500/10 p-2 rounded border border-rose-500/20 break-words">
-                    Exceeds available credit of {availableCredit.toFixed(2)}
+                  <div className="text-xs font-medium text-rose-500 bg-rose-500/10 p-2 rounded border border-rose-500/20 break-words mt-2">
+                    Exceeds available credit limit of {availableCredit.toFixed(2)}
                   </div>
                 ) : (
-                  <div className="text-xs font-medium text-emerald-400 bg-emerald-500/10 p-2 rounded border border-emerald-500/20 break-words">
-                    Within available credit limit
+                  <div className="text-xs font-medium text-emerald-400 bg-emerald-500/10 p-2 rounded border border-emerald-500/20 break-words mt-2">
+                    Within available limits
                   </div>
                 )}
               </div>
@@ -693,18 +748,7 @@ export function CheckoutDrawer() {
                 : "bg-emerald-500 hover:bg-emerald-600 text-white",
               isProcessing && "opacity-70 cursor-not-allowed",
             )}
-            disabled={
-              cart.length === 0 ||
-              isProcessing ||
-              isCreditExceeded ||
-              (paymentMethod === "MIXED" &&
-                (Math.abs(
-                  cartTotals.total -
-                    paymentSplits.reduce((acc, s) => acc + s.amount, 0),
-                ) > 0.01 || paymentSplits.some(s => !s.accountId))) ||
-              (paymentMethod === "CASH" && !cashAccountId) ||
-              (paymentMethod === "CARD" && !bankAccountId)
-            }
+            disabled={isSubmitDisabled}
             onClick={() => {
               handleCheckout();
             }}

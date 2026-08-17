@@ -43,7 +43,7 @@ export interface CartItem {
 }
 
 export type SaleType = "DRAFT" | "QUOTATION" | "SUSPEND" | "CREDIT_SALES" | "CARD"
-export type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED"
+export type PaymentMethod = "CASH" | "CARD" | "CREDIT" | "MIXED" | "MOBILE"
 
 export interface PaymentSplit {
   id: string
@@ -145,6 +145,8 @@ interface POSContextValue {
   setCashAccountId: (v: string) => void
   bankAccountId: string
   setBankAccountId: (v: string) => void
+  walletAccountId: string
+  setWalletAccountId: (v: string) => void
 
   // Calculator
   calculatorValue: string
@@ -163,6 +165,7 @@ interface POSContextValue {
   accounts: Account[]
   cashAccounts: Account[]
   bankAccounts: Account[]
+  walletAccounts: Account[]
   filteredProducts: Product[]
   cartProductIdSet: Set<string>
   recentSales: Sale[]
@@ -312,6 +315,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([])
   const [cashAccountId, setCashAccountId] = useState<string>("")
   const [bankAccountId, setBankAccountId] = useState<string>("")
+  const [walletAccountId, setWalletAccountId] = useState<string>("")
 
   // Calculator
   const [calculatorValue, setCalculatorValue] = useState("0")
@@ -445,6 +449,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
 
   const cashAccounts = useMemo(() => accounts.filter((acc) => acc.type === "CASH"), [accounts])
   const bankAccounts = useMemo(() => accounts.filter((acc) => acc.type === "BANK"), [accounts])
+  const walletAccounts = useMemo(() => accounts.filter((acc) => acc.type === "WALLET"), [accounts])
 
   const filteredProducts = useMemo(() => {
     let filtered = products
@@ -463,16 +468,17 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   // Set default accounts when available
   useEffect(() => {
     if (accounts.length > 0) {
-      if (paymentMethod === "CASH" && !cashAccountId) {
-        const cashAccount = cashAccounts.length > 0 ? cashAccounts[0] : accounts[0]
-        setCashAccountId(cashAccount.id)
+      if (paymentMethod === "CASH" && !cashAccountId && cashAccounts.length > 0) {
+        setCashAccountId(cashAccounts[0].id)
       }
-      if (paymentMethod === "CARD" && !bankAccountId) {
-        const bankAccount = bankAccounts.length > 0 ? bankAccounts[0] : accounts[0]
-        setBankAccountId(bankAccount.id)
+      if (paymentMethod === "CARD" && !bankAccountId && bankAccounts.length > 0) {
+        setBankAccountId(bankAccounts[0].id)
+      }
+      if (paymentMethod === "MOBILE" && !walletAccountId && walletAccounts.length > 0) {
+        setWalletAccountId(walletAccounts[0].id)
       }
     }
-  }, [accounts, cashAccounts, bankAccounts, paymentMethod, cashAccountId, bankAccountId])
+  }, [accounts, cashAccounts, bankAccounts, walletAccounts, paymentMethod, cashAccountId, bankAccountId, walletAccountId])
 
   // Set default customer (Walk-in) when none is selected
   useEffect(() => {
@@ -564,7 +570,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
       setPaymentSplits([])
       return
     }
-    if (paymentMethod === "CASH" || paymentMethod === "CARD") {
+    if (paymentMethod === "CASH" || paymentMethod === "CARD" || paymentMethod === "MOBILE") {
       setPaidAmountInput(cartTotals.total)
       setPaymentSplits([])
       return
@@ -1227,6 +1233,16 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
             occurredAt: new Date().toISOString(),
             type: "SALE_PAYMENT",
           })
+        } else if (paymentMethod === "MOBILE" && walletAccountId) {
+          payments.push({
+            accountId: walletAccountId,
+            amount: paidAmount,
+            branchId: selectedBranchId,
+            contactId: selectedContactId || undefined,
+            note: `Payment for sale`,
+            occurredAt: new Date().toISOString(),
+            type: "SALE_PAYMENT",
+          })
         } else if (paymentMethod === "MIXED") {
           paymentSplits.forEach((split) => {
             if (split.accountId && split.amount > 0) {
@@ -1393,9 +1409,10 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     discountType, setDiscountType, discountAmount, setDiscountAmount, taxRate, setTaxRate,
     paidAmountInput, setPaidAmountInput, paymentSplits, setPaymentSplits,
     cashAccountId, setCashAccountId, bankAccountId, setBankAccountId,
+    walletAccountId, setWalletAccountId,
     calculatorValue, setCalculatorValue, calculatorDisplay, setCalculatorDisplay,
     products, stocks, dispensers, contacts, categories, brands, branches,
-    accounts, cashAccounts, bankAccounts, filteredProducts, cartProductIdSet,
+    accounts, cashAccounts, bankAccounts, walletAccounts, filteredProducts, cartProductIdSet,
     recentSales, deleteSaleMutation,
     isLoadingProducts, isLoadingDispensers,
     fetchNextProducts, hasMoreProducts, isFetchingMoreProducts,
