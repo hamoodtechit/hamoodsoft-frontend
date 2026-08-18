@@ -441,6 +441,7 @@
   },
   "sales": {
     "title": "Sales",
+    "invoiceNumber": "Invoice Number",
     "description": "Manage sales orders and customers",
     "createSale": "Create Sale",
     "editSale": "Edit Sale",
@@ -458,6 +459,7 @@
     "paymentStatus": "Payment Status",
     "paymentStatusPaid": "Paid",
     "paymentStatusDue": "Due",
+    "paymentStatusUnpaid": "Unpaid (Due/Partial)",
     "paymentStatusPartial": "Partial",
     "paidAmount": "Paid Amount",
     "items": "Items",

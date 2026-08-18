@@ -460,11 +460,14 @@ export function InvoiceDialog({
           <span>Paid:</span>
           <span style="font-weight:bold;">${totals.paid.toFixed(2)}</span>
         </div>
-        ${(transaction as any)?.payments?.length > 0 ? (transaction as any).payments.map((p: any) => `
-        <div style="${totalRowStyle}font-size:${f.smallFontSizePt}pt;color:#555;">
-          <span>  - ${p.type === 'CUSTOMER_ACCOUNT' ? 'Company Balance' : (p.type === 'SALE_PAYMENT' ? 'Cash' : (p.type || 'Cash'))}:</span>
-          <span>${Number(p.amount).toFixed(2)}</span>
-        </div>`).join('') : ''}
+        ${(transaction as any)?.payments?.length > 0 ? `
+        <div style="border-top:0.3mm dashed #ccc; border-bottom:0.3mm dashed #ccc; margin:1mm 0; padding:1mm 0;">
+          ${(transaction as any).payments.map((p: any) => `
+          <div style="${totalRowStyle}">
+            <span>${p.type === 'CUSTOMER_ACCOUNT' ? 'Company Balance' : (p.type === 'SALE_PAYMENT' ? 'Cash' : (p.type || 'Cash'))}</span>
+            <span>${Number(p.amount).toFixed(2)}</span>
+          </div>`).join('')}
+        </div>` : ''}
         <div style="${totalRowStyle}${totals.due > 0 ? "font-weight:bold;color:#dc2626;" : ""}">
           <span>Current Due:</span>
           <span>${totals.due.toFixed(2)}</span>
@@ -1023,12 +1026,16 @@ export function InvoiceDialog({
                   <span>Paid:</span>
                   <span className="font-bold">{totals.paid.toFixed(2)}</span>
                 </div>
-                {(transaction as any)?.payments?.map((p: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm text-gray-600 pl-2">
-                    <span>- {p.type === 'CUSTOMER_ACCOUNT' ? 'Company Balance' : (p.type === 'SALE_PAYMENT' ? 'Cash' : (p.type || 'Cash'))}:</span>
-                    <span>{Number(p.amount).toFixed(2)}</span>
+                {((transaction as any)?.payments?.length > 0) && (
+                  <div className="border-t border-b border-dashed border-gray-300 my-1.5 py-1">
+                    {(transaction as any).payments.map((p: any, i: number) => (
+                      <div key={i} className="flex justify-between">
+                        <span>{p.type === 'CUSTOMER_ACCOUNT' ? 'Company Balance' : (p.type === 'SALE_PAYMENT' ? 'Cash' : (p.type || 'Cash'))}</span>
+                        <span>{Number(p.amount).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
                 <div
                   className={`flex justify-between ${totals.due > 0 ? "font-bold text-red-600" : ""}`}
                 >

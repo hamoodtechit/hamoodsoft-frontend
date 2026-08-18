@@ -61,6 +61,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ContactsPage() {
   const t = useTranslations("contacts");
@@ -260,8 +261,10 @@ export default function ContactsPage() {
   const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const deleteMutation = useDeleteContact();
+  const queryClient = useQueryClient();
 
   const handlePaymentSuccess = (res: any) => {
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
     if (res?.allocations || res?.remainingDeposit > 0) {
       setReceiptData({
         contactName: paymentContact?.name || "Customer",
@@ -644,7 +647,7 @@ export default function ContactsPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{viewContact.name}</h3>
                   <div className="text-sm text-muted-foreground mt-1">
-                    <Badge className={getTypeColor(viewContact.type)}>
+                    <Badge className={viewContact.type === "CUSTOMER" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : "bg-purple-100 text-purple-800 hover:bg-purple-200"}>
                       {viewContact.type === "CUSTOMER"
                         ? t("typeCustomer")
                         : t("typeSupplier")}

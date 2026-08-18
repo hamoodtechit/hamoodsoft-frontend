@@ -10,6 +10,7 @@ import { PermissionGuard } from "@/components/common/permission-guard"
 import { SaleDialog } from "@/components/common/sale-dialog"
 import { ReturnSaleDialog } from "@/components/common/return-sale-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -59,8 +67,11 @@ export default function SalesPage() {
   const deleteMutation = useDeleteSale()
 
   const [search, setSearch] = useState("")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL")
+  const [statusFilter, setStatusFilter] = useState<string>("ALL")
   const [page, setPage] = useState(1)
-  const limit = 10
+  const [limit, setLimit] = useState(20)
+  const [selectedSales, setSelectedSales] = useState<Sale[]>([])
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -88,11 +99,19 @@ export default function SalesPage() {
       params.search = trimmed
     }
 
+    if (paymentStatusFilter !== "ALL") {
+      params.paymentStatus = paymentStatusFilter as any
+    }
+
+    if (statusFilter !== "ALL") {
+      params.status = statusFilter as any
+    }
+
     // Always include branchId (even if null) so React Query detects changes
     params.branchId = selectedBranchId || undefined
 
     return params
-  }, [page, limit, search, selectedBranchId])
+  }, [page, limit, search, selectedBranchId, paymentStatusFilter, statusFilter])
 
   // Reset to page 1 when branch changes
   useEffect(() => {
@@ -213,27 +232,30 @@ export default function SalesPage() {
   
   const sales = data?.items ?? []
   const meta = data?.meta
-  const total = meta?.total ?? sales.length
+
   const totalPages =
     meta?.totalPages ??
-    Math.max(1, Math.ceil((total || 0) / (meta?.limit ?? limit)))
+    Math.max(1, Math.ceil((meta?.total || 0) / (meta?.limit ?? limit)))
+  
   const currentPage = meta?.page ?? page
 
   // Table columns configuration
   const tableColumns: Column<Sale>[] = useMemo(
     () => [
       {
+        id: "invoiceNumber",
+        header: t("invoiceNumber") || "Invoice No.",
+        accessorKey: "invoiceNumber",
+        cell: (row) => row.invoiceNumber || "-",
+        sortable: true,
+      },
+      {
         id: "contactId",
         header: t("contact"),
         cell: (row) => row.contact?.name || row.contactId || "-",
         sortable: false,
       },
-      {
-        id: "branch",
-        header: t("branch"),
-        cell: (row) => row.branch?.name || "-",
-        sortable: false,
-      },
+
       {
         id: "vehicleNo",
         header: "Vehicle No.",
@@ -327,12 +349,9 @@ export default function SalesPage() {
   // Export columns configuration
   const exportColumns: ExportColumn<Sale>[] = useMemo(
     () => [
+      { key: "invoiceNumber", header: "Invoice No.", width: 15, format: (value, row) => row.invoiceNumber || "-" },
       { key: "contactId", header: "Contact ID", width: 20 },
-      {
-        key: "branch",
-        header: "Branch",
-        format: (value, row) => row.branch?.name || "-",
-      },
+
       { key: "status", header: "Status", width: 15 },
       { key: "paymentStatus", header: "Payment Status", width: 15 },
       {
@@ -438,7 +457,7 @@ export default function SalesPage() {
 
   if (!hasAccess) {
     return (
-      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
+      <PageLayout title={t("title")} description={t("description")}>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
@@ -549,11 +568,6 @@ export default function SalesPage() {
                 <CardTitle>{t("title")}</CardTitle>
                 <CardDescription>
                   {t("description")}
-                  {selectedBranchId && (
-                    <span className="ml-2 text-xs">
-                      ({tCommon("filteredByBranch")})
-                    </span>
-                  )}
                 </CardDescription>
               </div>
             </div>
@@ -571,6 +585,41 @@ export default function SalesPage() {
                   className="pl-9"
                 />
               </div>
+              <Select
+                value={paymentStatusFilter}
+                onValueChange={(value) => {
+                  setPaymentStatusFilter(value)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder={t("paymentStatus")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("paymentStatus")}</SelectItem>
+                  <SelectItem value="PAID">{t("paymentStatusPaid")}</SelectItem>
+                  <SelectItem value="UNPAID">{t("paymentStatusUnpaid") || "Unpaid (Due/Partial)"}</SelectItem>
+                  <SelectItem value="DUE">{t("paymentStatusDue")}</SelectItem>
+                  <SelectItem value="PARTIAL">{t("paymentStatusPartial")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder={t("status")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("status")}</SelectItem>
+                  <SelectItem value="DRAFT">{t("statusDraft")}</SelectItem>
+                  <SelectItem value="SOLD">{t("statusSold")}</SelectItem>
+                  <SelectItem value="PENDING">{t("statusPending")}</SelectItem>
+                </SelectContent>
+              </Select>
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
                 data={sales}
@@ -578,6 +627,18 @@ export default function SalesPage() {
                 filename="sales"
                 disabled={isLoading || sales.length === 0}
               />
+              {selectedSales.length > 0 && (
+                <Button 
+                  variant="default"
+                  onClick={() => {
+                    setPaymentSale(null)
+                    setIsPaymentDialogOpen(true)
+                  }}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pay Selected ({selectedSales.length})
+                </Button>
+              )}
               <PermissionGuard permission={PERMISSIONS.SALES_CREATE}>
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -659,8 +720,25 @@ export default function SalesPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
+                selectable={true}
+                onSelectionChange={(selected) => {
+                  setSelectedSales(selected as Sale[])
+                }}
                 emptyMessage={t("noSales")}
               />
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1101,16 +1179,20 @@ export default function SalesPage() {
           setIsPaymentDialogOpen(open)
           if (!open) {
             setPaymentSale(null)
+            setSelectedSales([]) // clear selection after dialog closes
           }
         }}
         defaultType="SALE_PAYMENT"
         defaultSaleId={paymentSale?.id}
+        defaultSales={selectedSales.length > 0 ? selectedSales : undefined}
         defaultContactId={paymentSale?.contactId}
         defaultBranchId={paymentSale?.branchId}
         defaultAccountId={undefined}
         defaultAmount={
           paymentSale
             ? (paymentSale.totalAmount || paymentSale.totalPrice || 0) - (paymentSale.paidAmount || 0)
+            : selectedSales.length > 0
+            ? selectedSales.reduce((acc, s) => acc + ((s.totalAmount || s.totalPrice || 0) - (s.paidAmount || 0)), 0)
             : undefined
         }
       />

@@ -49,6 +49,7 @@ interface PaymentDialogProps {
   defaultContactId?: string
   defaultBranchId?: string
   defaultAmount?: number
+  defaultSales?: any[]
   onPaymentSuccess?: (data: any) => void
 }
 
@@ -62,6 +63,7 @@ export function PaymentDialog({
   defaultContactId,
   defaultBranchId,
   defaultAmount,
+  defaultSales,
   onPaymentSuccess,
 }: PaymentDialogProps) {
   const t = useTranslations("payments")
@@ -98,6 +100,7 @@ export function PaymentDialog({
     limit: 100,
     status: "SOLD", // Only show completed sales
     contactId: defaultContactId || undefined,
+    branchId: selectedBranchId || undefined,
   })
   const sales = salesData?.items ?? []
   
@@ -106,7 +109,7 @@ export function PaymentDialog({
   }, [sales])
 
   const totalDueAmount = useMemo(() => {
-    return unpaidSales.reduce((sum, s) => sum + (Number(s.totalAmount) - Number(s.paidAmount || 0)), 0)
+    return unpaidSales.reduce((sum, s) => sum + (Number(s.totalPrice || s.totalAmount || 0) - Number(s.paidAmount || 0)), 0)
   }, [unpaidSales])
   // Fetch purchases - will be used when payment type is PURCHASE_PAYMENT
   const { data: purchasesData } = usePurchases({
@@ -124,15 +127,38 @@ export function PaymentDialog({
     }
   }, [open, defaultValues, form])
 
+  const isMultiSale = Array.isArray(defaultSales) && defaultSales.length > 0;
+
   const onSubmit = async (data: CreatePaymentInput) => {
     try {
-      const payload = {
-        ...data,
-        occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
-      }
-      const res = await createMutation.mutateAsync(payload)
-      if (onPaymentSuccess) {
-        onPaymentSuccess(res)
+      if (isMultiSale) {
+        await Promise.all(
+          defaultSales!.map(async (sale) => {
+            const dueAmount = (sale.totalAmount || sale.totalPrice || 0) - (sale.paidAmount || 0);
+            if (dueAmount <= 0) return;
+            const payload = {
+              ...data,
+              saleId: sale.id,
+              contactId: sale.contactId,
+              branchId: sale.branchId,
+              amount: dueAmount,
+              occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
+            };
+            return createMutation.mutateAsync(payload);
+          })
+        );
+        if (onPaymentSuccess) {
+          onPaymentSuccess(data);
+        }
+      } else {
+        const payload = {
+          ...data,
+          occurredAt: data.occurredAt ? new Date(data.occurredAt).toISOString() : undefined,
+        }
+        const res = await createMutation.mutateAsync(payload)
+        if (onPaymentSuccess) {
+          onPaymentSuccess(res)
+        }
       }
       onOpenChange(false)
       form.reset()
@@ -232,6 +258,7 @@ export function PaymentDialog({
                       type="number"
                       step="0.01"
                       {...field}
+                      disabled={isMultiSale}
                       max={defaultAmount !== undefined ? defaultAmount : undefined}
                       onChange={(e) => {
                         let val = parseFloat(e.target.value) || 0;

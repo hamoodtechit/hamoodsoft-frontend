@@ -217,7 +217,7 @@ export function CheckoutDrawer() {
                 </PopoverTrigger>
                 <PopoverContent className="w-[340px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search customer by name or phone..." autoFocus />
+                    <CommandInput placeholder="Search customer by name or phone..." autoFocus onKeyDown={(e) => e.stopPropagation()} />
                     <CommandList>
                       <CommandEmpty>No customer found.</CommandEmpty>
                       <CommandGroup className="max-h-[240px] overflow-y-auto">
@@ -336,7 +336,7 @@ export function CheckoutDrawer() {
                     </PopoverTrigger>
                     <PopoverContent className="w-[340px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search vehicle number..." autoFocus />
+                        <CommandInput placeholder="Search vehicle number..." autoFocus onKeyDown={(e) => e.stopPropagation()} />
                         <CommandList>
                           <CommandEmpty>No vehicle found.</CommandEmpty>
                           <CommandGroup className="max-h-[200px] overflow-y-auto">

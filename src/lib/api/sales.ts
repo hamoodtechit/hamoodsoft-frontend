@@ -10,7 +10,7 @@ export type SalesListParams = {
   branchId?: string
   contactId?: string
   status?: "DRAFT" | "SOLD" | "PENDING"
-  paymentStatus?: "PAID" | "DUE" | "PARTIAL"
+  paymentStatus?: "PAID" | "DUE" | "PARTIAL" | "UNPAID"
   startDate?: string
   endDate?: string
 }
