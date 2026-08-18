@@ -230,6 +230,11 @@ export function PaymentDialog({
                           Supplier Deposit (Available: {formatCurrency(contact!.balance, { generalSettings })})
                         </SelectItem>
                       )}
+                      {paymentType === "SALE_PAYMENT" && (contact?.balance ?? 0) > 0 && (
+                        <SelectItem value="CUSTOMER_ACCOUNT" className="text-blue-600 font-medium">
+                          Customer Deposit (Available: {formatCurrency(contact!.balance, { generalSettings })})
+                        </SelectItem>
+                      )}
                       {accounts
                         .filter((acc) => acc.isActive)
                         .map((account) => (
@@ -271,13 +276,13 @@ export function PaymentDialog({
                       {...field}
                       disabled={isMultiSale}
                       max={
-                        selectedAccountId === "SUPPLIER_ACCOUNT" 
+                        (selectedAccountId === "SUPPLIER_ACCOUNT" || selectedAccountId === "CUSTOMER_ACCOUNT")
                           ? (defaultAmount !== undefined ? Math.min(contact?.balance ?? 0, defaultAmount) : contact?.balance ?? 0)
                           : (defaultAmount !== undefined ? defaultAmount : undefined)
                       }
                       onChange={(e) => {
                         let val = parseFloat(e.target.value) || 0;
-                        const effectiveMax = selectedAccountId === "SUPPLIER_ACCOUNT" 
+                        const effectiveMax = (selectedAccountId === "SUPPLIER_ACCOUNT" || selectedAccountId === "CUSTOMER_ACCOUNT")
                           ? (defaultAmount !== undefined ? Math.min(contact?.balance ?? 0, defaultAmount) : contact?.balance ?? 0)
                           : (defaultAmount !== undefined ? defaultAmount : undefined);
                         
