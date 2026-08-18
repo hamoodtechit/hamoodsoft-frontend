@@ -186,6 +186,7 @@ export function PaymentDialog({
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     value={field.value}
+                    disabled={isMultiSale || !!defaultSaleId || !!defaultPurchaseId}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -241,15 +242,16 @@ export function PaymentDialog({
                 <FormItem>
                   <FormLabel>{t("amount")}</FormLabel>
                   
-                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length > 0 && (
+                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length > 0 && !defaultSaleId && !isMultiSale && (
                     <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-md mb-2 text-sm">
                       <p>This customer has <strong>{unpaidSales.length}</strong> unpaid sales.</p>
                       <p>Total Outstanding Due: <strong>{formatCurrency(totalDueAmount, { generalSettings })}</strong></p>
                     </div>
                   )}
-                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length === 0 && (
-                    <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-md mb-2 text-sm">
+                  {paymentType === "SALE_PAYMENT" && defaultContactId && unpaidSales.length === 0 && !defaultSaleId && !isMultiSale && (
+                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-md mb-2 text-sm">
                       <p>This customer has no unpaid sales.</p>
+                      <p>This payment will be added to their account balance as a deposit.</p>
                     </div>
                   )}
 

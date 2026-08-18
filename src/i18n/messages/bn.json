@@ -37,7 +37,8 @@
     "updatedAt": "আপডেটের সময়",
     "openMenu": "মেনু খুলুন",
     "noResults": "কোনো ফলাফল পাওয়া যায়নি",
-    "noResultsDescription": "আপনার অনুসন্ধান সামঞ্জস্য করার চেষ্টা করুন"
+    "noResultsDescription": "আপনার অনুসন্ধান সামঞ্জস্য করার চেষ্টা করুন",
+    "remainingAmount": "অবশিষ্ট পরিমাণ"
   },
   "auth": {
     "login": "লগইন",
@@ -261,14 +262,13 @@
   },
   "brands": {
     "title": "ব্র্যান্ড",
-    "description": "পণ্যের ব্র্যান্ড পরিচালনা করুন",
+    "description": "বিবরণ",
     "createBrand": "ব্র্যান্ড তৈরি করুন",
     "createBrandDescription": "একটি নতুন ব্র্যান্ড যোগ করুন",
     "editBrand": "ব্র্যান্ড সম্পাদনা করুন",
     "editBrandDescription": "ব্র্যান্ডের তথ্য আপডেট করুন",
     "name": "ব্র্যান্ডের নাম",
     "namePlaceholder": "যেমন: Nike",
-    "description": "বিবরণ",
     "descriptionPlaceholder": "যেমন: স্পোর্টস ব্র্যান্ড",
     "noBrands": "এখনো কোনো ব্র্যান্ড নেই",
     "noBrandsDescription": "আপনার পণ্য সংগঠিত করতে ব্র্যান্ড তৈরি করুন",
@@ -437,7 +437,7 @@
     "deleteCategory": "ক্যাটাগরি মুছুন",
     "categoryName": "ক্যাটাগরির নাম",
     "categoryNamePlaceholder": "ক্যাটাগরির নাম লিখুন",
-    "parentCategory": "মূল ক্যাটাগরি (ঐচ্ছিক)",
+    "parentCategory": "মূল ক্যাটাগরি",
     "parentCategoryPlaceholder": "মূল ক্যাটাগরি নির্বাচন করুন",
     "none": "কোনটিই নয় (শীর্ষ স্তর)",
     "noCategories": "এখনও কোনো ক্যাটাগরি নেই",
@@ -448,8 +448,7 @@
     "deleteConfirmDescription": "আপনি কি নিশ্চিত যে আপনি \"{name}\" মুছতে চান? এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।",
     "createDescription": "একটি নতুন ক্যাটাগরি বা উপ-ক্যাটাগরি তৈরি করুন",
     "updateDescription": "ক্যাটাগরির বিবরণ আপডেট করুন",
-    "name": "নাম",
-    "parentCategory": "মূল ক্যাটাগরি"
+    "name": "নাম"
   },
   "units": {
     "title": "একক",
