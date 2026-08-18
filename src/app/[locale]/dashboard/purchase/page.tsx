@@ -133,12 +133,7 @@ export default function PurchasePage() {
         cell: (row) => row.contact?.name || row.contactId || "-",
         sortable: false,
       },
-      {
-        id: "branch",
-        header: t("branch"),
-        cell: (row) => row.branch?.name || "-",
-        sortable: false,
-      },
+
       {
         id: "status",
         header: t("status"),
@@ -214,11 +209,7 @@ export default function PurchasePage() {
   const exportColumns: ExportColumn<Purchase>[] = useMemo(
     () => [
       { key: "contactId", header: "Contact ID", width: 20 },
-      {
-        key: "branch",
-        header: "Branch",
-        format: (value, row) => row.branch?.name || "-",
-      },
+
       { key: "status", header: "Status", width: 15 },
       {
         key: "totalPrice",

@@ -812,6 +812,10 @@ export function PurchaseDialog({
         ? Number(data.paidAmount)
         : totalAmount;
 
+    if (paymentAmountToUse <= 0) {
+      return [];
+    }
+
     if (paymentAmountToUse > 0) {
       if (paymentMethod === "CASH" && !cashAccountId) {
         toast.error(

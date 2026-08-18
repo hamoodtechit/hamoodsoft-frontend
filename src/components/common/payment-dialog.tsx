@@ -28,6 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
+import { useContact } from "@/lib/hooks/use-contacts"
 import { useCreatePayment } from "@/lib/hooks/use-payments"
 import { usePurchases } from "@/lib/hooks/use-purchases"
 import { useSales } from "@/lib/hooks/use-sales"
@@ -94,6 +95,9 @@ export function PaymentDialog({
   })
 
   const paymentType = form.watch("type")
+  const selectedAccountId = form.watch("accountId")
+  
+  const { data: contact } = useContact(defaultContactId)
   
   // Fetch sales - will be used when payment type is SALE_PAYMENT
   const { data: salesData } = useSales({
@@ -221,6 +225,11 @@ export function PaymentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      {paymentType === "PURCHASE_PAYMENT" && (contact?.balance ?? 0) > 0 && (
+                        <SelectItem value="SUPPLIER_ACCOUNT" className="text-green-600 font-medium">
+                          Supplier Deposit (Available: {formatCurrency(contact!.balance, { generalSettings })})
+                        </SelectItem>
+                      )}
                       {accounts
                         .filter((acc) => acc.isActive)
                         .map((account) => (
@@ -261,11 +270,19 @@ export function PaymentDialog({
                       step="0.01"
                       {...field}
                       disabled={isMultiSale}
-                      max={defaultAmount !== undefined ? defaultAmount : undefined}
+                      max={
+                        selectedAccountId === "SUPPLIER_ACCOUNT" 
+                          ? (defaultAmount !== undefined ? Math.min(contact?.balance ?? 0, defaultAmount) : contact?.balance ?? 0)
+                          : (defaultAmount !== undefined ? defaultAmount : undefined)
+                      }
                       onChange={(e) => {
                         let val = parseFloat(e.target.value) || 0;
-                        if (defaultAmount !== undefined && val > defaultAmount) {
-                          val = defaultAmount;
+                        const effectiveMax = selectedAccountId === "SUPPLIER_ACCOUNT" 
+                          ? (defaultAmount !== undefined ? Math.min(contact?.balance ?? 0, defaultAmount) : contact?.balance ?? 0)
+                          : (defaultAmount !== undefined ? defaultAmount : undefined);
+                        
+                        if (effectiveMax !== undefined && val > effectiveMax) {
+                          val = effectiveMax;
                         }
                         field.onChange(val);
                       }}
