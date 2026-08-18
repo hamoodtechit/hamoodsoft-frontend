@@ -11,6 +11,7 @@ import { SaleDialog } from "@/components/common/sale-dialog"
 import { ReturnSaleDialog } from "@/components/common/return-sale-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { Pagination } from "@/components/common/pagination"
+import { PaymentReceiptDialog, type PaymentReceiptData } from "@/components/common/payment-receipt-dialog"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -72,6 +73,9 @@ export default function SalesPage() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [selectedSales, setSelectedSales] = useState<Sale[]>([])
+  
+  const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -118,7 +122,7 @@ export default function SalesPage() {
     setPage(1)
   }, [selectedBranchId])
 
-  const { data, isLoading } = useSales(queryParams)
+  const { data, isLoading, refetch } = useSales(queryParams)
   
   // Fetch products to match with sale items for images
   const { data: productsData } = useProducts({ limit: 1000, branchId: selectedBranchId || undefined })
@@ -627,18 +631,29 @@ export default function SalesPage() {
                 filename="sales"
                 disabled={isLoading || sales.length === 0}
               />
-              {selectedSales.length > 0 && (
-                <Button 
-                  variant="default"
-                  onClick={() => {
-                    setPaymentSale(null)
-                    setIsPaymentDialogOpen(true)
-                  }}
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Pay Selected ({selectedSales.length})
-                </Button>
-              )}
+              {selectedSales.length > 0 && (() => {
+                const isSingleCustomer = new Set(selectedSales.map(s => s.contactId)).size === 1;
+                return (
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="default"
+                      disabled={!isSingleCustomer}
+                      onClick={() => {
+                        setPaymentSale(null)
+                        setIsPaymentDialogOpen(true)
+                      }}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay Selected ({selectedSales.length})
+                    </Button>
+                    {!isSingleCustomer && (
+                      <span className="text-xs text-red-500">
+                        Select sales for a single customer
+                      </span>
+                    )}
+                  </div>
+                )
+              })()}
               <PermissionGuard permission={PERMISSIONS.SALES_CREATE}>
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -1188,6 +1203,31 @@ export default function SalesPage() {
         defaultContactId={paymentSale?.contactId}
         defaultBranchId={paymentSale?.branchId}
         defaultAccountId={undefined}
+        onPaymentSuccess={(res) => {
+          if (selectedSales.length > 0) {
+            const allocations = selectedSales.map(s => {
+              const dueAmount = (s.totalAmount || s.totalPrice || 0) - (s.paidAmount || 0);
+              return {
+                saleId: s.id,
+                invoiceNumber: s.invoiceNumber || s.id,
+                appliedAmount: dueAmount
+              }
+            }).filter(a => a.appliedAmount > 0);
+
+            const totalPaid = allocations.reduce((sum, a) => sum + a.appliedAmount, 0);
+
+            setReceiptData({
+              contactName: selectedSales[0].contact?.name || "Customer",
+              totalPaid,
+              remainingDeposit: 0,
+              allocations,
+              date: new Date().toISOString()
+            });
+            setIsReceiptOpen(true);
+            setSelectedSales([]);
+          }
+          refetch();
+        }}
         defaultAmount={
           paymentSale
             ? (paymentSale.totalAmount || paymentSale.totalPrice || 0) - (paymentSale.paidAmount || 0)
@@ -1195,6 +1235,12 @@ export default function SalesPage() {
             ? selectedSales.reduce((acc, s) => acc + ((s.totalAmount || s.totalPrice || 0) - (s.paidAmount || 0)), 0)
             : undefined
         }
+      />
+      
+      <PaymentReceiptDialog
+        open={isReceiptOpen}
+        onOpenChange={setIsReceiptOpen}
+        data={receiptData}
       />
     </PageLayout>
   )

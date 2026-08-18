@@ -26,10 +26,10 @@ import { useMemo, useState } from "react";
 // Types & Constants
 // ───────────────────────────────────────────────────
 
-type InvoiceFormat = "pos-58mm" | "pos-80mm" | "a4" | "a5";
+export type InvoiceFormat = "pos-58mm" | "pos-80mm" | "a4" | "a5";
 
 /** Physical paper widths in mm */
-const FORMAT_CONFIG: Record<
+export const FORMAT_CONFIG: Record<
   InvoiceFormat,
   {
     label: string;
@@ -115,7 +115,7 @@ const FORMAT_CONFIG: Record<
 };
 
 /** Maps legacy layout setting values to InvoiceFormat */
-function settingToFormat(layout?: string): InvoiceFormat {
+export function settingToFormat(layout?: string): InvoiceFormat {
   switch (layout) {
     case "pos-58mm":
       return "pos-58mm";
