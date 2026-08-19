@@ -176,12 +176,6 @@ export default function StocksPage() {
       },
       sortable: false,
     },
-    {
-      id: "branch",
-      header: t("branch"),
-      cell: (row) => row.branch?.name || "-",
-      sortable: false,
-    },
   ], [t, productMap, products])
 
   // Export columns with all nested details
@@ -257,12 +251,7 @@ export default function StocksPage() {
         const unit = row.unit || products.find(p => p.id === row.productId)?.unit
         return unit?.suffix || "-"
       },
-    },
-    {
-      key: "branch",
-      header: "Branch",
-      width: 20,
-      format: (value, row) => row.branch?.name || "-",
+    
     },
     {
       key: "productCategories",

@@ -8,6 +8,7 @@ import { PageLayout } from "@/components/common/page-layout"
 import { PaymentDialog } from "@/components/common/payment-dialog"
 import { PurchaseDialog } from "@/components/common/purchase-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -67,7 +68,9 @@ export default function PurchasePage() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [purchaseTypeFilter, setPurchaseTypeFilter] = useState<"ALL" | "PRODUCT" | "FUEL">("ALL")
-  const limit = 10
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("ALL")
+  const [statusFilter, setStatusFilter] = useState<string>("ALL")
+  const [limit, setLimit] = useState(20)
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -102,8 +105,16 @@ export default function PurchasePage() {
       params.purchaseType = purchaseTypeFilter
     }
 
+    if (paymentStatusFilter !== "ALL") {
+      params.paymentStatus = paymentStatusFilter as any
+    }
+
+    if (statusFilter !== "ALL") {
+      params.status = statusFilter as any
+    }
+
     return params
-  }, [page, limit, search, selectedBranchId, purchaseTypeFilter])
+  }, [page, limit, search, selectedBranchId, purchaseTypeFilter, paymentStatusFilter, statusFilter])
 
   // Reset to page 1 when branch changes
   useEffect(() => {
@@ -175,6 +186,19 @@ export default function PurchasePage() {
         sortable: false,
       },
       {
+        id: "paymentStatus",
+        header: tCommon("paymentStatus") || "Payment Status",
+        cell: (row) => {
+          const { label, color } = getPaymentStatusInfo(row)
+          return (
+            <Badge className={color}>
+              {label}
+            </Badge>
+          )
+        },
+        sortable: false,
+      },
+      {
         id: "totalAmount",
         header: t("total"),
         accessorKey: "totalPrice",
@@ -211,6 +235,12 @@ export default function PurchasePage() {
       { key: "contactId", header: "Contact ID", width: 20 },
 
       { key: "status", header: "Status", width: 15 },
+      { 
+        key: "paymentStatus", 
+        header: "Payment Status", 
+        width: 15,
+        format: (value, row) => getPaymentStatusInfo(row).label
+      },
       {
         key: "totalPrice",
         header: "Total Amount",
@@ -365,6 +395,35 @@ export default function PurchasePage() {
     }
   }
 
+  const getPaymentStatusInfo = (p: Purchase) => {
+    const paidAmount = p.paidAmount || 0;
+    const totalPrice = p.totalPrice || p.totalAmount || 0;
+    const dueAmount = p.dueAmount || Math.max(0, totalPrice - paidAmount);
+    let paymentStatus = "UNPAID";
+    if (dueAmount <= 0 && totalPrice > 0) paymentStatus = "PAID";
+    else if (paidAmount > 0 && dueAmount > 0) paymentStatus = "PARTIAL";
+    else if (dueAmount > 0) paymentStatus = "DUE";
+    
+    const paymentColors: Record<string, string> = {
+      PAID: "bg-green-500/10 text-green-600 dark:text-green-400",
+      DUE: "bg-red-500/10 text-red-600 dark:text-red-400",
+      UNPAID: "bg-red-500/10 text-red-600 dark:text-red-400",
+      PARTIAL: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    }
+    const paymentLabels: Record<string, string> = {
+      PAID: tCommon("paymentStatusPaid") || "Paid",
+      DUE: tCommon("paymentStatusDue") || "Due",
+      UNPAID: tCommon("paymentStatusUnpaid") || "Unpaid",
+      PARTIAL: tCommon("paymentStatusPartial") || "Partial",
+    }
+    
+    return {
+      status: paymentStatus,
+      label: paymentLabels[paymentStatus] || paymentStatus,
+      color: paymentColors[paymentStatus] || ""
+    }
+  }
+
   return (
     <PageLayout title={t("title")} description={t("description")} maxWidth="full">
       <Card>
@@ -422,6 +481,42 @@ export default function PurchasePage() {
                       <Droplets className="h-3 w-3" /> {t("fuelPurchase")}
                     </span>
                   </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={paymentStatusFilter}
+                onValueChange={(value) => {
+                  setPaymentStatusFilter(value)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder={tCommon("paymentStatus") || "Payment Status"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{tCommon("paymentStatus") || "Payment Status"}</SelectItem>
+                  <SelectItem value="PAID">{tCommon("paymentStatusPaid") || "Paid"}</SelectItem>
+                  <SelectItem value="UNPAID">{tCommon("paymentStatusUnpaid") || "Unpaid"}</SelectItem>
+                  <SelectItem value="DUE">{tCommon("paymentStatusDue") || "Due"}</SelectItem>
+                  <SelectItem value="PARTIAL">{tCommon("paymentStatusPartial") || "Partial"}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder={t("status") || "Status"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">{t("status") || "Status"}</SelectItem>
+                  <SelectItem value="ORDERED">{t("statusOrdered") || "Ordered"}</SelectItem>
+                  <SelectItem value="PENDING">{t("statusPending") || "Pending"}</SelectItem>
+                  <SelectItem value="COMPLETED">{t("statusCompleted") || "Completed"}</SelectItem>
+                  <SelectItem value="RETURNED">Returned</SelectItem>
                 </SelectContent>
               </Select>
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
@@ -510,6 +605,19 @@ export default function PurchasePage() {
                 )}
                 emptyMessage={t("noPurchases")}
               />
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -534,6 +642,9 @@ export default function PurchasePage() {
                           <Badge variant={p.purchaseType === "FUEL" ? "secondary" : "outline"} className="gap-1">
                             {p.purchaseType === "FUEL" ? <Droplets className="h-3 w-3" /> : <Package className="h-3 w-3" />}
                             {p.purchaseType === "FUEL" ? t("fuelPurchase") : t("productPurchase")}
+                          </Badge>
+                          <Badge className={getPaymentStatusInfo(p).color}>
+                            {getPaymentStatusInfo(p).label}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -614,27 +725,19 @@ export default function PurchasePage() {
                 </Card>
               ))}
 
-              <div className="flex items-center justify-between pt-2">
-                <p className="text-sm text-muted-foreground">
-                  {t("pagination", { page: currentPage, totalPages })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    {tCommon("previous")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    {tCommon("next")}
-                  </Button>
-                </div>
-              </div>
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           )}
         </CardContent>

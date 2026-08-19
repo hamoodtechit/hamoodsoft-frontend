@@ -55,7 +55,14 @@
     "statusOrdered": "Ordered",
     "items": "items",
     "receipt": "Receipt",
-    "remainingAmount": "Remaining Amount"
+    "remainingAmount": "Remaining Amount",
+    "type": "Type",
+    "amount": "Amount",
+    "paymentStatus": "Payment Status",
+    "paymentStatusPaid": "Paid",
+    "paymentStatusUnpaid": "Unpaid",
+    "paymentStatusDue": "Due",
+    "paymentStatusPartial": "Partial"
   },
   "auth": {
     "login": "Login",

@@ -38,7 +38,14 @@
     "openMenu": "মেনু খুলুন",
     "noResults": "কোনো ফলাফল পাওয়া যায়নি",
     "noResultsDescription": "আপনার অনুসন্ধান সামঞ্জস্য করার চেষ্টা করুন",
-    "remainingAmount": "অবশিষ্ট পরিমাণ"
+    "remainingAmount": "অবশিষ্ট পরিমাণ",
+    "type": "ধরন",
+    "amount": "পরিমাণ",
+    "paymentStatus": "পেমেন্টের অবস্থা",
+    "paymentStatusPaid": "পরিশোধিত",
+    "paymentStatusUnpaid": "অপরিশোধিত",
+    "paymentStatusDue": "বকেয়া",
+    "paymentStatusPartial": "আংশিক"
   },
   "auth": {
     "login": "লগইন",

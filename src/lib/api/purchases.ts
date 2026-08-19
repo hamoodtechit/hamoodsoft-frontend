@@ -9,8 +9,9 @@ export type PurchasesListParams = {
   search?: string
   branchId?: string
   contactId?: string
-  status?: "PENDING" | "COMPLETED" | "CANCELLED"
+  status?: "PENDING" | "COMPLETED" | "CANCELLED" | "ORDERED" | "RETURNED"
   purchaseType?: "PRODUCT" | "FUEL"
+  paymentStatus?: "PAID" | "UNPAID" | "PARTIAL" | "DUE"
   startDate?: string
   endDate?: string
 }

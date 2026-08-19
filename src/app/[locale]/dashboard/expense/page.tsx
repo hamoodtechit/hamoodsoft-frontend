@@ -21,8 +21,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useTransactions } from "@/lib/hooks/use-transactions"
+import { useAccounts } from "@/lib/hooks/use-accounts"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
 import { PermissionGuard } from "@/components/common/permission-guard"
@@ -30,7 +39,7 @@ import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
 import { Transaction } from "@/types"
-import { Eye, Plus, TrendingDown, MoreVertical } from "lucide-react"
+import { Eye, Plus, TrendingDown, MoreVertical, Search } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -47,6 +56,8 @@ export default function ExpensePage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [viewTransactionId, setViewTransactionId] = useState<string | null>(null)
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("all")
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
@@ -62,14 +73,35 @@ export default function ExpensePage() {
   // Fetch all transactions and filter for expense
   const { data: transactionsData, isLoading } = useTransactions({ limit: 1000 })
   const allTransactions = transactionsData?.items ?? []
+  
+  const { data: accountsData } = useAccounts()
+  const accounts = accountsData?.items ?? []
 
   // Filter transactions for expense type
   const expenseTransactions = useMemo(() => {
     return allTransactions.filter((t: Transaction) => {
       const category = (t as any).category
-      return category === "EXPENSE"
+      if (category !== "EXPENSE") return false
+      
+      if (selectedAccountId !== "all" && t.accountId !== selectedAccountId) {
+        return false
+      }
+      
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchNote = t.note?.toLowerCase().includes(query)
+        const matchAccount = t.account?.name?.toLowerCase().includes(query)
+        const matchContact = t.contact?.name?.toLowerCase().includes(query)
+        const matchAmount = t.amount?.toString().includes(query)
+        
+        if (!matchNote && !matchAccount && !matchContact && !matchAmount) {
+          return false
+        }
+      }
+      
+      return true
     })
-  }, [allTransactions])
+  }, [allTransactions, selectedAccountId, searchQuery])
 
   // Find transaction details
   const transactionDetails = useMemo(() => {
@@ -116,12 +148,6 @@ export default function ExpensePage() {
       id: "contact",
       header: t("contact") || "Contact",
       cell: (row) => row.contact?.name || "-",
-      sortable: false,
-    },
-    {
-      id: "branch",
-      header: t("branch") || "Branch",
-      cell: (row) => row.branch?.name || "-",
       sortable: false,
     },
     {
@@ -189,6 +215,33 @@ export default function ExpensePage() {
                 {t("createExpense") || "Create Expense"}
               </Button>
             </PermissionGuard>
+          </div>
+          
+          <div className="flex flex-col gap-4 mt-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by note, account, contact, or amount..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="w-full sm:w-[200px]">
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
