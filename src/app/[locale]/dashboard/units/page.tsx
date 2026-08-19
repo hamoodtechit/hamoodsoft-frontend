@@ -90,36 +90,6 @@ export default function UnitsPage() {
   const canUpdate = useHasPermission(PERMISSIONS.UNITS_UPDATE)
   const canDelete = useHasPermission(PERMISSIONS.UNITS_DELETE)
 
-  // Check if user has access to inventory module
-  useEffect(() => {
-    if (!isCheckingAccess && !hasAccess) {
-      router.push(`/${locale}/dashboard`)
-    }
-  }, [hasAccess, isCheckingAccess, locale, router])
-
-  // Show loading while checking permissions
-  if (isCheckingAccess) {
-    return (
-      <PageLayout title={t("title")} description={t("description")}>
-        <SkeletonList count={5} />
-      </PageLayout>
-    )
-  }
-
-  if (!hasAccess) {
-    return (
-      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              {tModules("noAccessDescription")}
-            </p>
-          </CardContent>
-        </Card>
-      </PageLayout>
-    )
-  }
-
   const handleCreate = () => {
     setSelectedUnit(null)
     setIsDialogOpen(true)
@@ -222,6 +192,36 @@ export default function UnitsPage() {
       format: (value) => (value ? new Date(value).toLocaleString() : "-"),
     },
   ], [])
+
+  // Check if user has access to inventory module
+  useEffect(() => {
+    if (!isCheckingAccess && !hasAccess) {
+      router.push(`/${locale}/dashboard`)
+    }
+  }, [hasAccess, isCheckingAccess, locale, router])
+
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <PageLayout title={t("title")} description={t("description")}>
+        <SkeletonList count={5} />
+      </PageLayout>
+    )
+  }
+
+  if (!hasAccess) {
+    return (
+      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">
+              {tModules("noAccessDescription")}
+            </p>
+          </CardContent>
+        </Card>
+      </PageLayout>
+    )
+  }
 
   return (
     <PageLayout
