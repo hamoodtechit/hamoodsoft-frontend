@@ -176,7 +176,7 @@ export default function ContactsPage() {
       },
       {
         id: "balance",
-        header: t("balance") || "Advance",
+        header: activeTab === "customer" ? "Advance Received" : "Advance Given",
         accessorKey: "balance",
         cell: (row) => {
           const bal = row.balance || 0;
@@ -205,7 +205,7 @@ export default function ContactsPage() {
         },
       },
     ],
-    [t],
+    [t, activeTab],
   );
 
   // Export columns configuration
@@ -508,7 +508,7 @@ export default function ContactsPage() {
                             </span>
                           )}
                           <div className="text-right whitespace-nowrap">
-                            <span className="text-muted-foreground text-xs">{t("balance")} (Adv): </span>
+                            <span className="text-muted-foreground text-xs">{activeTab === "customer" ? "Advance Received" : "Advance Given"}: </span>
                             <span className="text-emerald-500 font-semibold">
                               {contact.balance?.toFixed(2) || "0.00"}
                             </span>
@@ -688,7 +688,7 @@ export default function ContactsPage() {
               <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">
-                    {t("balance")}
+                    {viewContact.type === "CUSTOMER" ? "Advance Received" : "Advance Given"}
                   </p>
                   <p
                     className={`font-medium text-lg ${(viewContact.balance || 0) < 0 ? "text-destructive" : "text-emerald-500"}`}
