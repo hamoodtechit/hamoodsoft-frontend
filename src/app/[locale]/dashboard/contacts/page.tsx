@@ -610,7 +610,7 @@ export default function ContactsPage() {
       <PaymentDialog
         open={isPaymentOpen}
         onOpenChange={setIsPaymentOpen}
-        defaultType="SALE_PAYMENT"
+        defaultType={paymentContact?.type === "SUPPLIER" ? "PURCHASE_PAYMENT" : "SALE_PAYMENT"}
         defaultContactId={paymentContact?.id}
         onPaymentSuccess={handlePaymentSuccess}
       />

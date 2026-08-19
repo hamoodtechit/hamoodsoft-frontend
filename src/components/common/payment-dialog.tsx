@@ -37,7 +37,7 @@ import { formatCurrency } from "@/lib/utils/currency"
 import { createPaymentSchema, type CreatePaymentInput } from "@/lib/validations/payments"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 
 interface PaymentDialogProps {
@@ -125,13 +125,28 @@ export function PaymentDialog({
 
   const isLoading = createMutation.isPending
 
+  const [hasAutoFilledAmount, setHasAutoFilledAmount] = useState(false)
+
   useEffect(() => {
     if (open) {
       form.reset(defaultValues)
+      setHasAutoFilledAmount(false)
     }
   }, [open, defaultValues, form])
 
   const isMultiSale = Array.isArray(defaultSales) && defaultSales.length > 0;
+
+  // Auto-fill outstanding amount for sale payments
+  useEffect(() => {
+    if (open && paymentType === "SALE_PAYMENT" && !defaultAmount && !isMultiSale) {
+      if (salesData && !hasAutoFilledAmount) {
+        if (totalDueAmount > 0 && form.getValues("amount") === 0) {
+          form.setValue("amount", totalDueAmount)
+          setHasAutoFilledAmount(true)
+        }
+      }
+    }
+  }, [open, paymentType, totalDueAmount, defaultAmount, isMultiSale, form, salesData, hasAutoFilledAmount])
 
   const onSubmit = async (data: CreatePaymentInput) => {
     try {
@@ -198,8 +213,12 @@ export function PaymentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="SALE_PAYMENT">{t("typeSalePayment")}</SelectItem>
-                      <SelectItem value="PURCHASE_PAYMENT">{t("typePurchasePayment")}</SelectItem>
+                      {(!contact || contact.type !== "SUPPLIER") && (
+                        <SelectItem value="SALE_PAYMENT">{t("typeSalePayment")}</SelectItem>
+                      )}
+                      {(!contact || contact.type !== "CUSTOMER") && (
+                        <SelectItem value="PURCHASE_PAYMENT">{t("typePurchasePayment")}</SelectItem>
+                      )}
                       <SelectItem value="DEPOSIT">{t("typeDeposit")}</SelectItem>
                     </SelectContent>
                   </Select>
