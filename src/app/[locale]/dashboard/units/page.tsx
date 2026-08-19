@@ -6,6 +6,7 @@ import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { UnitDialog } from "@/components/common/unit-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,6 +44,8 @@ export default function UnitsPage() {
   const { selectedBranchId } = useBranchSelection()
   const { data: units = [], isLoading } = useUnits(selectedBranchId || undefined)
   const deleteUnitMutation = useDeleteUnit()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -73,6 +76,13 @@ export default function UnitsPage() {
       unit.suffix.toLowerCase().includes(searchLower)
     )
   }, [units, search])
+
+  const totalItems = filteredUnits.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedUnits = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredUnits.slice(start, start + limit)
+  }, [filteredUnits, page, limit])
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
@@ -260,7 +270,10 @@ export default function UnitsPage() {
               <Input
                 placeholder={t("searchPlaceholder") || "Search units..."}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
@@ -286,53 +299,79 @@ export default function UnitsPage() {
               )}
             </div>
           ) : viewMode === "table" ? (
-            <DataTable
-              columns={tableColumns}
-              data={filteredUnits}
-              getRowId={(row) => row.id}
-              enableRowSelection={false}
-              emptyMessage={t("noUnits")}
-            />
+            <div className="space-y-4">
+              <DataTable
+                columns={tableColumns}
+                data={paginatedUnits}
+                getRowId={(row) => row.id}
+                enableRowSelection={false}
+                emptyMessage={t("noUnits")}
+              />
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredUnits.map((unit) => (
-                <Card key={unit.id} className="relative">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{unit.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {t("suffix")}: <span className="font-mono font-medium">{unit.suffix}</span>
-                        </CardDescription>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {paginatedUnits.map((unit) => (
+                  <Card key={unit.id} className="relative">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{unit.name}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {t("suffix")}: <span className="font-mono font-medium">{unit.suffix}</span>
+                          </CardDescription>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => handleEdit(unit)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {tCommon("edit")}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(unit)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canUpdate && (
-                            <DropdownMenuItem onClick={() => handleEdit(unit)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete && (
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(unit)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
             </div>
           )}
         </CardContent>

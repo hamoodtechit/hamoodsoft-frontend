@@ -6,6 +6,7 @@ import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { StockDialog } from "@/components/common/stock-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -59,6 +60,8 @@ export default function StocksPage() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [historyStock, setHistoryStock] = useState<Stock | null>(null)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   
   const { data: settingsData } = useSettings()
   const businessConfig = useMemo(() => {
@@ -110,6 +113,13 @@ export default function StocksPage() {
       stock.id?.toLowerCase().includes(searchLower)
     )
   })
+
+  const totalItems = filteredStocks.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedStocks = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredStocks.slice(start, start + limit)
+  }, [filteredStocks, page, limit])
 
   // Table columns configuration
   const tableColumns: Column<Stock>[] = useMemo(() => [
@@ -354,7 +364,10 @@ export default function StocksPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setPage(1)
+                  }}
                   placeholder={t("searchPlaceholder")}
                   className="pl-9"
                 />
@@ -398,106 +411,132 @@ export default function StocksPage() {
               )}
             </div>
           ) : viewMode === "table" ? (
-            <div className="rounded-md border">
-              <DataTable
-                data={filteredStocks}
-                columns={tableColumns}
-                actions={(row) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewHistory(row)}>
-                        <History className="mr-2 h-4 w-4" />
-                        {t("viewHistory")}
-                      </DropdownMenuItem>
-                      {canUpdate && (
-                        <DropdownMenuItem onClick={() => handleAdjust(row)}>
-                          <Package className="mr-2 h-4 w-4" />
-                          {t("adjustStock")}
+            <div className="space-y-4">
+              <div className="rounded-md border">
+                <DataTable
+                  data={paginatedStocks}
+                  columns={tableColumns}
+                  actions={(row) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewHistory(row)}>
+                          <History className="mr-2 h-4 w-4" />
+                          {t("viewHistory")}
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                emptyMessage={t("noStocks")}
+                        {canUpdate && (
+                          <DropdownMenuItem onClick={() => handleAdjust(row)}>
+                            <Package className="mr-2 h-4 w-4" />
+                            {t("adjustStock")}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  emptyMessage={t("noStocks")}
+                />
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
               />
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredStocks.map((stock) => {
-                const productHistory = getStockHistoryForProduct(stock.productId ?? '')
-                const product = stock.product || productMap.get(stock.productId ?? '')
-                return (
-                  <Card key={stock.id} className="relative">
-                    <CardContent className="py-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold truncate">
-                              {(() => {
-                                if (!product) return stock.productId || 'Unknown Product'
-                                if (stock.variantId) {
-                                  const variant = product.variants?.find(v => v.id === stock.variantId)
-                                  if (variant) {
-                                    return `${product.name} - ${variant.variantName}`
+            <div className="space-y-4">
+              <div className="space-y-3">
+                {paginatedStocks.map((stock) => {
+                  const productHistory = getStockHistoryForProduct(stock.productId ?? '')
+                  const product = stock.product || productMap.get(stock.productId ?? '')
+                  return (
+                    <Card key={stock.id} className="relative">
+                      <CardContent className="py-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold truncate">
+                                {(() => {
+                                  if (!product) return stock.productId || 'Unknown Product'
+                                  if (stock.variantId) {
+                                    const variant = product.variants?.find(v => v.id === stock.variantId)
+                                    if (variant) {
+                                      return `${product.name} - ${variant.variantName}`
+                                    }
                                   }
-                                }
-                                return product.name
-                              })()}
-                              {(stock.sku || product?.sku) ? ` (SKU: ${stock.sku || product?.sku})` : ""}
-                            </h4>
-                            <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
-                              {t("quantity")}: {stock.quantity}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            {(stock.purchasePrice ?? product?.purchasePrice) !== null && (stock.purchasePrice ?? product?.purchasePrice) !== undefined && (
-                              <span>
-                                {t("purchasePrice")}: {stock.purchasePrice ?? product?.purchasePrice}
-                              </span>
-                            )}
-                            {(stock.salePrice ?? product?.salePrice) !== null && (stock.salePrice ?? product?.salePrice) !== undefined && (
-                              <span>
-                                {t("salePrice")}: {stock.salePrice ?? product?.salePrice}
-                              </span>
-                            )}
-                          </div>
-                          {productHistory.length > 0 && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                              {t("lastTransaction")}:{" "}
-                              {new Date(productHistory[0].createdAt || "").toLocaleString()}
+                                  return product.name
+                                })()}
+                                {(stock.sku || product?.sku) ? ` (SKU: ${stock.sku || product?.sku})` : ""}
+                              </h4>
+                              <Badge variant={stock.quantity > 0 ? "default" : "destructive"}>
+                                {t("quantity")}: {stock.quantity}
+                              </Badge>
                             </div>
-                          )}
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewHistory(stock)}>
-                              <History className="mr-2 h-4 w-4" />
-                              {t("viewHistory")}
-                            </DropdownMenuItem>
-                            {canUpdate && (
-                              <DropdownMenuItem onClick={() => handleAdjust(stock)}>
-                                <Package className="mr-2 h-4 w-4" />
-                                {t("adjustStock")}
-                              </DropdownMenuItem>
+                            <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                              {(stock.purchasePrice ?? product?.purchasePrice) !== null && (stock.purchasePrice ?? product?.purchasePrice) !== undefined && (
+                                <span>
+                                  {t("purchasePrice")}: {stock.purchasePrice ?? product?.purchasePrice}
+                                </span>
+                              )}
+                              {(stock.salePrice ?? product?.salePrice) !== null && (stock.salePrice ?? product?.salePrice) !== undefined && (
+                                <span>
+                                  {t("salePrice")}: {stock.salePrice ?? product?.salePrice}
+                                </span>
+                              )}
+                            </div>
+                            {productHistory.length > 0 && (
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                {t("lastTransaction")}:{" "}
+                                {new Date(productHistory[0].createdAt || "").toLocaleString()}
+                              </div>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewHistory(stock)}>
+                                <History className="mr-2 h-4 w-4" />
+                                {t("viewHistory")}
+                              </DropdownMenuItem>
+                              {canUpdate && (
+                                <DropdownMenuItem onClick={() => handleAdjust(stock)}>
+                                  <Package className="mr-2 h-4 w-4" />
+                                  {t("adjustStock")}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
             </div>
           )}
         </CardContent>

@@ -5,6 +5,7 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,7 +59,7 @@ export default function ProductsPage() {
 
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
-  const limit = 10
+  const [limit, setLimit] = useState(10)
   
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -518,6 +519,19 @@ export default function ProductsPage() {
                 )}
                 emptyMessage={t("noProducts")}
               />
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -635,27 +649,19 @@ export default function ProductsPage() {
                 )
               })}
 
-              <div className="flex items-center justify-between pt-2">
-                <p className="text-sm text-muted-foreground">
-                  {t("pagination", { page, totalPages })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    {tCommon("previous")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    {tCommon("next")}
-                  </Button>
-                </div>
-              </div>
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           )}
         </CardContent>

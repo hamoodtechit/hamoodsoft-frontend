@@ -6,6 +6,7 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,14 +42,15 @@ export default function BrandsPage() {
   const { user } = useAuth()
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
-  const { data: brandsData, isLoading } = useBrands()
-  const brands = brandsData?.items || []
-  const deleteBrandMutation = useDeleteBrand()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [search, setSearch] = useState("")
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null)
-  const [search, setSearch] = useState("")
+
+  const deleteBrandMutation = useDeleteBrand()
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -65,15 +67,22 @@ export default function BrandsPage() {
     }
   }, [viewMode])
 
-  // Filter brands by search
-  const filteredBrands = useMemo(() => {
-    if (!search.trim()) return brands
-    const searchLower = search.toLowerCase()
-    return brands.filter((brand) =>
-      brand.name.toLowerCase().includes(searchLower) ||
-      (brand.description && brand.description.toLowerCase().includes(searchLower))
-    )
-  }, [brands, search])
+  const queryParams = useMemo(() => {
+    const p: any = { page, limit }
+    if (search.trim()) p.search = search.trim()
+    return p
+  }, [page, limit, search])
+
+  const { data: brandsData, isLoading } = useBrands(queryParams)
+  const brands = brandsData?.items || []
+  const meta = brandsData?.meta
+
+  const totalPages =
+    meta?.totalPages ??
+    Math.max(1, Math.ceil((meta?.total || 0) / (meta?.limit ?? limit)))
+
+  const filteredBrands = brands
+
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
@@ -271,7 +280,10 @@ export default function BrandsPage() {
               <Input
                 placeholder={t("searchPlaceholder") || "Search brands..."}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
@@ -297,53 +309,83 @@ export default function BrandsPage() {
               )}
             </div>
           ) : viewMode === "table" ? (
-            <DataTable
-              columns={tableColumns}
-              data={filteredBrands}
-              getRowId={(row) => row.id}
-              enableRowSelection={false}
-              emptyMessage={t("noBrands")}
-            />
+            <div className="space-y-4">
+              <DataTable
+                columns={tableColumns}
+                data={filteredBrands}
+                getRowId={(row) => row.id}
+                enableRowSelection={false}
+                emptyMessage={t("noBrands")}
+              />
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredBrands.map((brand) => (
-                <Card key={brand.id} className="relative">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{brand.name}</CardTitle>
-                        {brand.description && (
-                          <CardDescription className="mt-1">{brand.description}</CardDescription>
-                        )}
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredBrands.map((brand) => (
+                  <Card key={brand.id} className="relative">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{brand.name}</CardTitle>
+                          {brand.description && (
+                            <CardDescription className="mt-1">{brand.description}</CardDescription>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => handleEdit(brand)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {tCommon("edit")}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(brand)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canUpdate && (
-                            <DropdownMenuItem onClick={() => handleEdit(brand)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete && (
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(brand)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           )}
         </CardContent>

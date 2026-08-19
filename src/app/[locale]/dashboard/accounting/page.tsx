@@ -5,6 +5,7 @@ import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { PageLayout } from "@/components/common/page-layout"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
+import { Pagination } from "@/components/common/pagination"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -65,6 +66,8 @@ export default function AccountingPage() {
   const { generalSettings } = useAppSettings()
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<"CASH" | "BANK" | "WALLET" | "ASSET" | "LIABILITY" | "EQUITY" | "INCOME" | "EXPENSE" | "">("")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -273,6 +276,13 @@ export default function AccountingPage() {
     })
   }, [accounts, search, typeFilter])
 
+  const totalItems = filteredAccounts.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedAccounts = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredAccounts.slice(start, start + limit)
+  }, [filteredAccounts, page, limit])
+
   // Show loading while checking permissions
   if (isCheckingAccess) {
     return (
@@ -328,14 +338,20 @@ export default function AccountingPage() {
                     <Input
                       placeholder={t("searchAccounts")}
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => {
+                        setSearch(e.target.value)
+                        setPage(1)
+                      }}
                       className="pl-9"
                     />
                   </div>
                 </div>
                 <select
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as any)}
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value as any)
+                    setPage(1)
+                  }}
                   className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">{t("allTypes")}</option>
@@ -357,13 +373,28 @@ export default function AccountingPage() {
                   {t("noAccounts")}
                 </div>
               ) : (
-                <DataTable
-                  columns={accountColumns}
-                  data={filteredAccounts}
-                  getRowId={(row) => row.id}
-                  enableRowSelection={false}
-                  emptyMessage={t("noAccounts")}
-                />
+                <div className="space-y-4">
+                  <div className="rounded-md border">
+                    <DataTable
+                      columns={accountColumns}
+                      data={paginatedAccounts}
+                      getRowId={(row) => row.id}
+                      enableRowSelection={false}
+                      emptyMessage={t("noAccounts")}
+                    />
+                  </div>
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    limit={limit}
+                    onPageChange={setPage}
+                    onLimitChange={(newLimit) => {
+                      setLimit(newLimit)
+                      setPage(1)
+                    }}
+                  />
+                </div>
               )}
             </div>
           </CardContent>

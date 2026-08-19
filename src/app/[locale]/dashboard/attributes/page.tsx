@@ -6,6 +6,7 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,8 +43,24 @@ export default function AttributesPage() {
   const { user } = useAuth()
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
-  const { data: attributesData, isLoading } = useAttributes()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [search, setSearch] = useState("")
+  
+  const queryParams = useMemo(() => {
+    const p: any = { page, limit }
+    if (search.trim()) p.search = search.trim()
+    return p
+  }, [page, limit, search])
+
+  const { data: attributesData, isLoading } = useAttributes(queryParams)
   const attributes = attributesData?.items || []
+  const meta = attributesData?.meta
+
+  const totalPages =
+    meta?.totalPages ??
+    Math.max(1, Math.ceil((meta?.total || 0) / (meta?.limit ?? limit)))
+
   const createAttributeMutation = useCreateAttribute()
   const updateAttributeMutation = useUpdateAttribute()
   const deleteAttributeMutation = useDeleteAttribute()
@@ -51,7 +68,6 @@ export default function AttributesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(null)
-  const [search, setSearch] = useState("")
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -69,14 +85,7 @@ export default function AttributesPage() {
   }, [viewMode])
 
   // Filter attributes by search
-  const filteredAttributes = useMemo(() => {
-    if (!search.trim()) return attributes
-    const searchLower = search.toLowerCase()
-    return attributes.filter((attribute) =>
-      attribute.name.toLowerCase().includes(searchLower) ||
-      attribute.values.some((value) => value.toLowerCase().includes(searchLower))
-    )
-  }, [attributes, search])
+  const filteredAttributes = attributes
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
@@ -283,7 +292,10 @@ export default function AttributesPage() {
               <Input
                 placeholder={t("searchPlaceholder") || "Search attributes..."}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
@@ -309,59 +321,89 @@ export default function AttributesPage() {
               )}
             </div>
           ) : viewMode === "table" ? (
-            <DataTable
-              columns={tableColumns}
-              data={filteredAttributes}
-              getRowId={(row) => row.id}
-              enableRowSelection={false}
-              emptyMessage={t("noAttributes")}
-            />
+            <div className="space-y-4">
+              <DataTable
+                columns={tableColumns}
+                data={filteredAttributes}
+                getRowId={(row) => row.id}
+                enableRowSelection={false}
+                emptyMessage={t("noAttributes")}
+              />
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredAttributes.map((attribute) => (
-                <Card key={attribute.id} className="relative">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{attribute.name}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex flex-wrap gap-1">
-                            {attribute.values.map((value, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {value}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardDescription>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredAttributes.map((attribute) => (
+                  <Card key={attribute.id} className="relative">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{attribute.name}</CardTitle>
+                          <CardDescription className="mt-2">
+                            <div className="flex flex-wrap gap-1">
+                              {attribute.values.map((value, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">
+                                  {value}
+                                </Badge>
+                              ))}
+                            </div>
+                          </CardDescription>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => handleEdit(attribute)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {tCommon("edit")}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(attribute)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canUpdate && (
-                            <DropdownMenuItem onClick={() => handleEdit(attribute)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete && (
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(attribute)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+              {meta && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={meta.total || 0}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(1)
+                  }}
+                />
+              )}
             </div>
           )}
         </CardContent>

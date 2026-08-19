@@ -3,6 +3,7 @@
 import { DataTable, type Column } from "@/components/common/data-table"
 import { PageLayout } from "@/components/common/page-layout"
 import { TransactionDialog } from "@/components/common/transaction-dialog"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,6 +59,8 @@ export default function IncomePage() {
   const [isTransactionDetailsOpen, setIsTransactionDetailsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.ACCOUNTING)
@@ -108,6 +111,13 @@ export default function IncomePage() {
     if (!viewTransactionId) return null
     return allTransactions.find((t: Transaction) => t.id === viewTransactionId) || null
   }, [viewTransactionId, allTransactions])
+
+  const totalItems = incomeTransactions.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedTransactions = useMemo(() => {
+    const start = (page - 1) * limit
+    return incomeTransactions.slice(start, start + limit)
+  }, [incomeTransactions, page, limit])
 
   // Table columns configuration
   const tableColumns: Column<Transaction>[] = useMemo(() => [
@@ -223,12 +233,18 @@ export default function IncomePage() {
               <Input
                 placeholder="Search by note, account, contact, or amount..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
             <div className="w-full sm:w-[200px]">
-              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <Select value={selectedAccountId} onValueChange={(val) => {
+                setSelectedAccountId(val)
+                setPage(1)
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by Account" />
                 </SelectTrigger>
@@ -253,33 +269,46 @@ export default function IncomePage() {
               No income transactions found
             </div>
           ) : (
-            <div className="rounded-md border">
-              <DataTable
-                data={incomeTransactions}
-                columns={tableColumns}
-                onRowClick={(row) => {
-                  setViewTransactionId(row.id)
-                  setIsTransactionDetailsOpen(true)
+            <div className="space-y-4">
+              <div className="rounded-md border">
+                <DataTable
+                  data={paginatedTransactions}
+                  columns={tableColumns}
+                  onRowClick={(row) => {
+                    setViewTransactionId(row.id)
+                    setIsTransactionDetailsOpen(true)
+                  }}
+                  actions={(row) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setViewTransactionId(row.id)
+                          setIsTransactionDetailsOpen(true)
+                        }}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          {tCommon("viewDetails") || "View Details"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  emptyMessage={t("noTransactions") || "No income transactions found"}
+                />
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
                 }}
-                actions={(row) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        setViewTransactionId(row.id)
-                        setIsTransactionDetailsOpen(true)
-                      }}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        {tCommon("viewDetails") || "View Details"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                emptyMessage={t("noTransactions") || "No income transactions found"}
               />
             </div>
           )}

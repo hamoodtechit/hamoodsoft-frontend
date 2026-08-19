@@ -6,6 +6,7 @@ import { DeleteConfirmationDialog } from "@/components/common/delete-confirmatio
 import { ExportButton } from "@/components/common/export-button"
 import { PageLayout } from "@/components/common/page-layout"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
+import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -95,6 +96,8 @@ export default function CategoriesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
   const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
 
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -149,6 +152,13 @@ export default function CategoriesPage() {
       (category.parent?.name && category.parent.name.toLowerCase().includes(searchLower))
     )
   }, [allCategoriesFlat, search])
+
+  const totalItems = filteredCategoriesForTable.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedCategoriesForTable = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredCategoriesForTable.slice(start, start + limit)
+  }, [filteredCategoriesForTable, page, limit])
 
   // Filter categories by search (for tree/card view - uses nested structure)
   const filteredCategoriesForTree = useMemo(() => {
@@ -542,7 +552,10 @@ export default function CategoriesPage() {
               <Input
                 placeholder={t("searchPlaceholder") || "Search categories..."}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
@@ -568,13 +581,26 @@ export default function CategoriesPage() {
               )}
             </div>
           ) : viewMode === "table" ? (
-            <DataTable
-              columns={tableColumns}
-              data={filteredCategoriesForTable}
-              getRowId={(row) => row.id}
-              enableRowSelection={false}
-              emptyMessage={t("noCategories")}
-            />
+            <div className="space-y-4">
+              <DataTable
+                columns={tableColumns}
+                data={paginatedCategoriesForTable}
+                getRowId={(row) => row.id}
+                enableRowSelection={false}
+                emptyMessage={t("noCategories")}
+              />
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
+            </div>
           ) : (
             <div className="space-y-2">{renderCategoryTree(categoryTree)}</div>
           )}
