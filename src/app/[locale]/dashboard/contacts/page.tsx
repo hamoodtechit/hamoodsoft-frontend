@@ -190,7 +190,7 @@ export default function ContactsPage() {
       },
       {
         id: "credit",
-        header: "Credit (Limit / Due)",
+        header: activeTab === "customer" ? "Credit (Limit / They Owe)" : "Credit (Limit / We Owe)",
         cell: (row) => {
           const limit = row.creditLimit || 0;
           const due = row.totalDue || 0;
@@ -198,7 +198,7 @@ export default function ContactsPage() {
             <div className="flex flex-col">
               <span className="text-xs text-muted-foreground">Limit: {limit.toFixed(2)}</span>
               <span className={due > 0 ? "text-destructive font-semibold text-sm" : "text-sm"}>
-                Due: {due.toFixed(2)}
+                {activeTab === "customer" ? "They Owe" : "We Owe"}: {due.toFixed(2)}
               </span>
             </div>
           );
@@ -521,7 +521,7 @@ export default function ContactsPage() {
                             <span className="font-semibold">{contact.creditLimit?.toFixed(2) || "0.00"}</span>
                           </div>
                           <div className="text-xs">
-                            <span className="text-muted-foreground">Total Due: </span>
+                            <span className="text-muted-foreground">{activeTab === "customer" ? "They Owe" : "We Owe"}: </span>
                             <span className={contact.totalDue && contact.totalDue > 0 ? "text-destructive font-semibold" : "font-semibold"}>
                               {contact.totalDue?.toFixed(2) || "0.00"}
                             </span>
