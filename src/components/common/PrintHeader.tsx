@@ -53,7 +53,7 @@ export function PrintHeader({ title, subtitle, dateRange }: PrintHeaderProps) {
 
         {/* Right: Report Info */}
         <div className="text-right flex flex-col items-end pr-4">
-          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wider m-0">
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider m-0">
             {title}
           </h2>
           
