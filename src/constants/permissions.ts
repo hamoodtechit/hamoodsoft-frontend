@@ -139,6 +139,10 @@ export const DEFAULT_OWNER_PERMISSIONS_BY_MODULE: ModulePermissionGroup[] = [
     module: 'pos',
     permissions: ['pos:sessions:read', 'pos:sessions:create'],
   },
+  {
+    module: 'reports',
+    permissions: ['reports:read'],
+  },
 ]
 
 // Frontend-friendly permission groups with labels for UI display
@@ -336,6 +340,13 @@ export const permissionGroups = {
     permissions: [
       { value: "pos:sessions:read", label: "Read / Access POS" },
       { value: "pos:sessions:create", label: "Open / Close POS Sessions" },
+    ],
+  },
+  // Reports module
+  reports: {
+    label: "Reports",
+    permissions: [
+      { value: "reports:read", label: "Read Reports" },
     ],
   },
 } as const

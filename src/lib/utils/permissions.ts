@@ -96,6 +96,9 @@ export const PERMISSIONS = {
   BRANCHES_CREATE: "branches:create",
   BRANCHES_UPDATE: "branches:update",
   BRANCHES_DELETE: "branches:delete",
+  
+  // Reports
+  REPORTS_READ: "reports:read",
 } as const
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS]
@@ -111,6 +114,7 @@ export const MODULES = {
   CRM: "crm",
   POINT_OF_SALE: "point-of-sale",
   OIL_FILLING_STATION: "oil-filling-station",
+  REPORTS: "reports",
 } as const
 
 export type ModuleName = typeof MODULES[keyof typeof MODULES]

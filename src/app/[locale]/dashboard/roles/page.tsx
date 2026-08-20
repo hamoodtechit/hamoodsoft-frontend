@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/hooks/use-auth"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { useDeleteRole, useRoles } from "@/lib/hooks/use-roles"
 import { useUsers } from "@/lib/hooks/use-users"
@@ -32,6 +33,8 @@ export default function RolesPage() {
   const router = useRouter()
   const locale = params.locale as string
   const currentBusiness = useCurrentBusiness()
+  const { user } = useAuth()
+  const isOwner = currentBusiness?.ownerId === user?.id
   const { data: roles = [], isLoading } = useRoles()
   const { data: users = [] } = useUsers()
   const deleteRoleMutation = useDeleteRole()
@@ -179,27 +182,33 @@ export default function RolesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <PermissionGuard permission="roles:update">
-                            <DropdownMenuItem onClick={() => handleEdit(role)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {tCommon("edit")}
-                            </DropdownMenuItem>
-                          </PermissionGuard>
-                          <PermissionGuard permission="roles:assign">
-                            <DropdownMenuItem onClick={() => handleAssignUser(role)}>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              {t("assignUser")}
-                            </DropdownMenuItem>
-                          </PermissionGuard>
-                          <PermissionGuard permission="roles:delete">
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(role)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {tCommon("delete")}
-                            </DropdownMenuItem>
-                          </PermissionGuard>
+                          {role.name.toLowerCase() !== "owner" && role.name.toLowerCase() !== "admin" && (
+                            <PermissionGuard permission="roles:update">
+                              <DropdownMenuItem onClick={() => handleEdit(role)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {tCommon("edit")}
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          )}
+                          {!(role.name.toLowerCase() === "owner" && !isOwner) && (
+                            <PermissionGuard permission="roles:assign">
+                              <DropdownMenuItem onClick={() => handleAssignUser(role)}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                {t("assignUser")}
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          )}
+                          {role.name.toLowerCase() !== "owner" && role.name.toLowerCase() !== "admin" && (
+                            <PermissionGuard permission="roles:delete">
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(role)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {tCommon("delete")}
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

@@ -22,7 +22,7 @@ export function PrintHeader({ title, subtitle, dateRange }: PrintHeaderProps) {
   const { logoUrl, companyName, businessAddress, officePhone, binNumber } = generalSettings
 
   return (
-    <div className="hidden print:block mb-6 print-exact pb-4 border-b-2 border-slate-800">
+    <div className="hidden print:!block mb-6 print-exact pb-4 border-b-2 border-slate-800">
       <div className="flex items-center justify-between">
         {/* Left: Logo and Business Info */}
         <div className="flex items-center gap-4">

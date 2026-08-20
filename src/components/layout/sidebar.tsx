@@ -99,7 +99,7 @@ export function Sidebar() {
       color: "text-purple-400",
       hash: "#reports-section",
       activePrefixes: ["/reports", "/dashboard/reports/sales", "/dashboard/reports/purchases", "/dashboard/reports/income", "/dashboard/reports/expense"],
-      requiredPermissions: [] as string[],
+      requiredPermissions: ["reports:read"],
     },
     {
       id: "modules-section",
