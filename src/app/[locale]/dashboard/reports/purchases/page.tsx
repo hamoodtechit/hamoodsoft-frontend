@@ -169,20 +169,6 @@ export default function PurchasesReportPage() {
         </CardContent>
       </Card>
 
-      {/* CONSOLIDATED SUMMARY */}
-      <div className="print:block">
-        {/* <h2 className="text-xl font-bold mb-3 text-slate-800 dark:text-slate-200">Consolidated Summary</h2> */}
-        <ReportSummary
-          items={[
-            { label: "Total Purchases", value: formatCurrency(summaries.totalPurchases, { generalSettings }) },
-            { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
-            { label: "Total Returns", value: formatCurrency(summaries.totalReturns, { generalSettings }), valueClassName: summaries.totalReturns > 0 ? "text-rose-600 dark:text-rose-400" : "" },
-            { label: "Total Paid (Cash/Bank)", value: formatCurrency(summaries.paidViaCashBank, { generalSettings }), valueClassName: "text-amber-600 dark:text-amber-400" },
-            { label: "Paid via Supplier Balance", value: formatCurrency(summaries.paidViaBalance, { generalSettings }), valueClassName: "text-blue-600 dark:text-blue-400" },
-          ]}
-        />
-      </div>
-
       {isLoading ? (
         <div className="flex justify-center items-center h-40">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -227,6 +213,15 @@ export default function PurchasesReportPage() {
                         )
                       })}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={3} className="px-3 py-2 text-right">Total:</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(purchases.reduce((sum, p) => sum + (p.taxAmount ?? 0), 0), { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(summaries.totalPurchases, { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right text-amber-600 dark:text-amber-400">{formatCurrency(purchases.reduce((sum, p) => sum + (p.paidAmount ?? 0), 0), { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right text-rose-600 dark:text-rose-400">{formatCurrency(purchases.reduce((sum, p) => sum + Math.max(0, (p.totalPrice ?? 0) - (p.paidAmount ?? 0)), 0), { generalSettings })}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -262,6 +257,13 @@ export default function PurchasesReportPage() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={3} className="px-3 py-2 text-right">Total Due Payments:</td>
+                        <td className="px-3 py-2 text-right text-amber-600 dark:text-amber-400">{formatCurrency(duePayments.reduce((sum, p) => sum + p.amount, 0), { generalSettings })}</td>
+                        <td className="px-3 py-2"></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -296,11 +298,75 @@ export default function PurchasesReportPage() {
                         )
                       })}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={3} className="px-3 py-2 text-right">Total Returns:</td>
+                        <td className="px-3 py-2 text-right text-rose-600 dark:text-rose-400">{formatCurrency(summaries.totalReturns, { generalSettings })}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* CONSOLIDATED SUMMARY (BOTTOM) */}
+          <div className="flex justify-end mt-8 print:mt-4">
+            <div className="w-full max-w-sm border-2 border-slate-800 dark:border-slate-300">
+              <div className="bg-slate-100 dark:bg-slate-800 p-2 border-b-2 border-slate-800 dark:border-slate-300">
+                <h3 className="font-bold text-center text-sm uppercase">Consolidated Summary</h3>
+              </div>
+              <div className="p-3 space-y-2 text-sm">
+                <div className="flex justify-between font-medium">
+                  <span>Gross Purchase</span>
+                  <span>{formatCurrency(summaries.totalPurchases, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Total Tax</span>
+                  <span>+ {formatCurrency(summaries.totalTax, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Total Net Payable</span>
+                  <span>{formatCurrency(summaries.totalPurchases + summaries.totalTax, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-medium text-amber-600">
+                  <span>Total Amount Paid</span>
+                  <span>{formatCurrency(summaries.paidViaCashBank + summaries.paidViaBalance, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold text-rose-600 border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Total Returns</span>
+                  <span>{formatCurrency(summaries.totalReturns, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold text-rose-600 border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Outstanding Balance</span>
+                  <span>{formatCurrency(Math.max(0, (summaries.totalPurchases + summaries.totalTax) - (summaries.paidViaCashBank + summaries.paidViaBalance) - summaries.totalReturns), { generalSettings })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SIGNATURES */}
+          <div className="hidden print:flex justify-between items-end mt-24 pt-8">
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Prepared By</p>
+              <p className="text-xs text-slate-500 italic">Pharmacy Department</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Accounts Dept</p>
+              <p className="text-xs text-slate-500 italic">Verified & Checked</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Authorized Signature</p>
+              <p className="text-xs text-slate-500 italic">Management</p>
+            </div>
+          </div>
+          
+          <div className="hidden print:block text-center mt-8 text-xs text-slate-500 italic">
+            This is a system generated report. Printed on {format(new Date(), "MMMM do, yyyy hh:mm a")}
+          </div>
 
         </div>
       )}

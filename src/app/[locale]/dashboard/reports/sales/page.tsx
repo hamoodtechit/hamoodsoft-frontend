@@ -175,21 +175,6 @@ export default function SalesReportPage() {
         </CardContent>
       </Card>
 
-      {/* CONSOLIDATED SUMMARY */}
-      <div className="print:block">
-        {/* <h2 className="text-xl font-bold mb-3 text-slate-800 dark:text-slate-200">Consolidated Summary</h2> */}
-        <ReportSummary
-          items={[
-            { label: "Total Sales", value: formatCurrency(summaries.totalSales, { generalSettings }) },
-            { label: "Total Discount", value: formatCurrency(summaries.totalDiscount, { generalSettings }) },
-            { label: "Total Tax", value: formatCurrency(summaries.totalTax, { generalSettings }) },
-            { label: "Total Returns", value: formatCurrency(summaries.totalReturns, { generalSettings }), valueClassName: summaries.totalReturns > 0 ? "text-rose-600 dark:text-rose-400" : "" },
-            { label: "Total Receipts (Cash/Bank)", value: formatCurrency(summaries.paidViaCashBank, { generalSettings }), valueClassName: "text-emerald-600 dark:text-emerald-400" },
-            { label: "Sales Paid via Balance", value: formatCurrency(summaries.paidViaBalance, { generalSettings }), valueClassName: "text-amber-600 dark:text-amber-400" },
-          ]}
-        />
-      </div>
-
       {isLoading ? (
         <div className="flex justify-center items-center h-40">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -234,6 +219,15 @@ export default function SalesReportPage() {
                         )
                       })}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={3} className="px-3 py-2 text-right">Total:</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(sales.reduce((sum, s) => sum + (s.taxAmount ?? 0), 0), { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(summaries.totalSales, { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400">{formatCurrency(sales.reduce((sum, s) => sum + (s.paidAmount ?? 0), 0), { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right text-rose-600 dark:text-rose-400">{formatCurrency(sales.reduce((sum, s) => sum + Math.max(0, (s.totalPrice ?? s.totalAmount ?? 0) - (s.paidAmount ?? 0)), 0), { generalSettings })}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -254,21 +248,29 @@ export default function SalesReportPage() {
                         <th className="px-3 py-2 border-b">Invoice No</th>
                         <th className="px-3 py-2 border-b">Collection Date</th>
                         <th className="px-3 py-2 border-b">Original Sale Date</th>
+                        <th className="px-3 py-2 border-b">Customer</th>
+                        <th className="px-3 py-2 border-b">Payment Method</th>
                         <th className="px-3 py-2 border-b text-right">Collected Amount</th>
-                        <th className="px-3 py-2 border-b text-right">Payment Method</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {dueCollections.map((col) => (
-                        <tr key={col.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                          <td className="px-3 py-2 font-medium">{col.sale?.invoiceNumber || "-"}</td>
-                          <td className="px-3 py-2">{col.occurredAt ? format(new Date(col.occurredAt), "dd MMM, hh:mm a") : "-"}</td>
-                          <td className="px-3 py-2">{col.sale?.createdAt ? format(new Date(col.sale.createdAt), "dd MMM, yyyy") : "-"}</td>
-                          <td className="px-3 py-2 text-right font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(col.amount, { generalSettings })}</td>
-                          <td className="px-3 py-2 text-right text-slate-600">{col.account?.name || "Customer Balance"}</td>
+                      {dueCollections.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                          <td className="px-3 py-2 font-medium">{payment.sale?.invoiceNumber || "-"}</td>
+                          <td className="px-3 py-2">{payment.occurredAt ? format(new Date(payment.occurredAt), "dd MMM, hh:mm a") : "-"}</td>
+                          <td className="px-3 py-2">{payment.sale?.createdAt ? format(new Date(payment.sale.createdAt), "dd MMM, yy") : "-"}</td>
+                          <td className="px-3 py-2">{payment.contact?.name || "-"}</td>
+                          <td className="px-3 py-2">{payment.accountId ? (payment.account?.name || "Bank") : "Cash / Bal"}</td>
+                          <td className="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400 font-medium">{formatCurrency(payment.amount, { generalSettings })}</td>
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={5} className="px-3 py-2 text-right">Total Collections:</td>
+                        <td className="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400">{formatCurrency(dueCollections.reduce((sum, p) => sum + p.amount, 0), { generalSettings })}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -284,16 +286,18 @@ export default function SalesReportPage() {
                   <table className="w-full text-sm text-left border-collapse print:text-[11px] print:w-full border border-slate-200 dark:border-slate-800">
                     <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       <tr>
+                        <th className="px-3 py-2 border-b">Return ID</th>
                         <th className="px-3 py-2 border-b">Original Invoice No</th>
                         <th className="px-3 py-2 border-b">Return Date</th>
                         <th className="px-3 py-2 border-b">Customer</th>
-                        <th className="px-3 py-2 border-b text-right">Total Amount</th>
+                        <th className="px-3 py-2 border-b text-right">Return Total</th>
                         <th className="px-3 py-2 border-b text-right">Refund Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {rawReturns.map((ret) => (
                         <tr key={ret.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 text-rose-600 dark:text-rose-400">
+                          <td className="px-3 py-2 font-medium">RET-{ret.id.substring(0, 4).toUpperCase()}</td>
                           <td className="px-3 py-2 font-medium">{ret.sale?.invoiceNumber || "-"}</td>
                           <td className="px-3 py-2">{ret.createdAt ? format(new Date(ret.createdAt), "dd MMM, hh:mm a") : "-"}</td>
                           <td className="px-3 py-2">{ret.contact?.name || "-"}</td>
@@ -302,11 +306,80 @@ export default function SalesReportPage() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <td colSpan={4} className="px-3 py-2 text-right">Total Returns:</td>
+                        <td className="px-3 py-2 text-right text-rose-600 dark:text-rose-400">{formatCurrency(summaries.totalReturns, { generalSettings })}</td>
+                        <td className="px-3 py-2 text-right text-rose-600 dark:text-rose-400">{formatCurrency(rawReturns.reduce((sum, r) => sum + (r.refundAmount ?? 0), 0), { generalSettings })}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* CONSOLIDATED SUMMARY (BOTTOM) */}
+          <div className="flex justify-end mt-8 print:mt-4">
+            <div className="w-full max-w-sm border-2 border-slate-800 dark:border-slate-300">
+              <div className="bg-slate-100 dark:bg-slate-800 p-2 border-b-2 border-slate-800 dark:border-slate-300">
+                <h3 className="font-bold text-center text-sm uppercase">Consolidated Summary</h3>
+              </div>
+              <div className="p-3 space-y-2 text-sm">
+                <div className="flex justify-between font-medium">
+                  <span>Gross Sales</span>
+                  <span>{formatCurrency(summaries.totalSales + summaries.totalDiscount, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-medium text-rose-600">
+                  <span>Total Discount Given</span>
+                  <span>- {formatCurrency(summaries.totalDiscount, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Total Tax</span>
+                  <span>+ {formatCurrency(summaries.totalTax, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Total Net Receivable</span>
+                  <span>{formatCurrency(summaries.totalSales + summaries.totalTax, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-medium text-emerald-600">
+                  <span>Total Amount Received</span>
+                  <span>{formatCurrency(summaries.paidViaCashBank + summaries.paidViaBalance, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold text-rose-600 border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Total Returns</span>
+                  <span>{formatCurrency(summaries.totalReturns, { generalSettings })}</span>
+                </div>
+                <div className="flex justify-between font-bold text-rose-600 border-t border-slate-300 dark:border-slate-700 pt-2 mt-2">
+                  <span>Outstanding Balance</span>
+                  <span>{formatCurrency(Math.max(0, (summaries.totalSales + summaries.totalTax) - (summaries.paidViaCashBank + summaries.paidViaBalance) - summaries.totalReturns), { generalSettings })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SIGNATURES */}
+          <div className="hidden print:flex justify-between items-end mt-24 pt-8">
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Prepared By</p>
+              <p className="text-xs text-slate-500 italic">Sales Department</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Accounts Dept</p>
+              <p className="text-xs text-slate-500 italic">Verified & Checked</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-800 dark:border-slate-300 mx-auto"></div>
+              <p className="font-bold text-sm mt-1 uppercase">Authorized Signature</p>
+              <p className="text-xs text-slate-500 italic">Management</p>
+            </div>
+          </div>
+          
+          <div className="hidden print:block text-center mt-8 text-xs text-slate-500 italic">
+            This is a system generated report. Printed on {format(new Date(), "MMMM do, yyyy hh:mm a")}
+          </div>
 
         </div>
       )}
