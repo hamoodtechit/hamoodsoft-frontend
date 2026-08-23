@@ -250,6 +250,34 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       }
     })
 
+    // HR dropdown
+    if (currentBusiness) {
+      const hrSubmenu: NavItem[] = [
+        {
+          title: t("sidebar.staff") || "Staff",
+          href: "/dashboard/hr/staff",
+          icon: UserPlus,
+          requiredPermissions: ["user:manage"],
+        },
+        {
+          title: t("sidebar.rolesPermissions"),
+          href: "/dashboard/hr/roles",
+          icon: Shield,
+          requiredPermissions: ["roles:read"],
+        },
+      ]
+
+      const filteredHrSubmenu = filterByPermission(hrSubmenu)
+      if (filteredHrSubmenu.length > 0) {
+        managementItems.push({
+          title: t("sidebar.hr") || "HR",
+          href: "#",
+          icon: Users,
+          submenu: filteredHrSubmenu,
+        })
+      }
+    }
+
     // My Business dropdown
     if (currentBusiness) {
       const myBusinessSubmenu: NavItem[] = [
@@ -258,18 +286,6 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           href: "/dashboard/settings",
           icon: Settings,
           requiredPermissions: ["settings:read"],
-        },
-        {
-          title: t("sidebar.rolesPermissions"),
-          href: "/dashboard/roles",
-          icon: Shield,
-          requiredPermissions: ["roles:read"],
-        },
-        {
-          title: t("sidebar.team"),
-          href: "/dashboard/team",
-          icon: UserPlus,
-          requiredPermissions: ["user:manage"],
         },
         {
           title: t("sidebar.createBusiness"),

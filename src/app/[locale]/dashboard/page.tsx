@@ -124,6 +124,7 @@ export default function DashboardPage() {
     main: 4,
     inventory: 6,
     accounting: 999, // Show all accounting items (no "See More" button)
+    hr: 4,
     business: 9,
     modules: 2,
     reports: 4,
@@ -345,27 +346,28 @@ export default function DashboardPage() {
       category: "business",
       requiredPermissions: ["settings:read"],
     },
+    // HR modules
     {
-      id: "roles",
-      title: t("sidebar.rolesPermissions"),
-      href: "/dashboard/roles",
-      icon: Shield,
-      color: "text-red-600",
-      bgColor: "bg-red-50 dark:bg-red-950/20",
-      enabled: true, // Always available
-      category: "business",
-      requiredPermissions: ["roles:read"],
-    },
-    {
-      id: "team",
-      title: t("sidebar.team"),
-      href: "/dashboard/team",
+      id: "staff",
+      title: t("sidebar.staff") || "Staff",
+      href: "/dashboard/hr/staff",
       icon: UserPlus,
       color: "text-violet-600",
       bgColor: "bg-violet-50 dark:bg-violet-950/20",
       enabled: true, // Always available
-      category: "business",
+      category: "hr",
       requiredPermissions: ["user:manage"],
+    },
+    {
+      id: "roles",
+      title: t("sidebar.rolesPermissions"),
+      href: "/dashboard/hr/roles",
+      icon: Shield,
+      color: "text-red-600",
+      bgColor: "bg-red-50 dark:bg-red-950/20",
+      enabled: true, // Always available
+      category: "hr",
+      requiredPermissions: ["roles:read"],
     },
     // Special modules
     {
@@ -630,6 +632,11 @@ export default function DashboardPage() {
       {/* Reports Grid */}
       {groupedItems.reports && groupedItems.reports.length > 0 &&
         renderCategoryGrid(groupedItems.reports, "reports", t("sidebar.reports") || "Reports")
+      }
+
+      {/* HR Grid */}
+      {groupedItems.hr && groupedItems.hr.length > 0 &&
+        renderCategoryGrid(groupedItems.hr, "hr", t("sidebar.hr") || "HR")
       }
 
       {/* Business Management Grid */}
