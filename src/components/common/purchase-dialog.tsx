@@ -1889,6 +1889,26 @@ export function PurchaseDialog({
                           )}
                         />
 
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.expiryDate` as any}
+                          render={({ field }) => (
+                            <FormItem className="flex-1 min-w-[150px]">
+                              <FormLabel>Expiry Date <span className="text-destructive">*</span></FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  required
+                                  {...field}
+                                  value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                                  onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <div className="flex-1 min-w-[100px] pb-2 text-right">
                           <span className="text-sm text-muted-foreground mr-2">
                             {t("subtotal")}:

@@ -41,6 +41,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  HardDrive,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -201,48 +202,15 @@ export default function DashboardPage() {
       requiredPermissions: ["stocks:read"],
     },
     {
-      id: "categories",
-      title: t("sidebar.categories"),
-      href: "/dashboard/categories",
-      icon: FolderTree,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50 dark:bg-indigo-950/20",
+      id: "inventory-settings",
+      title: "Inventory Settings",
+      href: "/dashboard/inventory/settings",
+      icon: Settings,
+      color: "text-slate-600",
+      bgColor: "bg-slate-50 dark:bg-slate-950/20",
       enabled: enabledModules.includes("inventory"),
       category: "inventory",
-      requiredPermissions: ["product_categories:read"],
-    },
-    {
-      id: "brands",
-      title: t("sidebar.brands"),
-      href: "/dashboard/brands",
-      icon: FileText,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
-      enabled: enabledModules.includes("inventory"),
-      category: "inventory",
-      requiredPermissions: ["brands:read"],
-    },
-    {
-      id: "units",
-      title: t("sidebar.unit"),
-      href: "/dashboard/units",
-      icon: Ruler,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50 dark:bg-amber-950/20",
-      enabled: enabledModules.includes("inventory"),
-      category: "inventory",
-      requiredPermissions: ["units:read"],
-    },
-    {
-      id: "attributes",
-      title: t("sidebar.attributes"),
-      href: "/dashboard/attributes",
-      icon: BarChart3,
-      color: "text-rose-600",
-      bgColor: "bg-rose-50 dark:bg-rose-950/20",
-      enabled: enabledModules.includes("inventory"),
-      category: "inventory",
-      requiredPermissions: ["attributes:read"],
+      requiredPermissions: ["brands:read", "product_categories:read", "units:read", "attributes:read"],
     },
     // Reports submenu items
     {
@@ -323,6 +291,17 @@ export default function DashboardPage() {
       category: "accounting",
       requiredPermissions: ["transactions:read"],
     },
+    {
+      id: "accounting-settings",
+      title: "Accounting Settings",
+      href: "/dashboard/accounting/categories",
+      icon: Settings,
+      color: "text-slate-600",
+      bgColor: "bg-slate-50 dark:bg-slate-950/20",
+      enabled: enabledModules.includes("accounting"),
+      category: "accounting",
+      requiredPermissions: ["income_expense_categories:read"],
+    },
     // Business management
     {
       id: "branches",
@@ -334,6 +313,17 @@ export default function DashboardPage() {
       enabled: true, // Always available
       category: "business",
       requiredPermissions: ["branches:read"],
+    },
+    {
+      id: "media",
+      title: "Media Manager",
+      href: "/dashboard/media",
+      icon: HardDrive,
+      color: "text-sky-600",
+      bgColor: "bg-sky-50 dark:bg-sky-950/20",
+      enabled: true,
+      category: "business",
+      requiredPermissions: ["media:read"],
     },
     {
       id: "settings",
@@ -448,13 +438,31 @@ export default function DashboardPage() {
     return grouped
   }, [orderedItems, pinnedItems, enabledItems])
 
-  // Simulate loading
+  // Simulate loading and handle hash scrolling
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 500)
+    }, 300)
     return () => clearTimeout(timer)
   }, [])
+
+  // Auto-scroll to target section if URL has hash on mount or hash change
+  useEffect(() => {
+    if (!isLoading && typeof window !== "undefined" && window.location.hash) {
+      const targetId = window.location.hash.replace("#", "")
+      const targetEl = document.getElementById(targetId)
+      const mainScroll = document.getElementById("main-scroll")
+      if (targetEl && mainScroll) {
+        setTimeout(() => {
+          const scrollPos = targetEl.getBoundingClientRect().top + mainScroll.scrollTop - mainScroll.getBoundingClientRect().top
+          mainScroll.scrollTo({
+            top: scrollPos - 24,
+            behavior: "smooth",
+          })
+        }, 100)
+      }
+    }
+  }, [isLoading])
 
   // Drag and drop sensors
   const sensors = useSensors(

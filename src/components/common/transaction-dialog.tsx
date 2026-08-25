@@ -76,6 +76,7 @@ export function TransactionDialog({
   const defaultValues = useMemo(() => {
     if (isIncome) {
       return {
+        name: "",
         accountId: defaultAccountId || "",
         categoryId: defaultCategoryId,
         amount: 0,
@@ -84,6 +85,7 @@ export function TransactionDialog({
       } as CreateIncomeTransactionInput
     } else {
       return {
+        name: "",
         accountId: defaultAccountId || "",
         contactId: defaultContactId,
         categoryId: defaultCategoryId,
@@ -136,6 +138,23 @@ export function TransactionDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{isIncome ? "Income Name / Title" : "Expense Name / Title"} <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={isIncome ? "e.g. Daily Cash Sales, Service Fee" : "e.g. Office Rent, Electricity Bill"}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="accountId"

@@ -67,3 +67,12 @@ export function useUserPermissions() {
   const { permissions, isLoading } = usePermissions()
   return { permissions, isLoading }
 }
+
+/**
+ * Hook to check if current user is the business owner
+ */
+export function useIsOwner(): boolean {
+  const { isOwner } = usePermissions()
+  return Boolean(isOwner)
+}
+

@@ -186,12 +186,27 @@ export function PaymentDialog({
     }
   }
 
+  const isSupplierPayment = contact?.type === "SUPPLIER" || paymentType === "PURCHASE_PAYMENT";
+  const isCustomerPayment = contact?.type === "CUSTOMER" || paymentType === "SALE_PAYMENT";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("createPayment")}</DialogTitle>
-          <DialogDescription>{t("createPaymentDescription")}</DialogDescription>
+          <DialogTitle>
+            {isSupplierPayment
+              ? "Make Supplier Payment / Advance Deposit"
+              : isCustomerPayment
+                ? "Receive Payment / Customer Deposit"
+                : t("createPayment")}
+          </DialogTitle>
+          <DialogDescription>
+            {isSupplierPayment
+              ? `Record payment made to ${contact?.name ? `"${contact.name}"` : "supplier"} or give advance deposit.`
+              : isCustomerPayment
+                ? `Receive payment from ${contact?.name ? `"${contact.name}"` : "customer"} or record advance deposit.`
+                : t("createPaymentDescription")}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -214,12 +229,20 @@ export function PaymentDialog({
                     </FormControl>
                     <SelectContent>
                       {(!contact || contact.type !== "SUPPLIER") && (
-                        <SelectItem value="SALE_PAYMENT">{t("typeSalePayment")}</SelectItem>
+                        <SelectItem value="SALE_PAYMENT">
+                          Sale Invoice Payment (Collect Due)
+                        </SelectItem>
                       )}
                       {(!contact || contact.type !== "CUSTOMER") && (
-                        <SelectItem value="PURCHASE_PAYMENT">{t("typePurchasePayment")}</SelectItem>
+                        <SelectItem value="PURCHASE_PAYMENT">
+                          Purchase Bill Payment (Pay Supplier Due)
+                        </SelectItem>
                       )}
-                      <SelectItem value="DEPOSIT">{t("typeDeposit")}</SelectItem>
+                      <SelectItem value="DEPOSIT">
+                        {isSupplierPayment
+                          ? "Supplier Advance Deposit (Pay in Advance)"
+                          : "Customer Advance Deposit (Wallet Credit)"}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -232,7 +255,11 @@ export function PaymentDialog({
               name="accountId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("account")}</FormLabel>
+                  <FormLabel>
+                    {isSupplierPayment
+                      ? "Pay From Account (Cash / Bank)"
+                      : "Deposit To Account (Cash / Bank)"}
+                  </FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -240,18 +267,18 @@ export function PaymentDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("accountPlaceholder")} />
+                        <SelectValue placeholder={isSupplierPayment ? "Select account to pay from..." : "Select account to deposit into..."} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {paymentType === "PURCHASE_PAYMENT" && (contact?.balance ?? 0) > 0 && (
                         <SelectItem value="SUPPLIER_ACCOUNT" className="text-green-600 font-medium">
-                          Supplier Deposit (Available: {formatCurrency(contact!.balance, { generalSettings })})
+                          Supplier Advance Wallet (Available: {formatCurrency(contact!.balance, { generalSettings })})
                         </SelectItem>
                       )}
                       {paymentType === "SALE_PAYMENT" && (contact?.balance ?? 0) > 0 && (
                         <SelectItem value="CUSTOMER_ACCOUNT" className="text-blue-600 font-medium">
-                          Customer Deposit (Available: {formatCurrency(contact!.balance, { generalSettings })})
+                          Customer Advance Wallet (Available: {formatCurrency(contact!.balance, { generalSettings })})
                         </SelectItem>
                       )}
                       {accounts

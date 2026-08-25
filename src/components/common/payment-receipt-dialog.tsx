@@ -17,6 +17,7 @@ import {
 import { Printer } from "lucide-react"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
+import { formatDate } from "@/lib/utils/date"
 import { useState } from "react"
 import { InvoiceFormat, FORMAT_CONFIG, settingToFormat } from "@/components/common/invoice-dialog"
 
@@ -74,7 +75,7 @@ export function PaymentReceiptDialog({
         </div>
         <div style="display:flex;align-items:center;gap:1.5mm;text-align:right;">
           <span style="color:#555;">Date:</span>
-          <span style="font-weight:bold;">${new Date(data.date).toLocaleDateString()}</span>
+          <span style="font-weight:bold;">${formatDate(data.date, { timeZone: generalSettings?.timeZone })}</span>
         </div>
       </div>
     `
@@ -261,7 +262,7 @@ export function PaymentReceiptDialog({
               </div>
               <div className="flex items-center gap-1.5 text-right">
                 <span className="text-gray-500">Date:</span>
-                <span className="font-bold">{new Date(data.date).toLocaleDateString()}</span>
+                <span className="font-bold">{formatDate(data.date, { timeZone: generalSettings?.timeZone })}</span>
               </div>
             </div>
 

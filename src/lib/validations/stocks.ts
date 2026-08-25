@@ -16,6 +16,9 @@ export const createStockSchema = z.object({
   salePrice: z
     .number({ invalid_type_error: "Sale price must be a number" })
     .min(0, "Sale price must be 0 or greater"),
+  expiryDate: z.coerce.date({
+    errorMap: () => ({ message: "Invalid date" }),
+  }).optional().nullable(),
 })
 
 export const updateStockSchema = z.object({

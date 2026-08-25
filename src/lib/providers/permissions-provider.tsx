@@ -21,6 +21,8 @@ interface PermissionsContextValue {
   hasAllPermissions: (permissions: string[]) => boolean
   // Check if user has access to a module
   hasModuleAccess: (module: string) => boolean
+  // Whether user is the business owner
+  isOwner: boolean
 }
 
 const PermissionsContext = createContext<PermissionsContextValue | undefined>(undefined)
@@ -126,8 +128,9 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
       hasAnyPermission,
       hasAllPermissions,
       hasModuleAccess,
+      isOwner,
     }),
-    [permissions, userRole, isLoadingAuth, hasPermission, hasAnyPermission, hasAllPermissions, hasModuleAccess]
+    [permissions, userRole, isLoadingAuth, hasPermission, hasAnyPermission, hasAllPermissions, hasModuleAccess, isOwner]
   )
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>

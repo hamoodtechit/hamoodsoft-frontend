@@ -186,6 +186,13 @@ export default function StocksPage() {
       },
       sortable: false,
     },
+    {
+      id: "expiryDate",
+      header: "Expiry Date",
+      accessorKey: "expiryDate",
+      sortable: true,
+      cell: (row) => row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : "-",
+    },
   ], [t, productMap, products])
 
   // Export columns with all nested details
@@ -252,6 +259,12 @@ export default function StocksPage() {
         const unit = row.unit || products.find(p => p.id === row.productId)?.unit
         return unit?.name || "-"
       },
+    },
+    {
+      key: "expiryDate",
+      header: "Expiry Date",
+      width: 15,
+      format: (value, row) => row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : "-",
     },
     {
       key: "unitSuffix",

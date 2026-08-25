@@ -1,7 +1,7 @@
 "use client"
 
 import { accountsApi, type AccountsListParams, type AccountLedgerParams } from "@/lib/api/accounts"
-import { CreateAccountInput, UpdateAccountInput } from "@/lib/validations/accounts"
+import { CreateAccountInput, TransferAccountInput, UpdateAccountInput } from "@/lib/validations/accounts"
 import { Account } from "@/types"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -72,3 +72,21 @@ export function useUpdateAccount() {
     },
   })
 }
+
+export function useTransferAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: TransferAccountInput) => accountsApi.transferAccount(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] })
+      queryClient.invalidateQueries({ queryKey: ["account-ledger"] })
+      queryClient.invalidateQueries({ queryKey: ["transactions"] })
+      toast.success("Balance transferred successfully!")
+    },
+    onError: (error) => {
+      toast.error(extractError(error, "Failed to transfer balance. Please try again."))
+    },
+  })
+}
+

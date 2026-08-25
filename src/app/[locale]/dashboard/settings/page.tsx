@@ -37,7 +37,11 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { UpdateSettingInput, updateSettingSchema } from "@/lib/validations/settings"
 import { Setting } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Edit, Image as ImageIcon, Settings, X } from "lucide-react"
+import { Edit, Globe, Image as ImageIcon, Locate, Lock, Settings, ShieldCheck, X } from "lucide-react"
+import { COMMON_TIMEZONES, DEFAULT_TIMEZONE, detectDeviceTimeZone } from "@/lib/utils/date"
+import { useHasPermission, useIsOwner } from "@/lib/hooks/use-permissions"
+import { PERMISSIONS } from "@/lib/utils/permissions"
+import { Badge } from "@/components/ui/badge"
 import { useTranslations } from "next-intl"
 import { useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
@@ -55,6 +59,8 @@ const DEFAULT_CONFIG: BusinessConfig = {
 export default function BusinessSettingsPage() {
   const t = useTranslations("settings")
   const { settings, isLoading, generalSettings, taxSettings, invoiceSettings } = useAppSettings()
+  const isOwner = useIsOwner()
+  const canUpdateSettings = useHasPermission(PERMISSIONS.SETTINGS_UPDATE) || isOwner
   const updateMutation = useUpdateSetting()
   const createMutation = useCreateSetting()
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null)
@@ -74,6 +80,12 @@ export default function BusinessSettingsPage() {
   })
 
   const handleEdit = (setting: Setting) => {
+    if ((setting.name === "email" || setting.name === "sms") && !isOwner) {
+      return
+    }
+    if (!canUpdateSettings) {
+      return
+    }
     setEditingSetting(setting)
     if (setting.name === "businessConfig") {
       // For businessConfig, sync local state from the setting's configs
@@ -175,6 +187,7 @@ export default function BusinessSettingsPage() {
       email: "Email Settings",
       sms: "SMS Settings",
       businessConfig: "Business Config",
+      inventory: "Inventory Settings",
     }
     return names[name] || name.charAt(0).toUpperCase() + name.slice(1)
   }
@@ -187,24 +200,203 @@ export default function BusinessSettingsPage() {
       email: "Configure email server settings (SMTP)",
       sms: "Configure SMS provider settings (Nexmo, Twilio)",
       businessConfig: "Configure fuel point reducing settings",
+      inventory: "Configure inventory and stock rules",
     }
     return descriptions[name] || "Configure this setting"
   }
 
-  const displaySettings = useMemo(() => {
-    const defaultSettingNames = ["general", "taxRate", "invoice", "email", "sms", "businessConfig"]
+  const operationalSettings = useMemo(() => {
+    const operationalNames = ["general", "taxRate", "invoice", "inventory", "businessConfig"]
     const map = new Map<string, Setting>()
-    settings.forEach(s => map.set(s.name, s))
-    
-    // Ensure all default settings are present in the list
-    defaultSettingNames.forEach(name => {
+    settings.forEach((s) => {
+      if (operationalNames.includes(s.name)) {
+        map.set(s.name, s)
+      }
+    })
+
+    operationalNames.forEach((name) => {
       if (!map.has(name)) {
         map.set(name, { id: `new-${name}`, name, configs: {} } as Setting)
       }
     })
-    
+
     return Array.from(map.values())
   }, [settings])
+
+  const integrationSettings = useMemo(() => {
+    if (!isOwner) return []
+    const integrationNames = ["email", "sms"]
+    const map = new Map<string, Setting>()
+    settings.forEach((s) => {
+      if (integrationNames.includes(s.name)) {
+        map.set(s.name, s)
+      }
+    })
+
+    integrationNames.forEach((name) => {
+      if (!map.has(name)) {
+        map.set(name, { id: `new-${name}`, name, configs: {} } as Setting)
+      }
+    })
+
+    return Array.from(map.values())
+  }, [settings, isOwner])
+
+  const renderSettingCard = (setting: Setting, isRestricted = false) => (
+    <Card key={setting.id} className="relative">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">
+                {getSettingDisplayName(setting.name)}
+              </CardTitle>
+              {isRestricted && (
+                <Badge variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[10px] py-0 h-4">
+                  Owner Only
+                </Badge>
+              )}
+            </div>
+            <CardDescription className="mt-1">
+              {getSettingDescription(setting.name)}
+            </CardDescription>
+          </div>
+          {canUpdateSettings && (!isRestricted || isOwner) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEdit(setting)}
+              className="h-8 w-8"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2 text-sm">
+          {setting.name === "general" && generalSettings && (
+            <>
+              {generalSettings.companyName && (
+                <div>
+                  <span className="text-muted-foreground">Company: </span>
+                  <span className="font-medium">{generalSettings.companyName}</span>
+                </div>
+              )}
+              {generalSettings.currency && (
+                <div>
+                  <span className="text-muted-foreground">Currency: </span>
+                  <span className="font-medium">
+                    {generalSettings.currency.name} ({generalSettings.currency.symbol})
+                  </span>
+                </div>
+              )}
+              {generalSettings.timeZone && (
+                <div>
+                  <span className="text-muted-foreground">Timezone: </span>
+                  <span className="font-medium">{generalSettings.timeZone}</span>
+                </div>
+              )}
+            </>
+          )}
+          {setting.name === "taxRate" && taxSettings && (
+            <>
+              {taxSettings.name && (
+                <div>
+                  <span className="text-muted-foreground">Name: </span>
+                  <span className="font-medium">{taxSettings.name}</span>
+                </div>
+              )}
+              {taxSettings.rate !== undefined && (
+                <div>
+                  <span className="text-muted-foreground">Rate: </span>
+                  <span className="font-medium">{taxSettings.rate}%</span>
+                </div>
+              )}
+            </>
+          )}
+          {setting.name === "invoice" && invoiceSettings && (
+            <>
+              {invoiceSettings.prefix && (
+                <div>
+                  <span className="text-muted-foreground">Prefix: </span>
+                  <span className="font-medium">{invoiceSettings.prefix}</span>
+                </div>
+              )}
+              {invoiceSettings.layout && (
+                <div>
+                  <span className="text-muted-foreground">Layout: </span>
+                  <span className="font-medium uppercase">{invoiceSettings.layout}</span>
+                </div>
+              )}
+            </>
+          )}
+          {setting.name === "businessConfig" && (
+            <>
+              <div>
+                <span className="text-muted-foreground">Fuel Point Reducing: </span>
+                <span className="font-medium">
+                  {setting.configs?.showPointReducing ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+              {Boolean(setting.configs?.showPointReducing) && (
+                <div>
+                  <span className="text-muted-foreground">Reducing Amount/L: </span>
+                  <span className="font-medium">
+                    {String(setting.configs?.pointReducingAmountPerLiter ?? 0)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+          {setting.name === "inventory" && (
+            <>
+              <div>
+                <span className="text-muted-foreground">Expired Sales: </span>
+                <span className="font-medium">
+                  {setting.configs?.allowExpiredProductSales ? "Allowed" : "Blocked"}
+                </span>
+              </div>
+            </>
+          )}
+          {setting.name === "email" && (
+            <>
+              <div>
+                <span className="text-muted-foreground">Host: </span>
+                <span className="font-medium">{String(setting.configs?.host || "Not configured")}</span>
+              </div>
+              {setting.configs?.port && (
+                <div>
+                  <span className="text-muted-foreground">Port: </span>
+                  <span className="font-medium">{String(setting.configs?.port)}</span>
+                </div>
+              )}
+              {setting.configs?.username && (
+                <div>
+                  <span className="text-muted-foreground">User: </span>
+                  <span className="font-medium">{String(setting.configs?.username)}</span>
+                </div>
+              )}
+            </>
+          )}
+          {setting.name === "sms" && (
+            <>
+              <div>
+                <span className="text-muted-foreground">Provider: </span>
+                <span className="font-medium uppercase">{String(setting.configs?.provider || "Not configured")}</span>
+              </div>
+              {setting.configs?.senderId && (
+                <div>
+                  <span className="text-muted-foreground">Sender ID: </span>
+                  <span className="font-medium">{String(setting.configs?.senderId)}</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
     <PageLayout title={t("title")} description={t("description")} maxWidth="full">
@@ -223,129 +415,53 @@ export default function BusinessSettingsPage() {
         <CardContent>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : displaySettings.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No settings found
-            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {displaySettings.map((setting) => (
-                <Card key={setting.id} className="relative">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">
-                          {getSettingDisplayName(setting.name)}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {getSettingDescription(setting.name)}
-                        </CardDescription>
+            <div className="space-y-8">
+              {/* Operational & Business Settings */}
+              <div>
+                <div className="mb-4">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Operational & Business Settings
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    General station preferences, tax rules, invoice layouts, and inventory settings
+                  </p>
+                </div>
+                {operationalSettings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                    No operational settings found
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {operationalSettings.map((setting) => renderSettingCard(setting, false))}
+                  </div>
+                )}
+              </div>
+
+              {/* System & Gateway Integrations (Owner Only) */}
+              {isOwner && (
+                <div className="pt-6 border-t">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-amber-500" />
+                        <h3 className="text-base font-semibold text-foreground">
+                          System & Gateway Integrations
+                        </h3>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(setting)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Sensitive SMTP server credentials and SMS gateway configurations (restricted to Business Owner only)
+                      </p>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      {setting.name === "general" && generalSettings && (
-                        <>
-                          {generalSettings.logoUrl && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">Logo:</span>
-                              <img
-                                src={generalSettings.logoUrl}
-                                alt="Logo"
-                                className="h-8 w-8 object-contain"
-                              />
-                            </div>
-                          )}
-                          {generalSettings.currency && (
-                            <div>
-                              <span className="text-muted-foreground">Currency: </span>
-                              <span className="font-medium">
-                                {generalSettings.currency.symbol} ({generalSettings.currency.code})
-                              </span>
-                            </div>
-                          )}
-                          {generalSettings.timeZone && (
-                            <div>
-                              <span className="text-muted-foreground">Timezone: </span>
-                              <span className="font-medium">{generalSettings.timeZone}</span>
-                            </div>
-                          )}
-                          {generalSettings.binNumber && (
-                            <div>
-                              <span className="text-muted-foreground">BIN Number: </span>
-                              <span className="font-medium">{generalSettings.binNumber}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {setting.name === "taxRate" && taxSettings && (
-                        <>
-                          {taxSettings.name && (
-                            <div>
-                              <span className="text-muted-foreground">Tax Name: </span>
-                              <span className="font-medium">{taxSettings.name}</span>
-                            </div>
-                          )}
-                          {taxSettings.rate !== undefined && (
-                            <div>
-                              <span className="text-muted-foreground">Tax Rate: </span>
-                              <span className="font-medium">{taxSettings.rate}%</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {setting.name === "invoice" && invoiceSettings && (
-                        <>
-                          <div>
-                            <span className="text-muted-foreground">Prefix: </span>
-                            <span className="font-medium">{invoiceSettings.prefix}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Start Number: </span>
-                            <span className="font-medium">{invoiceSettings.startNumber}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Layout: </span>
-                            <span className="font-medium">{
-                              { "pos-58mm": "POS 58mm", "pos-80mm": "POS 80mm", "pos-a4": "A4", "a4": "A4", "a5": "A5" }[invoiceSettings.layout || "pos-80mm"] || invoiceSettings.layout
-                            }</span>
-                          </div>
-                        </>
-                      )}
-                      {(setting.name === "email" || setting.name === "sms") && (
-                        <div className="text-muted-foreground">
-                          Click edit to configure
-                        </div>
-                      )}
-                      {setting.name === "businessConfig" && (
-                        <>
-                          <div>
-                            <span className="text-muted-foreground">Show Point Reducing: </span>
-                            <span className="font-medium">
-                              {setting.configs?.showPointReducing ? "Enabled" : "Disabled"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Reducing Amount: </span>
-                            <span className="font-medium">
-                              {Number(setting.configs?.pointReducingAmountPerLiter ?? 0)} ml / liter
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <Badge variant="outline" className="w-fit border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-xs py-0.5">
+                      Business Owner Only
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {integrationSettings.map((setting) => renderSettingCard(setting, true))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -591,10 +707,47 @@ export default function BusinessSettingsPage() {
                     name="configs.timeZone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Timezone</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Asia/Kolkata" />
-                        </FormControl>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="flex items-center gap-1.5">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            Business Timezone
+                          </FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-primary gap-1 px-2"
+                            onClick={() => {
+                              const detected = detectDeviceTimeZone()
+                              field.onChange(detected)
+                            }}
+                          >
+                            <Locate className="h-3.5 w-3.5" />
+                            Detect Device Timezone
+                          </Button>
+                        </div>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || DEFAULT_TIMEZONE}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select business timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-[300px]">
+                            {COMMON_TIMEZONES.map((tz) => (
+                              <SelectItem key={tz.value} value={tz.value}>
+                                <div className="flex items-center justify-between gap-3 w-full">
+                                  <span>{tz.label}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {tz.offset}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1029,6 +1182,33 @@ export default function BusinessSettingsPage() {
                       </p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Inventory Settings */}
+              {editingSetting?.name === "inventory" && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="configs.allowExpiredProductSales"
+                    render={({ field }) => (
+                      <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                        <div className="space-y-1 pr-4">
+                          <Label htmlFor="allowExpiredProductSales" className="text-sm font-medium">
+                            Allow Expired Product Sales
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            When enabled, you can sell products even if their stock has passed its expiry date.
+                          </p>
+                        </div>
+                        <Switch
+                          id="allowExpiredProductSales"
+                          checked={field.value === true}
+                          onCheckedChange={field.onChange}
+                        />
+                      </div>
+                    )}
+                  />
                 </div>
               )}
 

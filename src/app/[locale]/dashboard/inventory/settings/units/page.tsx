@@ -1,39 +1,38 @@
 "use client"
 
-import { BrandDialog } from "@/components/common/brand-dialog"
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
-import { PageLayout } from "@/components/common/page-layout"
+import { UnitDialog } from "@/components/common/unit-dialog"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useBranchSelection } from "@/lib/hooks/use-branch-selection"
 import { useCurrentBusiness } from "@/lib/hooks/use-business"
-import { useBrands, useCreateBrand, useDeleteBrand, useUpdateBrand } from "@/lib/hooks/use-brands"
+import { useDeleteUnit, useUnits } from "@/lib/hooks/use-units"
 import { useHasModuleAccess, useHasPermission } from "@/lib/hooks/use-permissions"
 import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { type ExportColumn } from "@/lib/utils/export"
-import { Brand } from "@/types"
-import { Building2, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Unit } from "@/types"
+import { MoreVertical, Pencil, Plus, Ruler, Search, Trash2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
-export default function BrandsPage() {
-  const t = useTranslations("brands")
+export default function UnitsPage() {
+  const t = useTranslations("units")
   const tCommon = useTranslations("common")
   const tModules = useTranslations("modulesPages.inventory")
   const params = useParams()
@@ -42,20 +41,20 @@ export default function BrandsPage() {
   const { user } = useAuth()
   const currentBusiness = useCurrentBusiness()
   const { selectedBranchId } = useBranchSelection()
+  const { data: units = [], isLoading } = useUnits(selectedBranchId || undefined)
+  const deleteUnitMutation = useDeleteUnit()
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
-  const [search, setSearch] = useState("")
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null)
-
-  const deleteBrandMutation = useDeleteBrand()
-
+  const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null)
+  const [search, setSearch] = useState("")
+  
   // View mode with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("brands-view-mode") as ViewMode) || "table"
+      return (localStorage.getItem("units-view-mode") as ViewMode) || "table"
     }
     return "table"
   })
@@ -63,101 +62,61 @@ export default function BrandsPage() {
   // Save view mode preference
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("brands-view-mode", viewMode)
+      localStorage.setItem("units-view-mode", viewMode)
     }
   }, [viewMode])
 
-  const queryParams = useMemo(() => {
-    const p: any = { page, limit }
-    if (search.trim()) p.search = search.trim()
-    return p
-  }, [page, limit, search])
+  // Filter units by search
+  const filteredUnits = useMemo(() => {
+    if (!search.trim()) return units
+    const searchLower = search.toLowerCase()
+    return units.filter((unit) =>
+      unit.name.toLowerCase().includes(searchLower) ||
+      unit.suffix.toLowerCase().includes(searchLower)
+    )
+  }, [units, search])
 
-  const { data: brandsData, isLoading } = useBrands(queryParams)
-  const brands = brandsData?.items || []
-  const meta = brandsData?.meta
-
-  const totalPages =
-    meta?.totalPages ??
-    Math.max(1, Math.ceil((meta?.total || 0) / (meta?.limit ?? limit)))
-
-  const filteredBrands = brands
-
+  const totalItems = filteredUnits.length
+  const totalPages = Math.ceil(totalItems / limit) || 1
+  const paginatedUnits = useMemo(() => {
+    const start = (page - 1) * limit
+    return filteredUnits.slice(start, start + limit)
+  }, [filteredUnits, page, limit])
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
-  const canCreate = useHasPermission(PERMISSIONS.BRANDS_CREATE)
-  const canUpdate = useHasPermission(PERMISSIONS.BRANDS_UPDATE)
-  const canDelete = useHasPermission(PERMISSIONS.BRANDS_DELETE)
-
-  // Check if user has access to inventory module
-  useEffect(() => {
-    if (!isCheckingAccess && !hasAccess) {
-      router.push(`/${locale}/dashboard`)
-    }
-  }, [hasAccess, isCheckingAccess, locale, router])
-
-  // Show loading while checking permissions
-  if (isCheckingAccess) {
-    return (
-      <PageLayout title={t("title")} description={t("description")}>
-        <SkeletonList count={5} />
-      </PageLayout>
-    )
-  }
-
-  if (!hasAccess) {
-    return (
-      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
-          </CardContent>
-        </Card>
-      </PageLayout>
-    )
-  }
+  const canCreate = useHasPermission(PERMISSIONS.UNITS_CREATE)
+  const canUpdate = useHasPermission(PERMISSIONS.UNITS_UPDATE)
+  const canDelete = useHasPermission(PERMISSIONS.UNITS_DELETE)
 
   const handleCreate = () => {
-    setSelectedBrand(null)
+    setSelectedUnit(null)
     setIsDialogOpen(true)
   }
 
-  const handleEdit = (brand: Brand) => {
-    setSelectedBrand(brand)
+  const handleEdit = (unit: Unit) => {
+    setSelectedUnit(unit)
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (brand: Brand) => {
-    setBrandToDelete(brand)
+  const handleDelete = (unit: Unit) => {
+    setUnitToDelete(unit)
     setIsDeleteDialogOpen(true)
   }
 
   const confirmDelete = () => {
-    if (brandToDelete) {
-      deleteBrandMutation.mutate(brandToDelete.id, {
+    if (unitToDelete) {
+      deleteUnitMutation.mutate(unitToDelete.id, {
         onSuccess: () => {
           setIsDeleteDialogOpen(false)
-          setBrandToDelete(null)
+          setUnitToDelete(null)
         },
       })
     }
   }
 
-  const handleSubmitCreate = (data: any) => {
-    // Handled by BrandDialog internally
-    setIsDialogOpen(false)
-    setSelectedBrand(null)
-  }
-
-  const handleSubmitUpdate = (id: string, data: any) => {
-    // Handled by BrandDialog internally
-    setIsDialogOpen(false)
-    setSelectedBrand(null)
-  }
-
   // Table columns configuration
-  const tableColumns: Column<Brand>[] = useMemo(() => [
+  const tableColumns: Column<Unit>[] = useMemo(() => [
     {
       id: "name",
       header: t("name"),
@@ -165,12 +124,11 @@ export default function BrandsPage() {
       sortable: true,
     },
     {
-      id: "description",
-      header: t("description"),
-      cell: (row) => (
-        <span className="text-muted-foreground">{row.description || "-"}</span>
-      ),
-      sortable: false,
+      id: "suffix",
+      header: t("suffix"),
+      accessorKey: "suffix",
+      sortable: true,
+      cell: (row) => <span className="font-mono">{row.suffix}</span>,
     },
     {
       id: "createdAt",
@@ -217,59 +175,84 @@ export default function BrandsPage() {
   ], [t, tCommon])
 
   // Export columns configuration
-  const exportColumns: ExportColumn<Brand>[] = useMemo(
-    () => [
-      { key: "name", header: "Brand Name", width: 30 },
-      {
-        key: "description",
-        header: "Description",
-        width: 40,
-        format: (value) => value || "-",
-      },
-      {
-        key: "createdAt",
-        header: "Created At",
-        width: 15,
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
-      },
-      {
-        key: "updatedAt",
-        header: "Updated At",
-        width: 15,
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
-      },
-    ],
-    []
-  )
+  const exportColumns: ExportColumn<Unit>[] = useMemo(() => [
+    { key: "name", header: "Unit Name", width: 25 },
+    { key: "suffix", header: "Unit Suffix", width: 20 },
+    {
+      key: "createdAt",
+      header: "Created At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated At",
+      width: 20,
+      format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+    },
+  ], [])
+
+  // Check if user has access to inventory module
+  useEffect(() => {
+    if (!isCheckingAccess && !hasAccess) {
+      router.push(`/${locale}/dashboard`)
+    }
+  }, [hasAccess, isCheckingAccess, locale, router])
+
+  // Show loading while checking permissions
+  if (isCheckingAccess) {
+    return (
+      <div className="space-y-4">
+        <SkeletonList count={5} />
+      </div>
+    )
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <PageLayout title={t("title")} description={t("description")} maxWidth="full">
+    <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Building2 className="h-6 w-6" />
+                <Ruler className="h-6 w-6" />
               </div>
               <div>
                 <CardTitle>{t("title")}</CardTitle>
-                <CardDescription>{t("description")}</CardDescription>
+                <CardDescription>
+                  {t("description")}
+                  {selectedBranchId && (
+                    <span className="ml-2 text-xs">
+                      ({t("filteredByBranch")})
+                    </span>
+                  )}
+                </CardDescription>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <ViewToggle view={viewMode} onViewChange={setViewMode} />
               <ExportButton
-                data={filteredBrands}
+                data={filteredUnits}
                 columns={exportColumns}
-                filename="brands"
-                disabled={isLoading || filteredBrands.length === 0}
+                filename="units"
+                disabled={isLoading || filteredUnits.length === 0}
               />
-              <PermissionGuard permission={PERMISSIONS.BRANDS_CREATE}>
-                <Button onClick={handleCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("createBrand")}
-                </Button>
-              </PermissionGuard>
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createUnit")}
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -278,7 +261,7 @@ export default function BrandsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder={t("searchPlaceholder") || "Search brands..."}
+                placeholder={t("searchPlaceholder") || "Search units..."}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -290,21 +273,21 @@ export default function BrandsPage() {
           </div>
           {isLoading ? (
             <SkeletonList count={5} />
-          ) : filteredBrands.length === 0 ? (
+          ) : filteredUnits.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+              <Ruler className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                {search ? t("noResults") || "No results found" : t("noBrands")}
+                {search ? t("noResults") || "No results found" : t("noUnits")}
               </h3>
               <p className="text-muted-foreground mb-4">
                 {search
                   ? t("noResultsDescription") || "Try adjusting your search"
-                  : t("noBrandsDescription")}
+                  : t("noUnitsDescription")}
               </p>
               {!search && canCreate && (
                 <Button onClick={handleCreate}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {t("createBrand")}
+                  {t("createUnit")}
                 </Button>
               )}
             </div>
@@ -312,37 +295,35 @@ export default function BrandsPage() {
             <div className="space-y-4">
               <DataTable
                 columns={tableColumns}
-                data={filteredBrands}
+                data={paginatedUnits}
                 getRowId={(row) => row.id}
                 enableRowSelection={false}
-                emptyMessage={t("noBrands")}
+                emptyMessage={t("noUnits")}
               />
-              {meta && (
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  totalItems={meta.total || 0}
-                  limit={limit}
-                  onPageChange={setPage}
-                  onLimitChange={(newLimit) => {
-                    setLimit(newLimit)
-                    setPage(1)
-                  }}
-                />
-              )}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredBrands.map((brand) => (
-                  <Card key={brand.id} className="relative">
+                {paginatedUnits.map((unit) => (
+                  <Card key={unit.id} className="relative">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-lg">{brand.name}</CardTitle>
-                          {brand.description && (
-                            <CardDescription className="mt-1">{brand.description}</CardDescription>
-                          )}
+                          <CardTitle className="text-lg">{unit.name}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {t("suffix")}: <span className="font-mono font-medium">{unit.suffix}</span>
+                          </CardDescription>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -352,14 +333,14 @@ export default function BrandsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {canUpdate && (
-                              <DropdownMenuItem onClick={() => handleEdit(brand)}>
+                              <DropdownMenuItem onClick={() => handleEdit(unit)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 {tCommon("edit")}
                               </DropdownMenuItem>
                             )}
                             {canDelete && (
                               <DropdownMenuItem
-                                onClick={() => handleDelete(brand)}
+                                onClick={() => handleDelete(unit)}
                                 className="text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -373,31 +354,26 @@ export default function BrandsPage() {
                   </Card>
                 ))}
               </div>
-              {meta && (
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  totalItems={meta.total || 0}
-                  limit={limit}
-                  onPageChange={setPage}
-                  onLimitChange={(newLimit) => {
-                    setLimit(newLimit)
-                    setPage(1)
-                  }}
-                />
-              )}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit)
+                  setPage(1)
+                }}
+              />
             </div>
           )}
         </CardContent>
       </Card>
 
-      <BrandDialog
-        brand={selectedBrand}
+      <UnitDialog
+        unit={selectedUnit}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSubmitCreate={handleSubmitCreate}
-        onSubmitUpdate={handleSubmitUpdate}
-        isLoading={false}
       />
 
       <DeleteConfirmationDialog
@@ -405,9 +381,9 @@ export default function BrandsPage() {
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
         title={t("deleteConfirmTitle")}
-        description={t("deleteConfirmDescription")}
-        isLoading={deleteBrandMutation.isPending}
+        description={t("deleteConfirmDescription", { name: unitToDelete?.name || "" })}
+        isLoading={deleteUnitMutation.isPending}
       />
-    </PageLayout>
+    </>
   )
 }

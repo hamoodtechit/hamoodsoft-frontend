@@ -39,7 +39,8 @@ import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
-import { Transaction } from "@/types"
+import { formatDate, formatDateTime } from "@/lib/utils/date"
+import { Account, IncomeExpenseCategory, Transaction } from "@/types"
 import { Eye, Plus, TrendingUp, MoreVertical, Search } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useParams, useRouter } from "next/navigation"
@@ -92,12 +93,13 @@ export default function IncomePage() {
       
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
+        const matchName = t.name?.toLowerCase().includes(query)
         const matchNote = t.note?.toLowerCase().includes(query)
         const matchAccount = t.account?.name?.toLowerCase().includes(query)
         const matchContact = t.contact?.name?.toLowerCase().includes(query)
         const matchAmount = t.amount?.toString().includes(query)
         
-        if (!matchNote && !matchAccount && !matchContact && !matchAmount) {
+        if (!matchName && !matchNote && !matchAccount && !matchContact && !matchAmount) {
           return false
         }
       }
@@ -124,9 +126,20 @@ export default function IncomePage() {
     {
       id: "date",
       header: tCommon("date") || "Date",
-      cell: (row) => row.occurredAt ? new Date(row.occurredAt).toLocaleDateString() : "-",
+      cell: (row) => formatDate(row.occurredAt, { timeZone: generalSettings?.timeZone }),
       sortable: true,
       accessorKey: "occurredAt",
+    },
+    {
+      id: "name",
+      header: "Name / Title",
+      accessorKey: "name",
+      cell: (row) => (
+        <span className="font-medium text-foreground">
+          {row.name || "-"}
+        </span>
+      ),
+      sortable: true,
     },
     {
       id: "type",
@@ -342,12 +355,16 @@ export default function IncomePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Type</div>
-                        <div className="text-base">
-                          <Badge variant="default" className="bg-green-600">Income</Badge>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Name / Title</div>
+                          <div className="text-base font-medium">{transactionDetails.name || "-"}</div>
                         </div>
-                      </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Category</div>
+                          <div className="text-base">
+                            <Badge variant="default">Income</Badge>
+                          </div>
+                        </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Amount</div>
                         <div className="text-base font-semibold text-green-600">
@@ -358,7 +375,7 @@ export default function IncomePage() {
                         <div>
                           <div className="text-sm text-muted-foreground">Occurred At</div>
                           <div className="text-base">
-                            {new Date(transactionDetails.occurredAt).toLocaleString()}
+                            {formatDateTime(transactionDetails.occurredAt, { timeZone: generalSettings?.timeZone })}
                           </div>
                         </div>
                       )}

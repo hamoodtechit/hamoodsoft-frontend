@@ -14,12 +14,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { Package } from "lucide-react"
 
+import { useAppSettings } from "@/lib/providers/settings-provider"
+
 export function VariantPickerDialog() {
   const {
     isSkuDialogOpen, setIsSkuDialogOpen,
     selectedProductForSku, setSelectedProductForSku,
     getProductVariants, addToCartWithSku,
   } = usePOS()
+  const { inventorySettings } = useAppSettings()
+  const allowExpiredProductSales = inventorySettings?.allowExpiredProductSales ?? false
 
   return (
     <Dialog open={isSkuDialogOpen} onOpenChange={setIsSkuDialogOpen}>
@@ -39,6 +43,8 @@ export function VariantPickerDialog() {
                 const availableQty = stock?.quantity || 0
                 const managesStock = selectedProductForSku.manageStocks !== false
                 const isOutOfStock = managesStock && (stock === undefined || stock.quantity <= 0)
+                const isExpired = stock?.expiryDate ? new Date(stock.expiryDate) < new Date() : false
+                const isDisabled = Boolean(isOutOfStock || (!allowExpiredProductSales && isExpired))
 
                 const variantImage = variant?.thumbnailUrl ||
                   (variant?.images && variant.images[0]) ||
@@ -64,7 +70,7 @@ export function VariantPickerDialog() {
                   <button
                     key={variantData.sku || index}
                     onClick={() => {
-                      if (!isOutOfStock) {
+                      if (!isDisabled) {
                         addToCartWithSku(
                           selectedProductForSku,
                           variantData.sku,
@@ -75,14 +81,14 @@ export function VariantPickerDialog() {
                         setSelectedProductForSku(null)
                       }
                     }}
-                    disabled={isOutOfStock}
+                    disabled={isDisabled}
                     className={cn(
                       "group w-full p-4 border-2 rounded-xl text-left",
                       "transition-all duration-200",
                       "hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
                       "active:scale-[0.98]",
                       "flex items-center gap-4 bg-card",
-                      isOutOfStock && managesStock && "opacity-50 cursor-not-allowed hover:shadow-none"
+                      isDisabled && "opacity-50 cursor-not-allowed hover:shadow-none"
                     )}
                   >
                     {/* Variant Image */}
@@ -132,6 +138,11 @@ export function VariantPickerDialog() {
                               </Badge>
                             )}
                           </>
+                        )}
+                        {isExpired && (
+                          <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                            Expired
+                          </Badge>
                         )}
                       </div>
                     </div>

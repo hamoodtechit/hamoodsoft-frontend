@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 export const createIncomeTransactionSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   accountId: z.string().min(1, "Account is required"),
   branchId: z.string().optional(),
   categoryId: z.string().optional(),
@@ -10,6 +11,7 @@ export const createIncomeTransactionSchema = z.object({
 })
 
 export const createExpenseTransactionSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   accountId: z.string().min(1, "Account is required"),
   branchId: z.string().optional(),
   contactId: z.string().optional(),

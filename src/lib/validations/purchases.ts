@@ -15,6 +15,10 @@ export const purchaseItemSchema = z.object({
   itemType: z.enum(["PRODUCT", "SERVICE", "FUEL"]).optional(),
   fuelTypeId: z.string().optional(),
   tankerId: z.string().optional(),
+  expiryDate: z.coerce.date({
+    required_error: "Expiry date is required",
+    invalid_type_error: "Expiry date is required",
+  }),
 })
 
 /** Schema for a single tanker allocation within a fuel purchase */

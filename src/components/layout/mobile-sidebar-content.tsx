@@ -26,9 +26,13 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  Tags,
+  TrendingDown,
+  TrendingUp,
   UserPlus,
   Users,
   Wallet,
+  HardDrive,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
@@ -189,28 +193,10 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           requiredPermissions: ["stocks:read"],
         },
         {
-          title: t("sidebar.categories"),
-          href: "/dashboard/categories",
-          icon: FolderTree,
-          requiredPermissions: ["product_categories:read"],
-        },
-        {
-          title: t("sidebar.unit"),
-          href: "/dashboard/units",
-          icon: Ruler,
-          requiredPermissions: ["units:read"],
-        },
-        {
-          title: t("sidebar.brands"),
-          href: "/dashboard/brands",
-          icon: Package,
-          requiredPermissions: ["brands:read"],
-        },
-        {
-          title: t("sidebar.attributes"),
-          href: "/dashboard/attributes",
-          icon: Package,
-          requiredPermissions: ["attributes:read"],
+          title: "Inventory Settings",
+          href: "/dashboard/inventory/settings",
+          icon: Settings,
+          requiredPermissions: ["brands:read", "product_categories:read", "units:read", "attributes:read"],
         },
       ]
 
@@ -226,16 +212,43 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
       }
     }
 
-    // Accounting
+    // Accounting with submenu
     if (enabledModules.includes('accounting')) {
-      const accountingItem = {
-        title: t("sidebar.accounts"),
-        href: "/dashboard/accounting",
-        icon: Wallet,
-        requiredPermissions: ["accounts:read", "transactions:read", "payments:read"],
-      }
-      if (canSee(accountingItem.requiredPermissions)) {
-        managementItems.push(accountingItem)
+      const accountingSubmenu: NavItem[] = [
+        {
+          title: t("sidebar.accounts"),
+          href: "/dashboard/accounting",
+          icon: Wallet,
+          requiredPermissions: ["accounts:read"],
+        },
+        {
+          title: "Income",
+          href: "/dashboard/income",
+          icon: TrendingUp,
+          requiredPermissions: ["transactions:read"],
+        },
+        {
+          title: "Expense",
+          href: "/dashboard/expense",
+          icon: TrendingDown,
+          requiredPermissions: ["transactions:read"],
+        },
+        {
+          title: "Categories",
+          href: "/dashboard/accounting/categories",
+          icon: Tags,
+          requiredPermissions: ["transactions:read"],
+        },
+      ]
+
+      const filteredAccountingSubmenu = filterByPermission(accountingSubmenu)
+      if (filteredAccountingSubmenu.length > 0) {
+        managementItems.push({
+          title: t("sidebar.accounting"),
+          href: "#",
+          icon: BookOpen,
+          submenu: filteredAccountingSubmenu,
+        })
       }
     }
 
@@ -292,6 +305,12 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           href: "/register-business",
           icon: Plus,
           // Always visible — any user can create their own business
+        },
+        {
+          title: "Media Manager",
+          href: "/dashboard/media",
+          icon: HardDrive,
+          requiredPermissions: ["media:read"],
         },
         {
           title: t("sidebar.branches"),
@@ -358,13 +377,19 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   const renderNavItem = (item: NavItem | NavItemWithSubmenu, itemKey: string) => {
     const Icon = item.icon
     const fullHref = item.href === "#" ? "#" : `/${locale}${item.href}`
-    const isActive = item.href !== "#" && pathname?.startsWith(fullHref)
+    const isDashboard = item.href === "/dashboard"
+    const isActive = isDashboard
+      ? pathname === fullHref || pathname === item.href
+      : item.href !== "#" && (pathname === fullHref || pathname?.startsWith(fullHref + "/"))
     const hasSubmenu = 'submenu' in item && item.submenu && item.submenu.length > 0
     const isSubmenuOpen = openSubmenus[itemKey] || false
 
     // Check if any submenu item is active
     const isSubmenuActive = hasSubmenu && item.submenu?.some(
-      (subItem) => pathname?.startsWith(`/${locale}${subItem.href}`)
+      (subItem) => {
+        const subFull = `/${locale}${subItem.href}`
+        return pathname === subFull || pathname?.startsWith(subFull + "/")
+      }
     )
 
     if (hasSubmenu) {
@@ -382,9 +407,9 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
                 isSubmenuActive && "bg-secondary font-medium"
               )}
             >
-              <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center gap-3">
                 <Icon className="h-4 w-4 flex-shrink-0" />
-                <span className="flex-1 text-left text-sm">{item.title}</span>
+                <span className="text-sm font-normal">{item.title}</span>
               </div>
               <ChevronDown
                 className={cn(
@@ -398,7 +423,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
             {item.submenu?.map((subItem) => {
               const SubIcon = subItem.icon
               const subFullHref = `/${locale}${subItem.href}`
-              const isSubActive = pathname?.startsWith(subFullHref)
+              const isSubActive = pathname === subFullHref || pathname?.startsWith(subFullHref + "/")
 
               return (
                 <Link key={subItem.href} href={subFullHref} onClick={onLinkClick}>

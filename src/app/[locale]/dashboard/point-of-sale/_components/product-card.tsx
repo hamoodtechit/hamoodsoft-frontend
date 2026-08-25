@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { usePOS } from "./pos-provider"
+import { useAppSettings } from "@/lib/providers/settings-provider"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { getRandomGradient } from "@/lib/utils/aesthetics"
@@ -28,31 +29,41 @@ export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: 
   const managesStock = product.manageStocks !== false
   const totalStockQuantity = variants.reduce((sum, v) => sum + (v.stock?.quantity || 0), 0)
 
-  const isOutOfStock = managesStock && (
-    hasMultipleVariants
-      ? totalStockQuantity <= 0
-      : !stock || stock.quantity <= 0
-  )
-
   const productImage = firstVariant?.thumbnailUrl || product.thumbnailUrl || null
   const displayPrice = hasMultipleVariants ? product.price : (stock?.salePrice ?? firstVariant?.price ?? product.price ?? 0)
   const inCart = cartProductIdSet.has(product.id)
   const isSelected = lastSelectedProductId === product.id
 
+  const { inventorySettings } = useAppSettings()
+  const allowExpiredProductSales = inventorySettings?.allowExpiredProductSales ?? false
+  const isSingleStockExpired = !hasMultipleVariants && stock?.expiryDate && new Date(stock.expiryDate) < new Date()
+  const isOutOfStock = managesStock && (
+    hasMultipleVariants
+      ? totalStockQuantity <= 0
+      : !stock || stock.quantity <= 0
+  )
+  const isDisabled = isOutOfStock || (!allowExpiredProductSales && isSingleStockExpired)
+  const showExpiredBadge = isSingleStockExpired;
+
   if (productViewMode === "list") {
     return (
       <button
-        onClick={() => !isOutOfStock && handleProductClick(product)}
-        disabled={isOutOfStock}
+        onClick={() => !isDisabled && handleProductClick(product)}
+        disabled={Boolean(isDisabled)}
         data-shortcut={shortcutNumber}
         className={cn(
-          "w-full flex items-center justify-between gap-3 px-3.5 py-2 border rounded-xl transition-all group",
+          "w-full flex items-center justify-between gap-3 px-3.5 py-2 border rounded-xl transition-all group relative",
           "bg-gradient-to-br", getRandomGradient(product.id, 'subtle'),
           "hover:border-primary/50 hover:shadow-md",
-          isOutOfStock && "opacity-60",
+          isDisabled && "opacity-60",
           inCart && "border-primary/40 shadow-sm"
         )}
       >
+        {Boolean(showExpiredBadge) && (
+          <div className="absolute top-0 right-0 -mt-1.5 -mr-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 shadow-sm border-2 border-background z-10" title="Expired">
+            <span className="sr-only">Expired</span>
+          </div>
+        )}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {shortcutNumber && (
             <span className="text-[10px] font-black text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded shadow-xs shrink-0">
@@ -114,8 +125,8 @@ export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: 
 
   return (
     <button
-      onClick={() => !isOutOfStock && handleProductClick(product)}
-      disabled={isOutOfStock}
+      onClick={() => !isDisabled && handleProductClick(product)}
+      disabled={Boolean(isDisabled)}
       data-shortcut={shortcutNumber}
       className={cn(
         "group relative border-2 rounded-xl overflow-hidden",
@@ -124,11 +135,16 @@ export function ProductCard({ product, isPinned, onTogglePin, shortcutNumber }: 
         "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50",
         "active:scale-[0.98]",
         "flex flex-col h-full",
-        isOutOfStock && "opacity-60 cursor-not-allowed hover:shadow-none",
-        inCart && "border-primary/40 shadow-md shadow-primary/5",
-        isSelected && "ring-2 ring-primary ring-offset-2 shadow-lg"
+        isDisabled && "opacity-60",
+        inCart && "border-primary/40 shadow-sm",
+        isSelected && "border-primary shadow-md ring-2 ring-primary bg-primary/5"
       )}
     >
+      {Boolean(showExpiredBadge) && (
+        <Badge variant="destructive" className="absolute top-2 right-2 z-10 scale-90 origin-top-right shadow-sm px-1.5 py-0">
+          Expired
+        </Badge>
+      )}
       {/* In Cart Indicator */}
       {inCart && (
         <div className="absolute right-2 top-2 z-10 rounded-full bg-primary text-primary-foreground p-1.5 shadow-md">

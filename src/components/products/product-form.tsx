@@ -96,7 +96,7 @@ export function ProductForm({ product }: ProductFormProps) {
         purchasePrice: undefined,
         unitId: "",
         categoryIds: [] as string[],
-        branchIds: [] as string[],
+        branchIds: defaultBranchId ? [defaultBranchId] : [] as string[],
         brandId: "",
         variants: [] as Array<{ 
           variantName: string

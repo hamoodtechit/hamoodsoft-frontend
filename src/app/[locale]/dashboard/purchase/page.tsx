@@ -35,6 +35,7 @@ import { useAppSettings } from "@/lib/providers/settings-provider"
 import { useHasPermission } from "@/lib/hooks/use-permissions"
 import { PERMISSIONS } from "@/lib/utils/permissions"
 import { formatCurrency } from "@/lib/utils/currency"
+import { formatDate, formatDateTime } from "@/lib/utils/date"
 import { type ExportColumn } from "@/lib/utils/export"
 import { Purchase } from "@/types"
 import { CreditCard, Droplets, Eye, FileText, Mail, MoreVertical, Package, Pencil, Phone, Plus, Search, Trash2, User } from "lucide-react"
@@ -275,12 +276,12 @@ export default function PurchasePage() {
       {
         key: "createdAt",
         header: "Created At",
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+        format: (value) => formatDate(value, { timeZone: generalSettings?.timeZone, format: "short" }),
       },
       {
         key: "updatedAt",
         header: "Updated At",
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+        format: (value) => formatDate(value, { timeZone: generalSettings?.timeZone, format: "short" }),
       },
     ],
     []
@@ -939,17 +940,13 @@ export default function PurchasePage() {
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("createdAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewPurchase?.createdAt
-                      ? new Date(viewPurchase.createdAt).toLocaleString()
-                      : "-"}
+                    {formatDateTime(viewPurchase?.createdAt, { timeZone: generalSettings?.timeZone })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("updatedAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewPurchase?.updatedAt
-                      ? new Date(viewPurchase.updatedAt).toLocaleString()
-                      : "-"}
+                    {formatDateTime(viewPurchase?.updatedAt, { timeZone: generalSettings?.timeZone })}
                   </p>
                 </div>
               </div>
@@ -998,9 +995,7 @@ export default function PurchasePage() {
                               <p className="text-sm text-muted-foreground mt-1">{payment.notes}</p>
                             )}
                             <p className="text-xs text-muted-foreground mt-1">
-                              {payment.occurredAt
-                                ? new Date(payment.occurredAt).toLocaleDateString()
-                                : "-"}
+                              {formatDate(payment.occurredAt, { timeZone: generalSettings?.timeZone })}
                             </p>
                           </div>
                           <div className="text-right">

@@ -1,6 +1,7 @@
 export const endpoints = {
   auth: {
     login: "/auth/login",
+    magicLogin: "/auth/magic-login",
     register: "/auth/register",
     logout: "/auth/logout",
     refresh: "/auth/refresh",
@@ -118,6 +119,8 @@ export const endpoints = {
   media: {
     upload: "/media/upload",
     list: "/media",
+    folders: "/media/folders",
+    getById: (id: string) => `/media/${id}`,
     update: (id: string) => `/media/${id}`,
     delete: (id: string) => `/media/${id}`,
   },
@@ -127,8 +130,12 @@ export const endpoints = {
     getByName: (name: string) => `/settings/by-name/${name}`,
     update: (id: string) => `/settings/${id}`,
   },
+  permissions: {
+    list: "/permissions",
+  },
   accounts: {
     create: "/accounts",
+    transfer: "/accounts/transfer",
     list: "/accounts",
     getById: (id: string) => `/accounts/${id}`,
     update: (id: string) => `/accounts/${id}`,

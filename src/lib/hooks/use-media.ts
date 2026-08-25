@@ -26,6 +26,13 @@ export function useMediaById(id: string | undefined) {
   })
 }
 
+export function useMediaFolders() {
+  return useQuery({
+    queryKey: ["media", "folders"],
+    queryFn: () => mediaApi.getFolders(),
+  })
+}
+
 export function useUploadMedia() {
   const queryClient = useQueryClient()
 
@@ -33,6 +40,7 @@ export function useUploadMedia() {
     mutationFn: (data: UploadMediaInput) => mediaApi.upload(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["media"] })
+      queryClient.invalidateQueries({ queryKey: ["media", "folders"] })
       toast.success("Media uploaded successfully!")
     },
     onError: (error) => {

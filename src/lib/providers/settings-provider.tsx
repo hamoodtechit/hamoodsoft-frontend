@@ -37,6 +37,9 @@ interface SettingsContextValue {
   } | null
   emailSettings: Record<string, any> | null
   smsSettings: Record<string, any> | null
+  inventorySettings: {
+    allowExpiredProductSales?: boolean
+  } | null
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined)
@@ -79,10 +82,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         counterPhone: generalConfig.counterPhone || undefined,
         binNumber: generalConfig.binNumber || undefined,
         currency: generalConfig.currency || undefined,
-        timeZone: generalConfig.timeZone || undefined,
+        timeZone: generalConfig.timeZone || "Asia/Dhaka",
         currencySymbolPlacement: generalConfig.currencySymbolPlacement || "before-amount",
       }
-      : null
+      : {
+        timeZone: "Asia/Dhaka",
+        currencySymbolPlacement: "before-amount" as const,
+      }
 
     // Get tax settings
     const taxConfig = getSettingConfig("taxRate")
@@ -110,6 +116,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     // Get SMS settings
     const smsSettings = getSettingConfig("sms")
 
+    // Get Inventory settings
+    const inventoryConfig = getSettingConfig("inventory")
+    const inventorySettings = inventoryConfig 
+      ? {
+        allowExpiredProductSales: inventoryConfig.allowExpiredProductSales ?? false,
+      }
+      : null
+
     return {
       settings,
       isLoading,
@@ -120,6 +134,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       invoiceSettings,
       emailSettings,
       smsSettings,
+      inventorySettings,
     }
   }, [settings, isLoading])
 

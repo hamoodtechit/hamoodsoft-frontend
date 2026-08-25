@@ -31,6 +31,14 @@ export const authApi = {
     return response.data.data
   },
 
+  magicLogin: async (data: { key: string }): Promise<LoginResponse> => {
+    const response = await apiClient.post<ApiResponse<LoginResponse>>(
+      endpoints.auth.magicLogin,
+      data
+    )
+    return response.data.data
+  },
+
   register: async (data: RegisterInput): Promise<RegisterResponse> => {
     // Exclude confirmPassword from the request
     const { confirmPassword, ...registerData } = data

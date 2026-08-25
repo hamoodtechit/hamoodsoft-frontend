@@ -21,7 +21,7 @@ import {
 import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -38,14 +38,62 @@ export function Sidebar() {
 
   const [currentHash, setCurrentHash] = useState("")
 
+  // Clean path without locale and /dashboard
+  const cleanSubPath = useMemo(() => {
+    const stripped = pathname?.replace(new RegExp(`^(/${locale})?/dashboard`), "") || ""
+    return stripped === "" ? "/" : stripped
+  }, [pathname, locale])
+
+  const isDashboardRoot = cleanSubPath === "/"
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setCurrentHash(window.location.hash)
-      const handleHashChange = () => setCurrentHash(window.location.hash)
+      if (window.location.hash) {
+        setCurrentHash(window.location.hash)
+      } else if (isDashboardRoot) {
+        setCurrentHash("#dashboard-top")
+      }
+      const handleHashChange = () => setCurrentHash(window.location.hash || "#dashboard-top")
       window.addEventListener("hashchange", handleHashChange)
       return () => window.removeEventListener("hashchange", handleHashChange)
     }
-  }, [])
+  }, [isDashboardRoot])
+
+  // Scroll spy on #main-scroll when on dashboard root
+  useEffect(() => {
+    if (!isDashboardRoot || typeof window === "undefined") return
+
+    const mainScroll = document.getElementById("main-scroll")
+    if (!mainScroll) return
+
+    const sectionIds = [
+      "dashboard-top",
+      "main-section",
+      "inventory-section",
+      "accounting-section",
+      "reports-section",
+      "hr-section",
+      "business-section",
+      "modules-section",
+    ]
+
+    const handleScroll = () => {
+      const scrollPos = mainScroll.scrollTop + 140
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i])
+        if (el) {
+          const top = el.offsetTop
+          if (scrollPos >= top) {
+            setCurrentHash(`#${sectionIds[i]}`)
+            break
+          }
+        }
+      }
+    }
+
+    mainScroll.addEventListener("scroll", handleScroll, { passive: true })
+    return () => mainScroll.removeEventListener("scroll", handleScroll)
+  }, [isDashboardRoot])
 
   // Permission-based visibility check
   const canSee = (requiredPermissions?: string[]): boolean => {
@@ -62,15 +110,15 @@ export function Sidebar() {
       icon: LayoutDashboard,
       color: "text-blue-500",
       hash: "#dashboard-top",
-      activePrefixes: [],
+      activePrefixes: [] as string[],
       requiredPermissions: [] as string[],
     },
     {
-      id: "management-section",
+      id: "main-section",
       title: t("sidebar.management"),
       icon: Users,
       color: "text-cyan-400",
-      hash: "#management-section",
+      hash: "#main-section",
       activePrefixes: ["/crm", "/contacts"],
       requiredPermissions: ["contacts:read"],
     },
@@ -89,7 +137,7 @@ export function Sidebar() {
       icon: Wallet,
       color: "text-indigo-400",
       hash: "#accounting-section",
-      activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale"],
+      activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale", "/pos", "/expenses", "/expense", "/income"],
       requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read", "pos:sessions:read"],
     },
     {
@@ -98,17 +146,8 @@ export function Sidebar() {
       icon: BarChart2,
       color: "text-purple-400",
       hash: "#reports-section",
-      activePrefixes: ["/reports", "/dashboard/reports/sales", "/dashboard/reports/purchases", "/dashboard/reports/income", "/dashboard/reports/expense"],
+      activePrefixes: ["/reports"],
       requiredPermissions: ["reports:read"],
-    },
-    {
-      id: "modules-section",
-      title: t("sidebar.modules"),
-      icon: Grid,
-      color: "text-orange-400",
-      hash: "#modules-section",
-      activePrefixes: ["/oil-filling-station"],
-      requiredPermissions: ["fuel_types:read", "tankers:read", "dispensers:read", "dispenser_readings:read"],
     },
     {
       id: "hr-section",
@@ -116,24 +155,33 @@ export function Sidebar() {
       icon: Users,
       color: "text-violet-500",
       hash: "#hr-section",
-      activePrefixes: ["/hr"],
+      activePrefixes: ["/hr", "/roles", "/users"],
       requiredPermissions: ["roles:read", "user:manage"],
     },
     {
-      id: "my-business-section",
+      id: "business-section",
       title: t("sidebar.myBusiness"),
       icon: Building2,
       color: "text-rose-400",
-      hash: "#my-business-section",
-      activePrefixes: ["/settings", "/branches"],
-      requiredPermissions: ["settings:read", "branches:read"],
+      hash: "#business-section",
+      activePrefixes: ["/branches", "/media"],
+      requiredPermissions: ["branches:read", "settings:read", "media:read"],
+    },
+    {
+      id: "modules-section",
+      title: t("sidebar.modules"),
+      icon: Grid,
+      color: "text-orange-400",
+      hash: "#modules-section",
+      activePrefixes: ["/oil-filling-station", "/fuel"],
+      requiredPermissions: ["fuel_types:read", "tankers:read", "dispensers:read", "dispenser_readings:read"],
     },
     {
       id: "settings-section",
       title: t("sidebar.settings"),
       icon: Settings,
       color: "text-slate-400",
-      hash: "#settings-section",
+      directHref: `/${locale}/dashboard/settings`,
       marginTop: true,
       activePrefixes: ["/settings"],
       requiredPermissions: ["settings:read"],
@@ -142,10 +190,6 @@ export function Sidebar() {
 
   // Filter items by permission
   const visibleNavItems = navItems.filter((item) => canSee(item.requiredPermissions))
-
-  // If we are on exactly `/dashboard`, we can just hash-link. 
-  // If we are on `/dashboard/products`, we link to `/dashboard#inventory-section`.
-  const isDashboardRoot = pathname === `/${locale}/dashboard` || pathname === `/dashboard`
 
   return (
     <aside
@@ -195,9 +239,7 @@ export function Sidebar() {
           let isActuallyActive = false
 
           if (!isDashboardRoot) {
-            // Check if current pathname matches any of the activePrefixes
-            const subPath = pathname.replace(`/${locale}/dashboard`, "")
-            isActuallyActive = item.activePrefixes?.some(p => subPath.startsWith(p)) || false
+            isActuallyActive = item.activePrefixes?.some((p) => cleanSubPath.startsWith(p)) || false
           } else {
             if (currentHash) {
               isActuallyActive = currentHash === item.hash
@@ -206,24 +248,29 @@ export function Sidebar() {
             }
           }
 
-          const href = isDashboardRoot ? item.hash : `/${locale}/dashboard${item.hash}`
+          const href = item.directHref || (isDashboardRoot ? item.hash || "#" : `/${locale}/dashboard${item.hash || ""}`)
 
           return (
             <Link
               key={item.id}
               href={href}
               className={cn(
-                "nav-item flex items-center gap-4 px-4 py-3.5 rounded-l-2xl transition-colors cursor-pointer overflow-hidden",
-                (item as any).marginTop && "mt-2",
-                // Active State (bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white)
-                // Inactive State (text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50)
+                "nav-item flex items-center gap-4 px-4 py-3.5 rounded-l-2xl transition-all duration-200 cursor-pointer overflow-hidden relative",
+                item.marginTop && "mt-2",
                 isActuallyActive
-                  ? "bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                  ? "bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold shadow-sm border-r-4 border-blue-600"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 font-medium"
               )}
-              onClick={() => {
-                if (isDashboardRoot) {
-                  // Smooth scroll manual trigger (optional, standard target hash handles it if css scroll-behavior smooth is set)
+              onClick={(e) => {
+                if (item.directHref) {
+                  return
+                }
+                if (isDashboardRoot && item.hash) {
+                  e.preventDefault()
+                  setCurrentHash(item.hash)
+                  if (typeof window !== "undefined") {
+                    window.history.replaceState(null, "", item.hash)
+                  }
                   const targetEl = document.getElementById(item.id)
                   const mainScroll = document.getElementById("main-scroll")
                   if (targetEl && mainScroll) {

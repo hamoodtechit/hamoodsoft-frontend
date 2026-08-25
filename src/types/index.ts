@@ -196,6 +196,7 @@ export interface Stock {
   variantId?: string | null // Variant ID for variant-specific stock
   purchasePrice?: number | null
   salePrice?: number | null
+  expiryDate?: string | null
   profitMarginPercent?: number
   profitMarginAmount?: number
   product?: Product
@@ -383,6 +384,12 @@ export interface ClosePOSSessionInput {
 
 export type ContactType = "CUSTOMER" | "SUPPLIER"
 
+export interface ContactPerson {
+  name: string
+  phone: string
+  designation?: string
+}
+
 export interface Contact {
   id: string
   businessId?: string
@@ -396,6 +403,7 @@ export interface Contact {
   companyAddress?: string
   companyPhone?: string
   binNumber?: string
+  contactPersons?: ContactPerson[] | string
   balance: number
   totalDue?: number
   creditLimit: number
@@ -408,6 +416,7 @@ export interface Vehicle {
   id: string
   contactId: string
   vehicleNo: string
+  vehicleType?: string
   driverName?: string
   contact?: Contact
   createdAt?: string
@@ -477,6 +486,7 @@ export interface AccountLedgerEntry {
   credit?: number // API has separate credit field
   branchId?: string | null
   contactId?: string | null
+  name?: string | null
 }
 
 export interface AccountLedgerResponse {
@@ -526,6 +536,7 @@ export interface Transaction {
   type: TransactionType
   amount: number
   paidAmount?: number // Only for expenses
+  name?: string | null
   occurredAt: string
   note?: string | null
   referenceId?: string | null

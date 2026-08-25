@@ -230,29 +230,48 @@ export function InvoiceDialog({
 
   const cfg = FORMAT_CONFIG[selectedFormat];
 
+  const tz = generalSettings?.timeZone || "Asia/Dhaka";
+
   // ── Date formatters ──
 
   const formatDateHeader = (dateStr?: string) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = d.toLocaleString("en-US", { month: "short" }).toUpperCase();
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}-${month}-${year}`;
+    try {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: tz,
+        day: "2-digit",
+        month: "short",
+        year: "2-digit",
+      }).formatToParts(d);
+      const day = parts.find((p) => p.type === "day")?.value || "";
+      const month = (parts.find((p) => p.type === "month")?.value || "").toUpperCase();
+      const year = parts.find((p) => p.type === "year")?.value || "";
+      return `${day}-${month}-${year}`;
+    } catch {
+      return d.toLocaleDateString();
+    }
   };
 
   const formatTimestamp = (dateStr?: string) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, "0");
-    const mins = String(d.getMinutes()).padStart(2, "0");
-    const secs = String(d.getSeconds()).padStart(2, "0");
-    return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        timeZone: tz,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(d).replace(",", "");
+    } catch {
+      return d.toLocaleString();
+    }
   };
 
   /** Format date for MUSHAK 6.3: DD-Mon-YYYY */
@@ -260,10 +279,20 @@ export function InvoiceDialog({
     if (!dateStr) return "";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = d.toLocaleString("en-US", { month: "short" });
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    try {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: tz,
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).formatToParts(d);
+      const day = parts.find((p) => p.type === "day")?.value || "";
+      const month = parts.find((p) => p.type === "month")?.value || "";
+      const year = parts.find((p) => p.type === "year")?.value || "";
+      return `${day}-${month}-${year}`;
+    } catch {
+      return d.toLocaleDateString();
+    }
   };
 
   /** Format time for MUSHAK 6.3: hh:mm AM/PM */
@@ -271,12 +300,16 @@ export function InvoiceDialog({
     if (!dateStr) return "";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    let hours = d.getHours();
-    const mins = String(d.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12;
-    if (hours === 0) hours = 12;
-    return `${String(hours).padStart(2, "0")}:${mins} ${ampm}`;
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(d);
+    } catch {
+      return d.toLocaleTimeString();
+    }
   };
 
   // ── Invoice Data ──
@@ -357,12 +390,12 @@ export function InvoiceDialog({
 
         if (isPOS) {
           return `<tr>
-            <td style="padding:1mm 0.5mm;text-align:left;border-bottom:0.3mm solid #ddd;">${displayName}</td>
-            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${item.price.toFixed(2)}</td>
-            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;">${item.quantity} ${formatUnitAbbreviation(item)}</td>
-            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? `${txRate}%` : "0"}</td>
-            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
-            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;">${itemTotal.toFixed(2)}</td>
+            <td style="padding:1mm 0.5mm;text-align:left;border-bottom:0.3mm solid #ddd;word-break:break-word;">${displayName}</td>
+            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;word-break:break-word;">${item.price.toFixed(2)}</td>
+            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;word-break:break-word;">${item.quantity} ${formatUnitAbbreviation(item)}</td>
+            <td style="padding:1mm 0.5mm;text-align:center;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;word-break:break-word;">${txRate > 0 ? `${txRate}%` : "0"}</td>
+            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;font-size:${f.smallFontSizePt}pt;word-break:break-word;">${txRate > 0 ? itemTaxAmount.toFixed(2) : "0"}</td>
+            <td style="padding:1mm 0.5mm;text-align:right;border-bottom:0.3mm solid #ddd;word-break:break-word;">${itemTotal.toFixed(2)}</td>
           </tr>`;
         } else {
           return `<tr>
@@ -384,12 +417,12 @@ export function InvoiceDialog({
     // Table header
     const tableHeader = isPOS
       ? `<tr style="border-top:0.5mm solid #000;border-bottom:0.5mm solid #000;">
-            <th style="padding:1mm 0.5mm;text-align:left;font-weight:bold;">Product Name</th>
-            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Rate</th>
-            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Qty</th>
-            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;">Tax %</th>
-            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Tax Amt</th>
-            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;">Total</th>
+            <th style="padding:1mm 0.5mm;text-align:left;font-weight:bold;width:30%;">Product Name</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;width:15%;">Rate</th>
+            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;width:15%;">Qty</th>
+            <th style="padding:1mm 0.5mm;text-align:center;font-weight:bold;width:10%;">Tax %</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;width:15%;">Tax Amt</th>
+            <th style="padding:1mm 0.5mm;text-align:right;font-weight:bold;width:15%;">Total</th>
           </tr>`
       : `<tr style="border-top:0.5mm solid #000;border-bottom:0.5mm solid #000;">
             <th style="padding:1.5mm 2mm;text-align:left;font-weight:bold;">Product Name</th>
@@ -522,6 +555,7 @@ export function InvoiceDialog({
     table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
     }
     img {
       display: block;
@@ -722,12 +756,10 @@ export function InvoiceDialog({
               {/* Center Info */}
               <div className="flex-1 flex flex-col items-center text-center px-1 overflow-hidden">
                 <h1
-                  className="font-bold text-black leading-tight uppercase whitespace-nowrap"
+                  className="font-bold text-black leading-tight uppercase whitespace-normal break-words"
                   style={{
                     fontSize: `${cfg.titleFontSizePt * 1.33}px`,
                     maxWidth: "100%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
                   }}
                 >
                   {generalSettings?.companyName || "Company Name"}
@@ -861,7 +893,7 @@ export function InvoiceDialog({
 
             {/* Items Table */}
             <div className="mb-3">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
                 <thead>
                   <tr className="border-b border-t border-black/80">
                     <th

@@ -1,6 +1,7 @@
 "use client"
 
 import { AccountDialog } from "@/components/common/account-dialog"
+import { TransferDialog } from "@/components/common/transfer-dialog"
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { PageLayout } from "@/components/common/page-layout"
@@ -41,14 +42,17 @@ import { PermissionGuard } from "@/components/common/permission-guard"
 import { PERMISSIONS, MODULES } from "@/lib/utils/permissions"
 import { useModuleAccessCheck } from "@/lib/hooks/use-permission-check"
 import { formatCurrency } from "@/lib/utils/currency"
+import { formatDate, formatDateTime } from "@/lib/utils/date"
 import { Account, AccountLedgerEntry, Transaction } from "@/types"
 import {
+  ArrowRightLeft,
   BookOpen,
   Eye,
   MoreVertical,
   Pencil,
   Plus,
   Search,
+  Settings,
   Trash2
 } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -70,6 +74,8 @@ export default function AccountingPage() {
   const [limit, setLimit] = useState(20)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false)
+  const [transferFromAccountId, setTransferFromAccountId] = useState<string | undefined>(undefined)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
   const [viewAccountId, setViewAccountId] = useState<string | null>(null)
@@ -243,6 +249,17 @@ export default function AccountingPage() {
                 <BookOpen className="mr-2 h-4 w-4" />
                 {t("viewLedger")}
               </DropdownMenuItem>
+              {canCreateAccount && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTransferFromAccountId(row.id)
+                    setIsTransferDialogOpen(true)
+                  }}
+                >
+                  <ArrowRightLeft className="mr-2 h-4 w-4" />
+                  Transfer Balance
+                </DropdownMenuItem>
+              )}
               {canUpdateAccount && (
                 <DropdownMenuItem onClick={() => handleEditAccount(row)}>
                   <Pencil className="mr-2 h-4 w-4" />
@@ -321,12 +338,33 @@ export default function AccountingPage() {
                 <CardTitle>{t("accounts")}</CardTitle>
                 <CardDescription>{t("accountsDescription")}</CardDescription>
               </div>
-              {canCreateAccount && (
-                <Button onClick={handleCreateAccount}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("createAccount")}
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {canCreateAccount && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTransferFromAccountId(undefined)
+                      setIsTransferDialogOpen(true)
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                    Transfer Balance
+                  </Button>
+                )}
+                {canCreateAccount && (
+                  <Button onClick={handleCreateAccount}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("createAccount")}
+                  </Button>
+                )}
+                {useHasPermission("income_expense_categories:read") && (
+                  <Button variant="secondary" onClick={() => router.push(`/${locale}/dashboard/accounting/categories`)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -452,7 +490,7 @@ export default function AccountingPage() {
                         return (
                           <tr key={entry.id} className="border-b">
                             <td className="p-2 text-sm">
-                              {date ? new Date(date).toLocaleDateString() : "-"}
+                              {formatDate(date, { timeZone: generalSettings?.timeZone })}
                             </td>
                             <td className="p-2">
                               <Badge
@@ -552,7 +590,7 @@ export default function AccountingPage() {
                     <div>
                       <div className="text-sm text-muted-foreground">{tCommon("createdAt")}</div>
                       <div className="text-base">
-                        {new Date(accountDetails.createdAt).toLocaleString()}
+                        {formatDateTime(accountDetails.createdAt, { timeZone: generalSettings?.timeZone })}
                       </div>
                     </div>
                   )}
@@ -560,7 +598,7 @@ export default function AccountingPage() {
                     <div>
                       <div className="text-sm text-muted-foreground">{tCommon("updatedAt")}</div>
                       <div className="text-base">
-                        {new Date(accountDetails.updatedAt).toLocaleString()}
+                        {formatDateTime(accountDetails.updatedAt, { timeZone: generalSettings?.timeZone })}
                       </div>
                     </div>
                   )}
@@ -615,9 +653,7 @@ export default function AccountingPage() {
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground mt-1">
-                              {transaction.occurredAt
-                                ? new Date(transaction.occurredAt).toLocaleDateString()
-                                : "-"}
+                              {formatDate(transaction.occurredAt, { timeZone: generalSettings?.timeZone })}
                             </p>
                           </div>
                           <div className="text-right">
@@ -696,9 +732,7 @@ export default function AccountingPage() {
                       <div>
                         <div className="text-sm text-muted-foreground">Occurred At</div>
                         <div className="text-base font-semibold">
-                          {transactionDetails.occurredAt
-                            ? new Date(transactionDetails.occurredAt).toLocaleString()
-                            : "-"}
+                          {formatDateTime(transactionDetails.occurredAt, { timeZone: generalSettings?.timeZone })}
                         </div>
                       </div>
                       {transactionDetails.note && (
@@ -1015,6 +1049,12 @@ export default function AccountingPage() {
         account={selectedAccount}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+      />
+
+      <TransferDialog
+        open={isTransferDialogOpen}
+        onOpenChange={setIsTransferDialogOpen}
+        defaultFromAccountId={transferFromAccountId}
       />
 
 

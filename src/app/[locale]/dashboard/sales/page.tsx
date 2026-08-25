@@ -46,6 +46,7 @@ import { useProducts } from "@/lib/hooks/use-products"
 import { useDeleteSale, useSale, useSales } from "@/lib/hooks/use-sales"
 import { useAppSettings } from "@/lib/providers/settings-provider"
 import { formatCurrency } from "@/lib/utils/currency"
+import { formatDate, formatDateTime } from "@/lib/utils/date"
 import { type ExportColumn } from "@/lib/utils/export"
 import { MODULES, PERMISSIONS } from "@/lib/utils/permissions"
 import { Payment, Product, Sale } from "@/types"
@@ -396,12 +397,12 @@ export default function SalesPage() {
       {
         key: "createdAt",
         header: "Created At",
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+        format: (value) => formatDate(value, { timeZone: generalSettings?.timeZone, format: "short" }),
       },
       {
         key: "updatedAt",
         header: "Updated At",
-        format: (value) => (value ? new Date(value).toLocaleString() : "-"),
+        format: (value) => formatDate(value, { timeZone: generalSettings?.timeZone, format: "short" }),
       },
     ],
     []
@@ -1134,9 +1135,7 @@ export default function SalesPage() {
                             <p className="text-sm text-muted-foreground mt-1">{payment.notes}</p>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
-                            {payment.occurredAt
-                              ? new Date(payment.occurredAt).toLocaleDateString()
-                              : "-"}
+                            {formatDate(payment.occurredAt, { timeZone: generalSettings?.timeZone })}
                           </p>
                         </div>
                         <div className="text-right">
@@ -1154,17 +1153,13 @@ export default function SalesPage() {
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("createdAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewSale.createdAt
-                      ? new Date(viewSale.createdAt).toLocaleString()
-                      : "-"}
+                    {formatDateTime(viewSale.createdAt, { timeZone: generalSettings?.timeZone })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide">{tCommon("updatedAt")}</p>
                   <p className="font-medium text-foreground">
-                    {viewSale.updatedAt
-                      ? new Date(viewSale.updatedAt).toLocaleString()
-                      : "-"}
+                    {formatDateTime(viewSale.updatedAt, { timeZone: generalSettings?.timeZone })}
                   </p>
                 </div>
               </div>

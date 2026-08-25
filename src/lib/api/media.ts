@@ -3,11 +3,19 @@ import { ApiResponse, Media, PaginatedResult } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
 
+export interface MediaFolder {
+  id: string
+  name: string
+  slug: string
+  count: number
+}
+
 export interface MediaListParams {
   page?: number
   limit?: number
   search?: string
-  type?: "image" | "document"
+  type?: "image" | "document" | "all"
+  folder?: string
 }
 
 export interface MediaResponseShape {
@@ -55,6 +63,9 @@ export const mediaApi = {
     if (data.name) {
       formData.append("name", data.name)
     }
+    if (data.folder) {
+      formData.append("folder", data.folder)
+    }
 
     const response = await apiClient.post<ApiResponse<Media>>(
       endpoints.media.upload,
@@ -66,6 +77,13 @@ export const mediaApi = {
       }
     )
     return response.data.data
+  },
+
+  getFolders: async (): Promise<MediaFolder[]> => {
+    const response = await apiClient.get<ApiResponse<MediaFolder[]>>(
+      endpoints.media.folders
+    )
+    return response.data.data || []
   },
 
   list: async (params?: MediaListParams): Promise<PaginatedResult<Media>> => {
@@ -97,6 +115,9 @@ export const mediaApi = {
     if (data.name !== undefined) {
       formData.append("name", data.name)
     }
+    if (data.folder !== undefined) {
+      formData.append("folder", data.folder)
+    }
 
     const response = await apiClient.patch<ApiResponse<Media>>(
       endpoints.media.update(id),
@@ -114,3 +135,4 @@ export const mediaApi = {
     await apiClient.delete<ApiResponse<void>>(endpoints.media.delete(id))
   },
 }
+

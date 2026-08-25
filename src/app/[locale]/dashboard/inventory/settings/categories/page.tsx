@@ -4,7 +4,6 @@ import { CategoryDialog } from "@/components/common/category-dialog"
 import { DataTable, type Column } from "@/components/common/data-table"
 import { DeleteConfirmationDialog } from "@/components/common/delete-confirmation-dialog"
 import { ExportButton } from "@/components/common/export-button"
-import { PageLayout } from "@/components/common/page-layout"
 import { ViewToggle, type ViewMode } from "@/components/common/view-toggle"
 import { Pagination } from "@/components/common/pagination"
 import { SkeletonList } from "@/components/skeletons/skeleton-list"
@@ -62,21 +61,21 @@ export default function CategoriesPage() {
   // Show loading while checking permissions
   if (isCheckingAccess) {
     return (
-      <PageLayout title={t("title")} description={t("description")}>
+      <div className="space-y-4">
         <SkeletonList count={5} />
-      </PageLayout>
+      </div>
     )
   }
 
   if (!hasAccess) {
     return (
-      <PageLayout title={tModules("accessDenied")} description={tModules("noAccess")}>
+      <div className="space-y-4">
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">{tModules("noAccessDescription")}</p>
           </CardContent>
         </Card>
-      </PageLayout>
+      </div>
     )
   }
 
@@ -504,11 +503,7 @@ export default function CategoriesPage() {
   ], [t, tCommon])
 
   return (
-    <PageLayout
-      title={t("title")}
-      description={t("description")}
-      maxWidth="full"
-    >
+    <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -621,6 +616,6 @@ export default function CategoriesPage() {
         description={t("deleteConfirmDescription", { name: categoryToDelete?.name || "" })}
         isLoading={deleteCategoryMutation.isPending}
       />
-    </PageLayout>
+    </>
   )
 }

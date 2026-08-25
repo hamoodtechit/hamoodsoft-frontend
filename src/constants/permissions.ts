@@ -254,6 +254,7 @@ export const permissionGroups = {
       { value: "contacts:create", label: "Create Contacts" },
       { value: "contacts:update", label: "Update Contacts" },
       { value: "contacts:delete", label: "Delete Contacts" },
+      { value: "contacts:manage_finance", label: "Manage Contact Finance (Credit Limit & Balance)" },
     ],
   },
   // Settings module

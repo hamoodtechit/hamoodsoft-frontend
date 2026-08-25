@@ -14,5 +14,20 @@ export const updateAccountSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
+export const transferAccountSchema = z
+  .object({
+    fromAccountId: z.string().min(1, "Source account is required"),
+    toAccountId: z.string().min(1, "Destination account is required"),
+    amount: z.number().min(0.01, "Amount must be greater than 0"),
+    branchId: z.string().optional(),
+    occurredAt: z.string().optional(),
+    note: z.string().optional(),
+  })
+  .refine((data) => data.fromAccountId !== data.toAccountId, {
+    message: "Source and destination accounts must be different",
+    path: ["toAccountId"],
+  })
+
 export type CreateAccountInput = z.infer<typeof createAccountSchema>
 export type UpdateAccountInput = z.infer<typeof updateAccountSchema>
+export type TransferAccountInput = z.infer<typeof transferAccountSchema>

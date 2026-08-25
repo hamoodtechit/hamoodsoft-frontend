@@ -1,4 +1,4 @@
-import { CreateAccountInput, UpdateAccountInput } from "@/lib/validations/accounts"
+import { CreateAccountInput, TransferAccountInput, UpdateAccountInput } from "@/lib/validations/accounts"
 import { Account, AccountLedgerResponse, ApiResponse, PaginatedResult } from "@/types"
 import apiClient from "./client"
 import { endpoints } from "./endpoints"
@@ -70,6 +70,11 @@ function normalizeAccountsList(data: PaginatedResult<Account> | AccountsResponse
 export const accountsApi = {
   createAccount: async (data: CreateAccountInput): Promise<Account> => {
     const response = await apiClient.post<ApiResponse<Account>>(endpoints.accounts.create, data)
+    return response.data.data
+  },
+
+  transferAccount: async (data: TransferAccountInput): Promise<any> => {
+    const response = await apiClient.post<ApiResponse<any>>(endpoints.accounts.transfer, data)
     return response.data.data
   },
 

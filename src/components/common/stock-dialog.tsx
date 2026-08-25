@@ -101,13 +101,15 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
     defaultValues,
   })
 
-  // Watch productId and variantId to auto-fill prices
+  // Watch productId, variantId, and unitId to auto-fill prices and display unit
   const watchedFields = useWatch({
     control: form.control,
-    name: ["productId", "variantId"],
+    name: ["productId", "variantId", "unitId"],
   })
   const productId = watchedFields[0]
   const variantId = watchedFields[1]
+  const currentUnitId = watchedFields[2]
+  const selectedUnit = useMemo(() => units.find(u => u.id === currentUnitId), [units, currentUnitId])
 
   // Fetch existing stocks for the selected product (business-wide) to determine unique SKU suffix
   const { data: existingStocksData } = useStocks({
@@ -293,30 +295,20 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   />
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="unitId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("unit")}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                {/* Hidden unitId field to ensure it is submitted but not editable */}
+                <div className="hidden">
+                  <FormField
+                    control={form.control}
+                    name="unitId"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("selectUnit")} />
-                          </SelectTrigger>
+                          <Input {...field} value={field.value || ""} />
                         </FormControl>
-                        <SelectContent>
-                          {units.map((unit) => (
-                            <SelectItem key={unit.id} value={unit.id}>
-                              {unit.name} ({unit.suffix})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -341,16 +333,50 @@ export function StockDialog({ open, onOpenChange, defaultBranchId, defaultProduc
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("quantity")}</FormLabel>
+                      <FormLabel>
+                        {t("quantity")}
+                        {selectedUnit && <span className="text-muted-foreground ml-1.5 font-normal text-xs">({selectedUnit.name})</span>}
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder={t("quantityPlaceholder")}
+                            className={selectedUnit ? "pr-12" : ""}
+                            {...field}
+                            value={field.value || ""}
+                            onChange={(e) =>
+                              field.onChange(parseFloat(e.target.value) || 0)
+                            }
+                          />
+                          {selectedUnit && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+                              <span className="text-muted-foreground text-sm font-medium">
+                                {selectedUnit.suffix}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="expiryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expiry Date (Optional)</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder={t("quantityPlaceholder")}
+                          type="date"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          value={field.value || ""}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
                         />
                       </FormControl>
                       <FormMessage />
