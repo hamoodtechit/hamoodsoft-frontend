@@ -65,7 +65,7 @@ export default function BusinessSettingsPage() {
   const createMutation = useCreateSetting()
   const [editingSetting, setEditingSetting] = useState<Setting | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [activeMediaField, setActiveMediaField] = useState<"configs.logoUrl" | "configs.secondaryLogoUrl" | null>(null)
+  const [activeMediaField, setActiveMediaField] = useState<"configs.logoUrl" | "configs.secondaryLogoUrl" | "configs.bgImageUrl" | null>(null)
 
   // Business config state (for Fuel Point Reducing)
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(DEFAULT_CONFIG)
@@ -188,6 +188,7 @@ export default function BusinessSettingsPage() {
       sms: "SMS Settings",
       businessConfig: "Business Config",
       inventory: "Inventory Settings",
+      ui_preferences: "Appearance",
     }
     return names[name] || name.charAt(0).toUpperCase() + name.slice(1)
   }
@@ -201,12 +202,13 @@ export default function BusinessSettingsPage() {
       sms: "Configure SMS provider settings (Nexmo, Twilio)",
       businessConfig: "Configure fuel point reducing settings",
       inventory: "Configure inventory and stock rules",
+      ui_preferences: "Configure custom background image",
     }
     return descriptions[name] || "Configure this setting"
   }
 
   const operationalSettings = useMemo(() => {
-    const operationalNames = ["general", "taxRate", "invoice", "inventory", "businessConfig"]
+    const operationalNames = ["general", "taxRate", "invoice", "inventory", "businessConfig", "ui_preferences"]
     const map = new Map<string, Setting>()
     settings.forEach((s) => {
       if (operationalNames.includes(s.name)) {
@@ -1208,6 +1210,63 @@ export default function BusinessSettingsPage() {
                         />
                       </div>
                     )}
+                  />
+                </div>
+              )}
+
+              {/* UI Preferences / Appearance */}
+              {editingSetting?.name === "ui_preferences" && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="configs.bgImageUrl"
+                    render={({ field }) => {
+                      const bgUrl = field.value || ""
+                      return (
+                        <FormItem>
+                          <FormLabel>Background Image</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              {bgUrl ? (
+                                <div className="relative inline-block w-full">
+                                  <img
+                                    src={bgUrl}
+                                    alt="Background"
+                                    className="h-32 w-full object-cover border rounded-lg p-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md z-10"
+                                    onClick={() => field.onChange("")}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="h-32 w-full border-2 border-dashed rounded-lg flex items-center justify-center bg-slate-50 dark:bg-slate-900/50">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">No background image selected</span>
+                                  </div>
+                                </div>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setActiveMediaField("configs.bgImageUrl")}
+                                className="w-full"
+                              >
+                                <ImageIcon className="h-4 w-4 mr-2" />
+                                {bgUrl ? "Change Background" : "Select Background"}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
                   />
                 </div>
               )}

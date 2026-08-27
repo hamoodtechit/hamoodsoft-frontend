@@ -195,7 +195,7 @@ export function Sidebar() {
     <aside
       id="sidebar"
       className={cn(
-        "flex flex-col py-6 bg-white border-r dark:border-r-0 dark:bg-slate-800 z-20 shadow-xl transition-all duration-300 relative shrink-0",
+        "flex flex-col py-6 bg-gradient-to-b from-white via-white to-slate-50/80 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 z-20 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_24px_-12px_rgba(0,0,0,0.3)] transition-all duration-300 relative shrink-0",
         sidebarOpen ? "w-64 min-w-[256px]" : "w-[80px] min-w-[80px]"
       )}
     >

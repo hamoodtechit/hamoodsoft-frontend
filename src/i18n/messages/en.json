@@ -805,6 +805,7 @@
     "expense": "Expense",
     "transactions": "Transactions",
     "reports": "Reports",
+    "overallReport": "Overall Report",
     "salesReport": "Sales Reports",
     "purchasesReport": "Purchase Reports",
     "incomeReport": "Income Reports",

@@ -548,7 +548,7 @@ export default function DashboardPage() {
     return (
       <div 
         id={`${category}-section`}
-        className="mb-8 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-700/50 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300"
+        className="mb-8 bg-white/85 dark:bg-slate-800/85 backdrop-blur-sm p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-700/50 shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_2px_16px_-4px_rgba(0,0,0,0.2)] transition-all duration-300"
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
@@ -610,24 +610,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6 pb-10">
-      {/* Header Text */}
-      <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4" id="dashboard-top">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight transition-colors">
-            {t("sidebar.dashboard")}
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors">
-            {currentBusiness?.name
-              ? `Welcome to ${currentBusiness.name}! Manage your business operations.`
-              : "Welcome back! Here's what's happening with your business today."}
-          </p>
-        </div>
-        <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-300 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          System Online
-        </div>
-      </div>
+    <div className="flex-1 w-full space-y-6 pb-10 pt-4">
 
       {/* Favourites Grid */}
       {groupedItems.favourites && groupedItems.favourites.length > 0 &&

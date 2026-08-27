@@ -1,6 +1,7 @@
 "use client"
 
 import { useAppSettings } from "@/lib/providers/settings-provider"
+import { useCurrentBusiness } from "@/lib/hooks/use-business"
 import { format } from "date-fns"
 
 interface PrintHeaderProps {
@@ -14,12 +15,13 @@ interface PrintHeaderProps {
 
 export function PrintHeader({ title, subtitle, dateRange }: PrintHeaderProps) {
   const { generalSettings } = useAppSettings()
+  const currentBusiness = useCurrentBusiness()
 
-  if (!generalSettings) {
-    return null
-  }
-
-  const { logoUrl, companyName, businessAddress, officePhone, binNumber } = generalSettings
+  const logoUrl = generalSettings?.logoUrl
+  const companyName = generalSettings?.companyName || currentBusiness?.name || "Company Name"
+  const businessAddress = generalSettings?.businessAddress
+  const officePhone = generalSettings?.officePhone
+  const binNumber = generalSettings?.binNumber
 
   return (
     <div className="hidden print:!block mb-6 print-exact pb-4 border-b-2 border-slate-800">
@@ -30,14 +32,14 @@ export function PrintHeader({ title, subtitle, dateRange }: PrintHeaderProps) {
             <div className="w-12 h-12 relative flex-shrink-0 flex items-center justify-center">
               <img 
                 src={logoUrl} 
-                alt={companyName || "Business Logo"} 
+                alt={companyName} 
                 className="max-w-full max-h-full object-contain" 
               />
             </div>
           ) : null}
           
           <div>
-            <h1 className="text-lg font-bold text-slate-900 m-0 uppercase tracking-tight">{companyName || "Company Name"}</h1>
+            <h1 className="text-lg font-bold text-slate-900 m-0 uppercase tracking-tight">{companyName}</h1>
             {businessAddress && <p className="text-xs text-slate-600 mt-0.5 max-w-sm leading-tight">{businessAddress}</p>}
             
             <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-600">

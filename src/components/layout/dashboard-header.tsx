@@ -5,6 +5,7 @@ import { BusinessSwitcher } from "@/components/common/business-switcher"
 import { LanguageSwitcher } from "@/components/common/language-switcher"
 import { SearchModal } from "@/components/common/search-modal"
 import { ThemeToggle } from "@/components/common/theme-toggle"
+
 import { POSSessionIndicator } from "@/components/pos/pos-session-indicator"
 import { Button } from "@/components/ui/button"
 import {
@@ -101,6 +102,7 @@ export function DashboardHeader() {
 
         {/* Global Settings (Theme & Lang for desktop) */}
         <div className="hidden md:flex items-center gap-2">
+
           <LanguageSwitcher />
           <ThemeToggle />
         </div>

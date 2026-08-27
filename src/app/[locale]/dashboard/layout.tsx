@@ -4,11 +4,12 @@ import { DashboardHeader } from "@/components/layout/dashboard-header"
 import { getNextOnboardingStep } from "@/lib/hooks/use-onboarding"
 import { PermissionsProvider } from "@/lib/providers/permissions-provider"
 import { cn } from "@/lib/utils"
-import { useAuthStore } from "@/store"
+import { useAuthStore, useUIStore } from "@/store"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import { Sidebar } from "@/components/layout/sidebar"
+import { SettingsSync } from "@/components/common/settings-sync"
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [isHydrated, setIsHydrated] = useState(false)
   const { isAuthenticated, user, token } = useAuthStore()
+  const { bgImageUrl } = useUIStore()
   const params = useParams()
   const router = useRouter()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
@@ -151,18 +153,34 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
-      <div className="flex print:block h-screen print:h-auto bg-slate-50 dark:bg-slate-900 print:bg-white font-sans text-slate-800 dark:text-slate-100 overflow-hidden print:overflow-visible selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
+      <SettingsSync />
+      <div 
+        className="flex print:block h-screen print:h-auto bg-slate-50 dark:bg-slate-900 print:bg-white font-sans text-slate-800 dark:text-slate-100 overflow-hidden print:overflow-visible selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300"
+        style={{
+          backgroundImage: bgImageUrl && !isPOS ? `url("${bgImageUrl}")` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
         {/* Desktop sidebar — hidden on mobile, shown on md+ screens */}
         <div className="hidden md:flex print:hidden">
           <Sidebar />
         </div>
-        <main className="flex-1 flex print:block flex-col overflow-hidden print:overflow-visible relative min-w-0" id="layout-main-area">
+        <main className={cn(
+            "flex-1 flex flex-col min-w-0 transition-all duration-300 relative z-0 h-[calc(100vh-76px)]",
+            isPOS && "h-screen"
+          )}>
+          {/* Accent gradient bar */}
+          {!isPOS && (
+            <div className="h-[3px] shrink-0 bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500 print:hidden" />
+          )}
           {!isPOS && <div className="print:hidden"><DashboardHeader /></div>}
           <div 
              id="main-scroll" 
              className={cn(
-               "flex-1 overflow-auto scroll-smooth print:overflow-visible print:p-0", 
-               !isPOS && "p-4 sm:p-6 md:p-8 lg:p-10"
+                "flex-1 overflow-auto scroll-smooth print:overflow-visible print:p-0 print:bg-white", 
+                !isPOS && "p-4 sm:p-6 md:p-8 lg:p-10"
              )}
           >
             <div className={cn("w-full h-full print:max-w-none print:mx-0", !isPOS && "max-w-[1600px] mx-auto")}>

@@ -2,16 +2,18 @@ import { Locale } from "@/types"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-interface UIState {
+export interface UIState {
   theme: "light" | "dark" | "system"
   language: Locale
   sidebarOpen: boolean
+  bgImageUrl: string | null
   // Selected branch per business (so switching businesses keeps branch selections separate)
   selectedBranchByBusinessId: Record<string, string | null>
   setTheme: (theme: "light" | "dark" | "system") => void
   setLanguage: (language: Locale) => void
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
+  setBgImageUrl: (url: string | null) => void
   setSelectedBranch: (businessId: string, branchId: string | null) => void
 }
 
@@ -21,11 +23,13 @@ export const useUIStore = create<UIState>()(
       theme: "system",
       language: "en",
       sidebarOpen: true, // Default to open on desktop
+      bgImageUrl: null,
       selectedBranchByBusinessId: {},
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      setBgImageUrl: (url) => set({ bgImageUrl: url }),
       setSelectedBranch: (businessId, branchId) =>
         set((state) => ({
           selectedBranchByBusinessId: {
@@ -39,3 +43,4 @@ export const useUIStore = create<UIState>()(
     }
   )
 )
+

@@ -49,7 +49,7 @@ export default function OverallReportPage() {
   ].filter(d => d.value > 0)
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 print:space-y-0 print:gap-4 print:flex print:flex-col">
       <PrintHeader
         title="Profit & Loss Statement"
         dateRange={{
@@ -58,7 +58,7 @@ export default function OverallReportPage() {
         }}
       />
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 print:hidden">
         <BackButton href="/dashboard#reports-section" />
       </div>
 
@@ -107,10 +107,10 @@ export default function OverallReportPage() {
           <p className="text-slate-500 font-medium animate-pulse">Calculating financials...</p>
         </div>
       ) : (
-        <div className="space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-4">
+        <div className="space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-4 print:space-y-0 print:mt-4">
           
           {/* HIGH LEVEL METRICS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
             
             {/* Revenue Metric */}
             <Card className="border-emerald-100 dark:border-emerald-900/50 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-slate-900 overflow-hidden relative">
@@ -271,7 +271,7 @@ export default function OverallReportPage() {
             {/* STRUCTURED PNL TABLE */}
             <div className="lg:col-span-7">
               <Card className="border-slate-200 dark:border-slate-800 shadow-sm h-full">
-                <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 pb-4 bg-slate-50/50 dark:bg-slate-900/50">
+                <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 pb-4 bg-slate-50/50 dark:bg-slate-900/50 print:hidden">
                   <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">
                     Statement of Profit & Loss
                   </CardTitle>
