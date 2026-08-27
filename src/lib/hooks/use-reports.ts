@@ -38,3 +38,21 @@ export function usePurchasesReports(params: ReportsPurchasesParams) {
     enabled: !!params.branchId,
   })
 }
+
+export function useOverallReport(params: { branchId: string; startDate?: string; endDate?: string }) {
+  const queryKey = [
+    "reports",
+    "overall",
+    params.branchId,
+    params.startDate ?? null,
+    params.endDate ?? null,
+  ] as const
+
+  return useQuery({
+    queryKey,
+    queryFn: () => reportsApi.getOverallReport(params),
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    enabled: !!params.branchId,
+  })
+}

@@ -99,6 +99,11 @@ export const PERMISSIONS = {
   
   // Reports
   REPORTS_READ: "reports:read",
+  
+  // Media
+  MEDIA_READ: "media:read",
+  MEDIA_CREATE: "media:create",
+  MEDIA_DELETE: "media:delete",
 } as const
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS]

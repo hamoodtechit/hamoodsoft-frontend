@@ -31,6 +31,7 @@ import {
   FileText,
   FolderTree,
   Package,
+  PieChart,
   Ruler,
   Settings,
   Shield,
@@ -213,6 +214,17 @@ export default function DashboardPage() {
       requiredPermissions: ["brands:read", "product_categories:read", "units:read", "attributes:read"],
     },
     // Reports submenu items
+    {
+      id: "overall-report",
+      title: t("sidebar.overallReport") || "Overall & PnL",
+      href: "/dashboard/reports/overall",
+      icon: PieChart,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50 dark:bg-indigo-950/20",
+      enabled: true,
+      category: "reports",
+      requiredPermissions: ["reports:read"],
+    },
     {
       id: "sales-report",
       title: t("sidebar.salesReport") || "Sales Reports",

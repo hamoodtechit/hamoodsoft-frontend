@@ -61,4 +61,16 @@ export const reportsApi = {
     const response = await api.get<ApiResponse<ReportsPurchasesResponse>>("/reports/purchases", { params })
     return response.data.data
   },
+  getOverallReport: async (params: { branchId: string; startDate?: string; endDate?: string }) => {
+    const response = await api.get<ApiResponse<any>>("/reports/overall", { params })
+    return response.data.data as {
+      totalSales: number;
+      totalSaleReturns: number;
+      totalPurchases: number;
+      totalPurchaseReturns: number;
+      totalIncome: number;
+      totalExpense: number;
+      netProfit: number;
+    }
+  },
 }
