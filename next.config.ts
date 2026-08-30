@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-  /* Redirect root to login */
+  /* Redirect root to login and add magic link shortcuts */
   async redirects() {
     return [
       {
@@ -48,6 +48,16 @@ const nextConfig: NextConfig = {
         destination: "/login",
         permanent: false,
       },
+      {
+        source: "/demo-pump",
+        destination: "/en/magic-login?key=demo-pump",
+        permanent: false,
+      },
+      {
+        source: "/demo/:key",
+        destination: "/en/magic-login?key=:key",
+        permanent: false,
+      }
     ];
   },
 
