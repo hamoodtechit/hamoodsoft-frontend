@@ -182,7 +182,7 @@ export default function RolesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {role.name.toLowerCase() !== "owner" && role.name.toLowerCase() !== "admin" && (
+                          {role.name.toLowerCase() !== "owner" && (
                             <PermissionGuard permission="roles:update">
                               <DropdownMenuItem onClick={() => handleEdit(role)}>
                                 <Pencil className="mr-2 h-4 w-4" />
@@ -198,7 +198,7 @@ export default function RolesPage() {
                               </DropdownMenuItem>
                             </PermissionGuard>
                           )}
-                          {role.name.toLowerCase() !== "owner" && role.name.toLowerCase() !== "admin" && (
+                          {role.name.toLowerCase() !== "owner" && (
                             <PermissionGuard permission="roles:delete">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(role)}
