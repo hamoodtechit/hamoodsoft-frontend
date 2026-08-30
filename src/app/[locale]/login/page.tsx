@@ -78,15 +78,17 @@ export default function LoginPage() {
             <CardTitle className="text-2xl font-bold text-center">
               {t("signIn")}
             </CardTitle>
-            <CardDescription className="text-center">
-              {t("dontHaveAccount")}{" "}
-              <Link
-                href="/register"
-                className="text-primary hover:underline font-medium"
-              >
-                {t("signUp")}
-              </Link>
-            </CardDescription>
+            {process.env.NEXT_PUBLIC_ALLOW_TENANT_SIGNUP === "true" && (
+              <CardDescription className="text-center">
+                {t("dontHaveAccount")}{" "}
+                <Link
+                  href="/register"
+                  className="text-primary hover:underline font-medium"
+                >
+                  {t("signUp")}
+                </Link>
+              </CardDescription>
+            )}
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} suppressHydrationWarning>
