@@ -1,10 +1,17 @@
+const requireEnv = (name: string, value?: string) => {
+  if (!value) {
+    throw new Error(`Environment variable ${name} is missing. Please ensure it is set in your .env or deployment configuration.`);
+  }
+  return value;
+};
+
 export const config = {
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || "Patwary Pump",
-    url: process.env.NEXT_PUBLIC_APP_URL,
+    url: requireEnv("NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL),
   },
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL,
+    baseUrl: requireEnv("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL),
     timeout: 30000,
   },
   i18n: {
