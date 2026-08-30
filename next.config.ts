@@ -1,14 +1,20 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import withPWAInit from "@ducanh2912/next-pwa";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/config.ts");
+
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [],
   },
-  // Enable standalone output for Docker
   output: "standalone",
   eslint: {
     ignoreDuringBuilds: true,
@@ -32,4 +38,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(
+  withNextIntl(withPWA(nextConfig)),
+  {
+    org: "hamoodtech",
+    project: "school-frontend",
+    sentryUrl: "https://glitchtip-p04osokcwgw0c4so0gkcg44g.genify.live",
+
+    // Only print logs for uploading source maps in CI
+    silent: !process.env.CI,
+
+    // Disable source map uploading since we don't have the auth token right now
+    sourcemaps: {
+      disable: true,
+    },
+
+    // Automatically annotate React components to show their full name in breadcrumbs and session replay
+    reactComponentAnnotation: {
+      enabled: true,
+    },
+  }
+);
