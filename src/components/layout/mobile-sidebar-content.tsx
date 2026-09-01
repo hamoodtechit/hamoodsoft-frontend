@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { BusinessSwitcher } from "@/components/common/business-switcher"
 import { BranchSwitcher } from "@/components/common/branch-switcher"
-import { useBusinesses } from "@/lib/hooks/use-business"
+import { useBusinesses, useCurrentBusiness } from "@/lib/hooks/use-business"
 import { usePermissions } from "@/lib/providers/permissions-provider"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store"
@@ -39,24 +39,24 @@ import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
 import { useMemo, useState } from "react"
 
-interface NavItem {
+export interface NavItem {
   title: string
   href: string
-  icon: React.ComponentType<{ className?: string }>
-  badge?: string
+  icon: any
+  badge?: string | number
   requiredPermissions?: string[]
 }
 
-interface NavItemWithSubmenu extends NavItem {
+export interface NavItemWithSubmenu extends NavItem {
   submenu?: NavItem[]
 }
 
-interface NavSection {
+export interface NavSection {
   title?: string
   items: (NavItem | NavItemWithSubmenu)[]
 }
 
-interface MobileSidebarContentProps {
+export interface MobileSidebarContentProps {
   onLinkClick?: () => void
 }
 
@@ -114,6 +114,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
   const { data: apiBusinesses, isLoading: isLoadingBusinesses } = useBusinesses()
   const queryClient = useQueryClient()
   const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
+  const currentBusiness = useCurrentBusiness()
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     inventory: true,
     accounting: true,
@@ -130,12 +131,6 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
     if (apiBusinesses && apiBusinesses.length > 0) return apiBusinesses
     return []
   }, [storeBusinesses, apiBusinesses, queryClient])
-
-  // Get current business
-  const currentBusiness = useMemo(() => {
-    if (!storeUser?.currentBusinessId || !businesses || businesses.length === 0) return null
-    return businesses.find((b) => b.id === storeUser.currentBusinessId)
-  }, [storeUser?.currentBusinessId, businesses])
 
   const isOwner = currentBusiness?.ownerId === storeUser?.id
 

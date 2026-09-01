@@ -164,7 +164,8 @@ export function useAuth() {
           data.email !== storeUser.email ||
           // Detect permission changes for live role update sync
           JSON.stringify(data.permissions) !== JSON.stringify(storeUser.permissions) ||
-          data.roleId !== storeUser.roleId
+          data.roleId !== storeUser.roleId ||
+          JSON.stringify(data.role) !== JSON.stringify(storeUser.role)
         
         if (dataChanged) {
           // Merge to preserve any store updates while applying API changes

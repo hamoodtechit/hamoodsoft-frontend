@@ -17,6 +17,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth, useLogout } from "@/lib/hooks/use-auth"
+import { usePermissions } from "@/lib/providers/permissions-provider"
 import { useAuthStore, useUIStore } from "@/store"
 import { ChevronDown, Languages, Menu, Moon, Search, Sun, User } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
@@ -37,12 +38,14 @@ export function DashboardHeader() {
   const router = useRouter()
   const locale = Array.isArray(params?.locale) ? params.locale[0] : params?.locale || "en"
   const { user } = useAuth()
+  const { role, isOwner } = usePermissions()
   const { isAuthenticated } = useAuthStore()
   const { setLanguage } = useUIStore()
   const { setTheme } = useTheme()
   const logoutMutation = useLogout()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const roleName = role?.name || user?.role?.name || (isOwner ? "Owner" : "Staff")
 
   const switchLanguage = (newLocale: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,8 +123,8 @@ export function DashboardHeader() {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-tight">
                           {user?.name || "User"}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          Admin
+                        <span className="text-[11px] text-slate-400 font-medium capitalize truncate max-w-[120px]">
+                          {roleName}
                         </span>
                     </div>
                     <ChevronDown className="text-slate-400 w-4 h-4 hidden lg:block" />

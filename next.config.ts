@@ -54,8 +54,10 @@ export default withSentryConfig(
     },
 
     // Automatically annotate React components to show their full name in breadcrumbs and session replay
-    reactComponentAnnotation: {
-      enabled: true,
+    webpack: {
+      reactComponentAnnotation: {
+        enabled: true,
+      },
     },
   }
 );

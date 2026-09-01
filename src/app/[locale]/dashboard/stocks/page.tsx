@@ -301,7 +301,7 @@ export default function StocksPage() {
 
   // Permission checks
   const { hasAccess, isLoading: isCheckingAccess } = useModuleAccessCheck(MODULES.INVENTORY)
-  const canCreate = useHasPermission(PERMISSIONS.STOCKS_CREATE)
+  const canCreate = useHasPermission(PERMISSIONS.STOCKS_UPDATE)
   const canUpdate = useHasPermission(PERMISSIONS.STOCKS_UPDATE)
 
   // Secure by module access (inventory)

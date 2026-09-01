@@ -119,8 +119,10 @@ export function Sidebar() {
       icon: Users,
       color: "text-cyan-400",
       hash: "#main-section",
-      activePrefixes: ["/crm", "/contacts"],
-      requiredPermissions: ["contacts:read"],
+      //     activePrefixes: ["/crm", "/contacts"],
+      // requiredPermissions: ["contacts:read"],
+      activePrefixes: ["/crm", "/contacts", "/sales", "/purchase", "/point-of-sale", "/pos"],
+      requiredPermissions: ["contacts:read", "sales:read", "purchases:read", "pos:sessions:read", "crm:read"],
     },
     {
       id: "inventory-section",
@@ -137,8 +139,11 @@ export function Sidebar() {
       icon: Wallet,
       color: "text-indigo-400",
       hash: "#accounting-section",
-      activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale", "/pos", "/expenses", "/expense", "/income"],
-      requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read", "pos:sessions:read"],
+      //   activePrefixes: ["/accounting", "/sales", "/purchase", "/point-of-sale", "/pos", "/expenses", "/expense", "/income"],
+      // requiredPermissions: ["accounts:read", "transactions:read", "payments:read", "sales:read", "purchases:read", "pos:sessions:read"],
+
+      activePrefixes: ["/accounting", "/expenses", "/expense", "/income"],
+      requiredPermissions: ["accounts:read", "transactions:read", "payments:read"],
     },
     {
       id: "reports-section",
