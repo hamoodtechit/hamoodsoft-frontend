@@ -71,8 +71,7 @@ export default function DashboardPage() {
   const enabledModules = currentBusiness?.modules || []
   const [isLoading, setIsLoading] = useState(true)
   
-  // State for "See More" functionality
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+  // No longer using "See More" functionality
   
   const { user } = useAuthStore()
   const { hasAnyPermission, isLoading: isLoadingPermissions } = usePermissions()
@@ -121,16 +120,7 @@ export default function DashboardPage() {
     });
   }
 
-  // Items to show initially per category
-  const initialItemsToShow: Record<string, number> = {
-    main: 4,
-    inventory: 6,
-    accounting: 999, // Show all accounting items (no "See More" button)
-    hr: 4,
-    business: 9,
-    modules: 2,
-    reports: 4,
-  }
+  // Show all items by default
 
   // Define all dashboard items with colors
   const allItems: DashboardItem[] = [
@@ -523,12 +513,7 @@ export default function DashboardPage() {
     router.push(`/${locale}${href}`)
   }
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }))
-  }
+
 
 
   const renderCategoryGrid = (
@@ -536,10 +521,7 @@ export default function DashboardPage() {
     category: string,
     title: string
   ) => {
-    const isExpanded = expandedCategories[category] || false
-    const initialCount = initialItemsToShow[category] || items.length
-    const itemsToShow = isExpanded ? items : items.slice(0, initialCount)
-    const hasMore = items.length > initialCount
+    const itemsToShow = items
 
     if (itemsToShow.length === 0) return null
 
@@ -552,24 +534,7 @@ export default function DashboardPage() {
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
-          {hasMore && (
-            <button
-              onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  See Less
-                </>
-              ) : (
-                <>
-                  See More
-                  <ChevronDown className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          )}
+
         </div>
         {isLoading ? (
           <DashboardSkeletonGrid count={itemsToShow.length} />
