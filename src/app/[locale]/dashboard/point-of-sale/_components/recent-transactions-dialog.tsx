@@ -74,7 +74,10 @@ export function RecentTransactionsDialog() {
               ) : (
                 recentSales.map((sale) => {
                   const invoiceNumber = sale.invoiceNumber || (sale.invoiceSequence ? `INV${String(sale.invoiceSequence).padStart(6, "0")}` : sale.id.slice(0, 8).toUpperCase())
-                  const contactName = sale.contact?.name || "Walk-In Customer"
+                  const isWalkIn = !sale.contact || sale.contact.name.toLowerCase().includes("walk-in") || sale.contact.name.toLowerCase().includes("walk in")
+                  const contactName = isWalkIn
+                    ? (sale.customerName ? `${sale.customerName} (Walk-in)` : "Walk-in")
+                    : sale.contact?.name || "Walk-in"
                   const itemsCount = (sale.items?.length || sale.saleItems?.length || 0)
                   const totalAmount = sale.totalPrice || sale.totalAmount || 0
 

@@ -329,6 +329,17 @@ export function InvoiceDialog({
     ? (transaction as Purchase)?.taxRate || 0
     : (transaction as Sale)?.taxRate || 0;
 
+  const resolveCustomerName = () => {
+    const isWalkIn = !transaction?.contact || transaction?.contact?.name?.toLowerCase().includes("walk-in") || transaction?.contact?.name?.toLowerCase().includes("walk in");
+    if (isWalkIn) {
+      if ((transaction as Sale)?.customerName) {
+        return (transaction as Sale).customerName as string;
+      }
+      return "Walk-in";
+    }
+    return transaction?.contact?.name || "Walk-in";
+  };
+
   const phoneNumbers = [
     generalSettings?.officePhone,
     generalSettings?.counterPhone,
@@ -446,7 +457,7 @@ export function InvoiceDialog({
     const billInfoHtml = isPOS
       ? `<div style="margin-bottom:2mm;padding-bottom:1.5mm;border-bottom:0.3mm dashed #000;font-size:${f.fontSizePt}pt;">
             <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:1mm;font-weight:500;">
-              <span style="flex:1 1 auto;min-width:50%;">Name: ${transaction.contact?.name || "Walk-in"}</span>
+              <span style="flex:1 1 auto;min-width:50%;">Name: ${resolveCustomerName()}</span>
               <span style="white-space:nowrap;">INV: <strong>${invoiceNo}</strong></span>
             </div>
             <div style="margin-top:0.5mm;">
@@ -460,7 +471,7 @@ export function InvoiceDialog({
           </div>`
       : `<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3mm;padding-bottom:2mm;border-bottom:0.3mm solid #000;font-size:${f.fontSizePt}pt;">
             <div>
-              <div style="font-weight:600;">Name: ${transaction.contact?.name || "Walk-in"}</div>
+              <div style="font-weight:600;">Name: ${resolveCustomerName()}</div>
               <div style="display:flex;flex-wrap:wrap;gap:3mm;margin-top:0.5mm;">
                 ${vehicleNo ? `<div>Vehicle No: <strong>${vehicleNo}</strong>${driverName ? ` (Driver: <strong>${driverName}</strong>)` : ""}</div>` : ""}
                 ${transaction.contact?.binNumber ? `<div>Customer BIN: <strong>${transaction.contact.binNumber}</strong></div>` : ""}
@@ -573,8 +584,8 @@ export function InvoiceDialog({
       ${generalSettings?.businessAddress ? `<div style="font-size:${f.smallFontSizePt}pt;color:#333;margin-top:0.5mm;line-height:1.2;">${generalSettings.businessAddress}</div>` : ""}
       ${phoneNumbers ? `<div style="font-size:${f.smallFontSizePt}pt;font-weight:500;margin-top:0.3mm;">${phoneNumbers}</div>` : ""}
       ${generalSettings?.binNumber ? `<div style="font-size:${f.smallFontSizePt}pt;font-weight:600;margin-top:0.3mm;">BIN : ${generalSettings.binNumber}</div>` : ""}
-      <div style="font-weight:bold;margin-top:1mm;font-size:${f.fontSizePt}pt;">MUSHAK 6.3 / মূসক-৬.৩</div>
-      <div style="font-weight:600;font-size:${f.fontSizePt}pt;">Tax Invoice / কর চালানপত্র</div>
+      <!-- <div style="font-weight:bold;margin-top:1mm;font-size:${f.fontSizePt}pt;">MUSHAK 6.3 / মূসক-৬.৩</div> -->
+      <!-- <div style="font-weight:600;font-size:${f.fontSizePt}pt;">Tax Invoice / কর চালানপত্র</div> -->
     </div>
     <div style="flex:0 0 auto;">${logoRight}</div>
   </div>
@@ -788,7 +799,7 @@ export function InvoiceDialog({
                     BIN : {generalSettings.binNumber}
                   </p>
                 )}
-                <p
+                {/* <p
                   className="font-bold mt-1"
                   style={{ fontSize: `${cfg.fontSizePt * 1.33}px` }}
                 >
@@ -799,7 +810,7 @@ export function InvoiceDialog({
                   style={{ fontSize: `${cfg.fontSizePt * 1.33}px` }}
                 >
                   Tax Invoice / কর চালানপত্র
-                </p>
+                </p> */}
               </div>
 
               {/* Right Logo */}
@@ -823,7 +834,7 @@ export function InvoiceDialog({
               <div className="mb-2 border-b border-dashed pb-1.5 space-y-0.5">
                 <div className="flex flex-wrap justify-between items-start gap-x-2 font-medium">
                   <span className="flex-1 min-w-[50%]">
-                    Name: {transaction.contact?.name || "Walk-in"}
+                    Name: {resolveCustomerName()}
                   </span>
                   <span className="whitespace-nowrap">
                     INV: <span className="font-bold">{invoiceNo}</span>
@@ -860,7 +871,7 @@ export function InvoiceDialog({
                 <div>
                   <p className="font-semibold">
                     Name:{" "}
-                    {transaction.contact?.name || "Walk-in"}
+                    {resolveCustomerName()}
                   </p>
                   <div className="flex flex-wrap gap-x-3 text-sm">
                     {vehicleNo && (

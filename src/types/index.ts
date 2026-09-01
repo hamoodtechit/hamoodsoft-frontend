@@ -343,6 +343,7 @@ export interface Sale {
   invoiceNumber?: string
   invoiceSequence?: number
   vehicleNo?: string
+  customerName?: string
   branch?: Branch
   contact?: Contact
   createdAt?: string

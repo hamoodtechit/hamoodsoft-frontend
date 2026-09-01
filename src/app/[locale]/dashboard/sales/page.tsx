@@ -257,7 +257,13 @@ export default function SalesPage() {
       {
         id: "contactId",
         header: t("contact"),
-        cell: (row) => row.contact?.name || row.contactId || "-",
+        cell: (row) => {
+          const isWalkIn = !row.contact || row.contact?.name?.toLowerCase().includes("walk-in") || row.contact?.name?.toLowerCase().includes("walk in");
+          if (isWalkIn) {
+            return row.customerName ? `${row.customerName} (Walk-in)` : "Walk-in";
+          }
+          return row.contact?.name || row.contactId || "-";
+        },
         sortable: false,
       },
 
@@ -766,7 +772,15 @@ export default function SalesPage() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold">{s.contact?.name || `Contact: ${s.contactId}`}</h4>
+                            <h4 className="font-semibold">
+                              {(() => {
+                                const isWalkIn = !s.contact || s.contact?.name?.toLowerCase().includes("walk-in") || s.contact?.name?.toLowerCase().includes("walk in");
+                                if (isWalkIn) {
+                                  return s.customerName ? `${s.customerName} (Walk-in)` : "Walk-in";
+                                }
+                                return s.contact?.name || `Contact: ${s.contactId}`;
+                              })()}
+                            </h4>
                             <Badge className={getStatusColor(s.status)}>
                               {s.status === "DRAFT"
                                 ? t("statusDraft")

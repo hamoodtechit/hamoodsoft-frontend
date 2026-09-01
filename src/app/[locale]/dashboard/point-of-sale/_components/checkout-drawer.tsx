@@ -58,6 +58,8 @@ export function CheckoutDrawer() {
     setVehicleNo,
     vehicleId,
     setVehicleId,
+    customerName,
+    setCustomerName,
     setIsContactDialogOpen,
     saleType,
     setSaleType,
@@ -304,9 +306,9 @@ export function CheckoutDrawer() {
               )}
             </div>
 
-            {!isWalkIn && (
+            {!isWalkIn ? (
               selectedContact && selectedContact.vehicles && selectedContact.vehicles.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 mt-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                       Vehicle No.
@@ -397,7 +399,7 @@ export function CheckoutDrawer() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1 mt-3">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                     Vehicle No. (Optional)
                   </Label>
@@ -412,6 +414,36 @@ export function CheckoutDrawer() {
                   />
                 </div>
               )
+            ) : (
+              <div className="space-y-3 mt-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Customer Name (Optional)
+                  </Label>
+                  <Input
+                    placeholder="e.g. John Doe"
+                    value={customerName}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setCustomerName(e.target.value);
+                    }}
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Vehicle No. (Optional)
+                  </Label>
+                  <Input
+                    placeholder="e.g. DHK-12-3456"
+                    value={vehicleNo}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setVehicleNo(e.target.value);
+                      setVehicleId("");
+                    }}
+                    className="h-10 font-mono"
+                  />
+                </div>
+              </div>
             )}
 
             <div className="space-y-2">

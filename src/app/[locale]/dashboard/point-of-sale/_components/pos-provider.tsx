@@ -76,6 +76,8 @@ interface POSContextValue {
   setSelectedContactId: (v: string) => void
   vehicleNo: string
   setVehicleNo: (v: string) => void
+  customerName: string
+  setCustomerName: (v: string) => void
   vehicleId: string
   setVehicleId: (v: string) => void
   isContactDialogOpen: boolean
@@ -245,6 +247,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
   const [posMode, setPosMode] = useState<"standard" | "petrol">("petrol")
   const [selectedContactId, setSelectedContactId] = useState<string>("")
   const [vehicleNo, setVehicleNo] = useState<string>("")
+  const [customerName, setCustomerName] = useState<string>("")
   const [vehicleId, setVehicleId] = useState<string>("")
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -1266,6 +1269,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         contactId: selectedContactId || "temp-contact",
         vehicleNo: vehicleNo || undefined,
         vehicleId: vehicleId || undefined,
+        customerName: customerName || undefined,
         items,
         status,
         paymentStatus,
@@ -1314,6 +1318,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     paymentSplits, accounts, products, getProductVariants,
     playSound, createSaleMutation, clearCart, dispensers,
     businessConfig.pointReducingAmountPerLiter, businessConfig.showPointReducing,
+    customerName, vehicleNo, vehicleId, taxRate
   ])
 
   // Save as draft
@@ -1358,6 +1363,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
         branchId: selectedBranchId!,
         contactId: selectedContactId || "temp-contact",
         vehicleNo: vehicleNo || undefined,
+        customerName: customerName || undefined,
         items,
         status: "DRAFT" as const,
         paymentStatus: "DUE" as const,
@@ -1380,8 +1386,9 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     }
   }, [
     cart, selectedBranchId, selectedContactId,
-    cartTotals.total, cartTotals.saleDiscount,
-    discountType, createSaleMutation,
+    cartTotals.total, cartTotals.saleDiscount, cartTotals.tax,
+    discountType, discountAmount, taxRate, createSaleMutation,
+    customerName, vehicleNo, dispensers
   ])
 
   // ── Context value ──────────────────────────────────────────────────────
@@ -1391,6 +1398,7 @@ export function POSProvider({ children }: { children: React.ReactNode }) {
     searchQuery, setSearchQuery, selectedCategoryId, setSelectedCategoryId,
     selectedBrandId, setSelectedBrandId, barcodeInput, setBarcodeInput,
     posMode, setPosMode, selectedContactId, setSelectedContactId, vehicleNo, setVehicleNo,
+    customerName, setCustomerName,
     vehicleId,
     setVehicleId,
     isContactDialogOpen, setIsContactDialogOpen, isProcessing,

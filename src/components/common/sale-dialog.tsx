@@ -741,6 +741,7 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
   const watchedDiscountAmount = form.watch("discountAmount" as any) || 0;
   const watchedContactId = form.watch("contactId" as any);
   const selectedContact = contacts.find((c) => c.id === watchedContactId);
+  const isWalkIn = !selectedContact || selectedContact.name.toLowerCase().includes("walk-in") || selectedContact.name.toLowerCase().includes("walk in");
 
   // Compute how much is being paid upfront
   const watchedPaidAmount = form.watch("paidAmount" as any) || 0;
@@ -888,6 +889,36 @@ export function SaleDialog({ sale, open, onOpenChange }: SaleDialogProps) {
                             </div>
                           </div>
                         )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {isWalkIn && (
+                    <FormField
+                      control={form.control}
+                      name="customerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Customer Name (Optional)</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder="e.g. John Doe" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="vehicleNo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vehicle No. (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ""} placeholder="e.g. DHK-12-3456" />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
