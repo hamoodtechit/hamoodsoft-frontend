@@ -575,7 +575,7 @@ export function InvoiceDialog({
 </head>
 <body>
   <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm;padding-bottom:2mm;border-bottom:0.3mm solid #000;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm;padding-bottom:5mm;border-bottom:0.3mm solid #000;">
     <div style="flex:0 0 auto;">${logoLeft}</div>
     <div style="flex:1;text-align:center;padding:0 1mm;overflow:hidden;">
       <div style="font-weight:bold;text-transform:uppercase;line-height:1.2;white-space:nowrap;font-size:${f.titleFontSizePt}pt;">
