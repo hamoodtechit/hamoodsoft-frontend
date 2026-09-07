@@ -161,7 +161,7 @@ export function Sidebar() {
       color: "text-violet-500",
       hash: "#hr-section",
       activePrefixes: ["/hr", "/roles", "/users"],
-      requiredPermissions: ["roles:read", "user:manage"],
+      requiredPermissions: ["roles:create", "user:manage"],
     },
     {
       id: "business-section",

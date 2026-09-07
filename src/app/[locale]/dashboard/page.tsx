@@ -359,7 +359,7 @@ export default function DashboardPage() {
       bgColor: "bg-red-50 dark:bg-red-950/20",
       enabled: true, // Always available
       category: "hr",
-      requiredPermissions: ["roles:read"],
+      requiredPermissions: ["roles:create"],
     },
     // Special modules
     {

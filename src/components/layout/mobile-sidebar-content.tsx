@@ -271,7 +271,7 @@ export function MobileSidebarContent({ onLinkClick }: MobileSidebarContentProps 
           title: t("sidebar.rolesPermissions"),
           href: "/dashboard/hr/roles",
           icon: Shield,
-          requiredPermissions: ["roles:read"],
+          requiredPermissions: ["roles:create"],
         },
       ]
 

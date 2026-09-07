@@ -98,13 +98,13 @@ export default function RolesPage() {
 
   return (
     <PermissionGuard
-      permission="roles:read"
+      permission="roles:create"
       fallback={
-        <PageLayout title={tSettings("accessDenied")} description={tSettings("selectBusiness")}>
+        <PageLayout title={tSettings("accessDenied")} description={tSettings("accessDenied")}>
           <Card>
             <CardContent className="pt-6">
               <p className="text-muted-foreground">
-                {tSettings("selectBusinessDescription")}
+                You do not have permission to access roles and permissions.
               </p>
             </CardContent>
           </Card>
