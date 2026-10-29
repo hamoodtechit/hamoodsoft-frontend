@@ -205,6 +205,17 @@ export default function DashboardPage() {
     },
     // Reports submenu items
     {
+      id: "product-sales-report",
+      title: t("sidebar.productSalesReport"),
+      href: "/dashboard/reports/product-sales",
+      icon: Package,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
+      enabled: enabledModules.includes("sales"),
+      category: "reports",
+      requiredPermissions: ["reports:read"],
+    },
+    {
       id: "overall-report",
       title: t("sidebar.overallReport") || "Overall & PnL",
       href: "/dashboard/reports/overall",
